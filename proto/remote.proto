@@ -1,0 +1,4 @@
+syntax = "proto3";
+package remote;
+option go_package = "/github.com/hollywood/remote";
+// import "actor.proto";

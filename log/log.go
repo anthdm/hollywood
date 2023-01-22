@@ -24,6 +24,10 @@ func Tracew(msg string, args M) {
 	logrus.WithFields(logrus.Fields(args)).Trace(msg)
 }
 
+func Fatalw(msg string, args M) {
+	logrus.WithFields(logrus.Fields(args)).Fatal(msg)
+}
+
 func init() {
 	logrus.SetLevel(logrus.TraceLevel)
 }
