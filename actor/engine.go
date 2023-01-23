@@ -2,7 +2,6 @@ package actor
 
 import (
 	"os"
-	"time"
 
 	"github.com/anthdm/hollywood/log"
 )
@@ -50,11 +49,14 @@ func NewEngine() *Engine {
 	if err != nil {
 		host = "local"
 	}
-	return &Engine{
+
+	e := &Engine{
 		registry:    NewRegistry(),
 		EventStream: NewEventStream(),
 		address:     host,
 	}
+
+	return e
 }
 
 func (e *Engine) SetRemote(r Remoter) {
@@ -74,13 +76,10 @@ func (e *Engine) Spawn(p Producer, name string) *PID {
 
 func (e *Engine) spawn(cfg ProducerConfig) *PID {
 	proc := NewProcess(e, cfg)
-	pid := proc.start()
+	proc.start()
+	e.registry.add(proc.pid, proc)
 
-	e.registry.add(pid, proc)
-
-	log.Infow("[ACTOR] spawned", log.M{"pid": pid})
-
-	return pid
+	return proc.pid
 }
 
 func (e *Engine) Address() string {
@@ -119,6 +118,7 @@ func (e *Engine) sendLocal(pid *PID, msg any) {
 func (e Engine) Poison(pid *PID) {
 	proc := e.registry.get(pid)
 	if proc != nil {
+		e.sendLocal(pid, Stopped{})
 		close(proc.quitch)
 		e.registry.remove(pid)
 	}
@@ -127,12 +127,11 @@ func (e Engine) Poison(pid *PID) {
 type Process struct {
 	ProducerConfig
 
-	mailbox    chan any
-	context    *Context
-	pid        *PID
-	restarts   int
-	quitch     chan struct{}
-	hardquitch chan struct{}
+	mailbox  chan any
+	context  *Context
+	pid      *PID
+	restarts int
+	quitch   chan struct{}
 }
 
 func NewProcess(e *Engine, cfg ProducerConfig) *Process {
@@ -148,7 +147,6 @@ func NewProcess(e *Engine, cfg ProducerConfig) *Process {
 		ProducerConfig: cfg,
 		context:        ctx,
 		quitch:         make(chan struct{}, 1),
-		hardquitch:     make(chan struct{}, 1),
 	}
 }
 
@@ -157,33 +155,10 @@ func (p *Process) start() *PID {
 	p.mailbox <- Started{}
 
 	go func() {
-		select {
-		case <-p.quitch:
-			p.mailbox <- Stopped{}
-			close(p.mailbox)
-			break
-		case <-p.hardquitch:
-			break
-		}
-		log.Tracew("[ACTOR] process terminated", log.M{
-			"pid": p.pid,
-		})
-	}()
-
-	start := time.Now()
-	go func() {
 		defer func() {
 			if err := recover(); err != nil {
 				p.restarts++
-				if p.restarts == p.MaxRestarts {
-					log.Errorw("[ACTOR] terminated", log.M{
-						"pid":    p.pid,
-						"reason": "max retries exceeded",
-					})
-					close(p.hardquitch)
-					return
-				}
-				log.Errorw("[ACTOR] restart", log.M{
+				log.Errorw("[ACTOR] restarting", log.M{
 					"n":           p.restarts,
 					"maxRestarts": p.MaxRestarts,
 					"pid":         p.pid,
@@ -191,16 +166,22 @@ func (p *Process) start() *PID {
 				})
 				p.start()
 			}
-			log.Debugw("[ACTOR] stopped", log.M{
-				"pid":    p.pid,
-				"active": time.Since(start),
-			})
 		}()
 
-		for msg := range p.mailbox {
-			p.context.message = msg
-			recv.Receive(p.context)
+	loop:
+		for {
+			select {
+			case msg := <-p.mailbox:
+				p.context.message = msg
+				recv.Receive(p.context)
+			case <-p.quitch:
+				close(p.mailbox)
+				break loop
+			}
 		}
+		log.Tracew("[PROCESS] mailbox shutdown", log.M{
+			"pid": p.pid,
+		})
 	}()
 
 	return p.pid
