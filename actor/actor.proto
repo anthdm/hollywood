@@ -1,0 +1,8 @@
+syntax = "proto3";
+package actor;
+option go_package = "github.com/anthdm/hollywood/actor";
+
+message PID {
+	string address = 1;
+	string ID = 2;
+}

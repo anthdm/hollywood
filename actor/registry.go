@@ -2,6 +2,8 @@ package actor
 
 import (
 	"sync"
+
+	"github.com/anthdm/hollywood/log"
 )
 
 type Registry struct {
@@ -23,6 +25,12 @@ func (r *Registry) remove(pid *PID) {
 
 func (r *Registry) add(pid *PID, proc *Process) {
 	r.mu.Lock()
+	if _, ok := r.procs[pid.String()]; ok {
+		log.Warnw("[ACTOR] pid already registered", log.M{
+			"pid": pid,
+		})
+		return
+	}
 	r.procs[pid.String()] = proc
 	r.mu.Unlock()
 }

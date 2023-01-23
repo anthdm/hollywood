@@ -38,6 +38,7 @@ type Engine struct {
 
 type Remoter interface {
 	Address() string
+	Send(*PID, any)
 }
 
 func NewEngine() *Engine {
@@ -87,6 +88,20 @@ func (e *Engine) Address() string {
 }
 
 func (e *Engine) Send(pid *PID, msg any) {
+	if e.isLocalMessage(pid) {
+		e.sendLocal(pid, msg)
+		return
+	}
+	if e.remote == nil {
+		log.Errorw("[ENGINE] failed sending messsage", log.M{
+			"err": "engine has no remote configured",
+		})
+		return
+	}
+	e.remote.Send(pid, msg)
+}
+
+func (e *Engine) sendLocal(pid *PID, msg any) {
 	proc := e.registry.get(pid)
 	if proc != nil {
 		proc.mailbox <- msg
@@ -112,11 +127,12 @@ func (e Engine) Poison(pid *PID) {
 type Process struct {
 	ProducerConfig
 
-	mailbox  chan any
-	context  *Context
-	pid      *PID
-	restarts int
-	quitch   chan struct{}
+	mailbox    chan any
+	context    *Context
+	pid        *PID
+	restarts   int
+	quitch     chan struct{}
+	hardquitch chan struct{}
 }
 
 func NewProcess(e *Engine, cfg ProducerConfig) *Process {
@@ -132,6 +148,7 @@ func NewProcess(e *Engine, cfg ProducerConfig) *Process {
 		ProducerConfig: cfg,
 		context:        ctx,
 		quitch:         make(chan struct{}, 1),
+		hardquitch:     make(chan struct{}, 1),
 	}
 }
 
@@ -140,9 +157,17 @@ func (p *Process) start() *PID {
 	p.mailbox <- Started{}
 
 	go func() {
-		<-p.quitch
-		p.mailbox <- Stopped{}
-		close(p.mailbox)
+		select {
+		case <-p.quitch:
+			p.mailbox <- Stopped{}
+			close(p.mailbox)
+			break
+		case <-p.hardquitch:
+			break
+		}
+		log.Tracew("[ACTOR] process terminated", log.M{
+			"pid": p.pid,
+		})
 	}()
 
 	start := time.Now()
@@ -151,9 +176,19 @@ func (p *Process) start() *PID {
 			if err := recover(); err != nil {
 				p.restarts++
 				if p.restarts == p.MaxRestarts {
-					log.Errorw("[ACTOR] restart", log.M{"n": p.restarts})
+					log.Errorw("[ACTOR] terminated", log.M{
+						"pid":    p.pid,
+						"reason": "max retries exceeded",
+					})
+					close(p.hardquitch)
 					return
 				}
+				log.Errorw("[ACTOR] restart", log.M{
+					"n":           p.restarts,
+					"maxRestarts": p.MaxRestarts,
+					"pid":         p.pid,
+					"reason":      err,
+				})
 				p.start()
 			}
 			log.Debugw("[ACTOR] stopped", log.M{
@@ -169,4 +204,8 @@ func (p *Process) start() *PID {
 	}()
 
 	return p.pid
+}
+
+func (e *Engine) isLocalMessage(pid *PID) bool {
+	return e.address == pid.Address
 }
