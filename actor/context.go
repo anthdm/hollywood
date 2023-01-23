@@ -6,6 +6,12 @@ type Context struct {
 	message any
 }
 
+func (c *Context) Respond(msg any) {
+	proc := c.engine.registry.get(c.pid)
+
+	proc.outbox <- msg
+}
+
 func (c *Context) PID() *PID {
 	return c.pid
 }

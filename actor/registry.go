@@ -8,12 +8,12 @@ import (
 
 type Registry struct {
 	mu    sync.RWMutex
-	procs map[string]*Process
+	procs map[string]*process
 }
 
 func NewRegistry() *Registry {
 	return &Registry{
-		procs: make(map[string]*Process),
+		procs: make(map[string]*process),
 	}
 }
 
@@ -23,7 +23,7 @@ func (r *Registry) remove(pid *PID) {
 	r.mu.Unlock()
 }
 
-func (r *Registry) add(pid *PID, proc *Process) {
+func (r *Registry) add(pid *PID, proc *process) {
 	r.mu.Lock()
 	if _, ok := r.procs[pid.String()]; ok {
 		log.Warnw("[ACTOR] pid already registered", log.M{
@@ -35,7 +35,7 @@ func (r *Registry) add(pid *PID, proc *Process) {
 	r.mu.Unlock()
 }
 
-func (r *Registry) get(pid *PID) *Process {
+func (r *Registry) get(pid *PID) *process {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 

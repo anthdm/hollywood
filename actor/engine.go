@@ -1,7 +1,10 @@
 package actor
 
 import (
+	"context"
+	"fmt"
 	"os"
+	"time"
 
 	"github.com/anthdm/hollywood/log"
 )
@@ -86,6 +89,24 @@ func (e *Engine) Address() string {
 	return e.address
 }
 
+func (e *Engine) Request(pid *PID, msg any, timeout time.Duration) (any, error) {
+	proc := e.registry.get(pid)
+	if proc == nil {
+		return nil, fmt.Errorf("pid [%s] not found in registry", pid)
+	}
+	e.Send(pid, msg)
+
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case res := <-proc.outbox:
+		return res, nil
+	}
+}
+
 func (e *Engine) Send(pid *PID, msg any) {
 	if e.isLocalMessage(pid) {
 		e.sendLocal(pid, msg)
@@ -103,7 +124,7 @@ func (e *Engine) Send(pid *PID, msg any) {
 func (e *Engine) sendLocal(pid *PID, msg any) {
 	proc := e.registry.get(pid)
 	if proc != nil {
-		proc.mailbox <- msg
+		proc.inbox <- msg
 		return
 	}
 	dl := &DeadLetter{
@@ -122,69 +143,6 @@ func (e Engine) Poison(pid *PID) {
 		close(proc.quitch)
 		e.registry.remove(pid)
 	}
-}
-
-type Process struct {
-	ProducerConfig
-
-	mailbox  chan any
-	context  *Context
-	pid      *PID
-	restarts int
-	quitch   chan struct{}
-}
-
-func NewProcess(e *Engine, cfg ProducerConfig) *Process {
-	pid := NewPID(e.address, cfg.Name)
-	ctx := &Context{
-		engine: e,
-		pid:    pid,
-	}
-
-	return &Process{
-		pid:            pid,
-		mailbox:        make(chan any, 1000),
-		ProducerConfig: cfg,
-		context:        ctx,
-		quitch:         make(chan struct{}, 1),
-	}
-}
-
-func (p *Process) start() *PID {
-	recv := p.Producer()
-	p.mailbox <- Started{}
-
-	go func() {
-		defer func() {
-			if err := recover(); err != nil {
-				p.restarts++
-				log.Errorw("[ACTOR] restarting", log.M{
-					"n":           p.restarts,
-					"maxRestarts": p.MaxRestarts,
-					"pid":         p.pid,
-					"reason":      err,
-				})
-				p.start()
-			}
-		}()
-
-	loop:
-		for {
-			select {
-			case msg := <-p.mailbox:
-				p.context.message = msg
-				recv.Receive(p.context)
-			case <-p.quitch:
-				close(p.mailbox)
-				break loop
-			}
-		}
-		log.Tracew("[PROCESS] mailbox shutdown", log.M{
-			"pid": p.pid,
-		})
-	}()
-
-	return p.pid
 }
 
 func (e *Engine) isLocalMessage(pid *PID) bool {
