@@ -2,7 +2,6 @@ package actor
 
 import (
 	"os"
-	"sync"
 	"time"
 
 	"github.com/anthdm/hollywood/log"
@@ -12,12 +11,14 @@ type ProducerConfig struct {
 	Producer    Producer
 	Name        string
 	MaxRestarts int
+	MailboxSize int
 }
 
 func DefaultProducerConfig(p Producer) ProducerConfig {
 	return ProducerConfig{
 		Producer:    p,
 		MaxRestarts: 3,
+		MailboxSize: 100,
 	}
 }
 
@@ -27,47 +28,37 @@ type Receiver interface {
 
 type Producer func() Receiver
 
-type Registry struct {
-	mu    sync.RWMutex
-	procs map[*PID]*Process
-}
-
-func NewRegistry() *Registry {
-	return &Registry{
-		procs: make(map[*PID]*Process),
-	}
-}
-
-func (r *Registry) remove(pid *PID) {
-	r.mu.Lock()
-	delete(r.procs, pid)
-	r.mu.Unlock()
-}
-
-func (r *Registry) add(pid *PID, proc *Process) {
-	r.mu.Lock()
-	r.procs[pid] = proc
-	r.mu.Unlock()
-}
-
-func (r *Registry) get(pid *PID) *Process {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-
-	return r.procs[pid]
-}
-
 type Engine struct {
 	EventStream *EventStream
 
+	address  string
 	registry *Registry
+	remote   Remoter
+}
+
+type Remoter interface {
+	Address() string
 }
 
 func NewEngine() *Engine {
+	var (
+		host string
+		err  error
+	)
+	host, err = os.Hostname()
+	if err != nil {
+		host = "local"
+	}
 	return &Engine{
 		registry:    NewRegistry(),
 		EventStream: NewEventStream(),
+		address:     host,
 	}
+}
+
+func (e *Engine) SetRemote(r Remoter) {
+	e.remote = r
+	e.address = r.Address()
 }
 
 func (e *Engine) SpawnConfig(cfg ProducerConfig) *PID {
@@ -86,7 +77,13 @@ func (e *Engine) spawn(cfg ProducerConfig) *PID {
 
 	e.registry.add(pid, proc)
 
+	log.Infow("[ACTOR] spawned", log.M{"pid": pid})
+
 	return pid
+}
+
+func (e *Engine) Address() string {
+	return e.address
 }
 
 func (e *Engine) Send(pid *PID, msg any) {
@@ -108,6 +105,7 @@ func (e Engine) Poison(pid *PID) {
 	proc := e.registry.get(pid)
 	if proc != nil {
 		close(proc.quitch)
+		e.registry.remove(pid)
 	}
 }
 
@@ -122,8 +120,7 @@ type Process struct {
 }
 
 func NewProcess(e *Engine, cfg ProducerConfig) *Process {
-	host, _ := os.Hostname()
-	pid := NewPID(host, cfg.Name)
+	pid := NewPID(e.address, cfg.Name)
 	ctx := &Context{
 		engine: e,
 		pid:    pid,

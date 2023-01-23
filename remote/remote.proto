@@ -9,6 +9,12 @@ service Remote {
 
 message Message {
 	bytes data = 1;
-	int32 target = 2;
+	PID target = 2;
 	int32 sender = 3;
+	string typeName = 4;
+}
+
+message PID {
+	string address = 1;
+	string name = 2;
 }

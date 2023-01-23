@@ -1,7 +1,6 @@
 package remote
 
 import (
-	fmt "fmt"
 	"net"
 	"strings"
 
@@ -33,11 +32,19 @@ func (r *streamReader) Receive(stream Remote_ReceiveServer) error {
 			if strings.Contains(err.Error(), "Canceled desc") {
 				break
 			}
-			log.Errorw("[REMOTE] stream reader receive", log.M{"err": err})
+			log.Errorw("[REMOTE] stream receive", log.M{"err": err})
 			return err
 		}
 
-		fmt.Println(msg)
+		pid := msg.Target
+		dmsg, err := deserialize(msg.Data, msg.TypeName)
+		if err != nil {
+			log.Errorw("[REMOTE] deserialize", log.M{"err": err})
+		}
+
+		apid := actor.NewPID(pid.Address, pid.Name)
+
+		r.remote.engine.Send(apid, dmsg)
 	}
 
 	return nil
@@ -76,4 +83,8 @@ func (r *Remote) Start() {
 	})
 
 	grpcserver.Serve(ln)
+}
+
+func (r *Remote) Address() string {
+	return r.config.ListenAddr
 }
