@@ -3,12 +3,15 @@ package remote
 import (
 	context "context"
 	"net"
+	"time"
 
 	"github.com/anthdm/hollywood/actor"
 	"github.com/anthdm/hollywood/log"
 	"google.golang.org/protobuf/proto"
 	"storj.io/drpc/drpcconn"
 )
+
+const connIdleTimeout = time.Second * 5
 
 type writeToStream struct {
 	sender *actor.PID
@@ -18,14 +21,19 @@ type writeToStream struct {
 
 type streamWriter struct {
 	writeToAddr string
+	rawconn     net.Conn
 	conn        *drpcconn.Conn
 	stream      DRPCRemote_ReceiveStream
+	engine      *actor.Engine
+	routerPID   *actor.PID
 }
 
-func newStreamWriter(address string) actor.Producer {
+func newStreamWriter(e *actor.Engine, rpid *actor.PID, address string) actor.Producer {
 	return func() actor.Receiver {
 		return &streamWriter{
 			writeToAddr: address,
+			engine:      e,
+			routerPID:   rpid,
 		}
 	}
 }
@@ -47,13 +55,15 @@ func (e *streamWriter) init() {
 			"writeToAddr": e.writeToAddr,
 		})
 	}
+	e.rawconn = rawconn
+	rawconn.SetDeadline(time.Now().Add(connIdleTimeout))
 
 	conn := drpcconn.New(rawconn)
 	client := NewDRPCRemoteClient(conn)
 
 	stream, err := client.Receive(context.Background())
 	if err != nil {
-		log.Errorw("[REMOTE] streaming receive error", log.M{
+		log.Errorw("[STREAM WRITER] streaming receive error", log.M{
 			"err":         err,
 			"writeToAddr": e.writeToAddr,
 		})
@@ -65,6 +75,11 @@ func (e *streamWriter) init() {
 	log.Tracew("[REMOTE] stream writer started", log.M{
 		"writeToAddr": e.writeToAddr,
 	})
+
+	go func() {
+		<-e.conn.Closed()
+		e.engine.Send(e.routerPID, terminateStream{address: e.writeToAddr})
+	}()
 }
 
 func (e *streamWriter) handleWriteStream(ws writeToStream) {
@@ -80,4 +95,5 @@ func (e *streamWriter) handleWriteStream(ws writeToStream) {
 			"err": err,
 		})
 	}
+	e.rawconn.SetDeadline(time.Now().Add(connIdleTimeout))
 }

@@ -20,23 +20,23 @@ func newStreamReader(r *Remote) *streamReader {
 
 func (r *streamReader) Receive(stream DRPCRemote_ReceiveStream) error {
 	defer func() {
-		log.Warnw("[REMOTE] stream reader terminated", log.M{})
+		log.Tracew("[STREAM READER] terminated", log.M{})
 	}()
 
 	for {
 		msg, err := stream.Recv()
 		if err != nil {
-			if strings.Contains(err.Error(), "Canceled desc") {
+			if strings.Contains(err.Error(), "context canceled") {
 				break
 			}
-			log.Errorw("[REMOTE] stream receive", log.M{"err": err})
+			log.Errorw("[STREAM READER] receive", log.M{"err": err})
 			return err
 		}
 
 		pid := msg.Target
 		dmsg, err := deserialize(msg.Data, msg.TypeName)
 		if err != nil {
-			log.Warnw("[REMOTE] deserialize", log.M{"err": err})
+			log.Warnw("[STREAM READER] deserialize", log.M{"err": err})
 			continue
 		}
 

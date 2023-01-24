@@ -26,7 +26,6 @@ func New(e *actor.Engine, cfg Config) *Remote {
 	r := &Remote{
 		engine: e,
 		config: cfg,
-		// streams: make(map[string]*actor.PID),
 	}
 	r.streamReader = newStreamReader(r)
 	return r
@@ -42,7 +41,7 @@ func (r *Remote) Start() {
 	DRPCRegisterRemote(mux, r.streamReader)
 	s := drpcserver.New(mux)
 
-	r.streamRouterPID = r.engine.Spawn(newStreamRouter(r.engine), "streammanager")
+	r.streamRouterPID = r.engine.Spawn(newStreamRouter(r.engine), "router")
 
 	log.Infow("[REMOTE] server started", log.M{
 		"listenAddr": r.config.ListenAddr,
