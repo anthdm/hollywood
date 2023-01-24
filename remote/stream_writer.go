@@ -2,22 +2,24 @@ package remote
 
 import (
 	context "context"
+	"net"
 
 	"github.com/anthdm/hollywood/actor"
 	"github.com/anthdm/hollywood/log"
-	"google.golang.org/grpc"
 	"google.golang.org/protobuf/proto"
+	"storj.io/drpc/drpcconn"
 )
 
-type writeStream struct {
-	pid *actor.PID
-	msg proto.Message
+type writeToStream struct {
+	sender *actor.PID
+	pid    *actor.PID
+	msg    proto.Message
 }
 
 type streamWriter struct {
 	writeToAddr string
-	conn        *grpc.ClientConn
-	stream      Remote_ReceiveClient
+	conn        *drpcconn.Conn
+	stream      DRPCRemote_ReceiveStream
 }
 
 func newStreamWriter(address string) actor.Producer {
@@ -32,13 +34,13 @@ func (e *streamWriter) Receive(ctx *actor.Context) {
 	switch msg := ctx.Message().(type) {
 	case actor.Started:
 		e.init()
-	case writeStream:
+	case writeToStream:
 		e.handleWriteStream(msg)
 	}
 }
 
 func (e *streamWriter) init() {
-	conn, err := grpc.Dial(e.writeToAddr, grpc.WithInsecure())
+	rawconn, err := net.Dial("tcp", e.writeToAddr)
 	if err != nil {
 		log.Fatalw("[REMOTE] failed to dial pid", log.M{
 			"err":         err,
@@ -46,7 +48,9 @@ func (e *streamWriter) init() {
 		})
 	}
 
-	client := NewRemoteClient(conn)
+	conn := drpcconn.New(rawconn)
+	client := NewDRPCRemoteClient(conn)
+
 	stream, err := client.Receive(context.Background())
 	if err != nil {
 		log.Errorw("[REMOTE] streaming receive error", log.M{
@@ -54,6 +58,7 @@ func (e *streamWriter) init() {
 			"writeToAddr": e.writeToAddr,
 		})
 	}
+
 	e.stream = stream
 	e.conn = conn
 
@@ -62,7 +67,7 @@ func (e *streamWriter) init() {
 	})
 }
 
-func (e *streamWriter) handleWriteStream(ws writeStream) {
+func (e *streamWriter) handleWriteStream(ws writeToStream) {
 	msg, err := serialize(ws.pid, ws.msg)
 	if err != nil {
 		log.Errorw("[REMOTE] failed serializing message", log.M{

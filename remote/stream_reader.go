@@ -7,7 +7,7 @@ import (
 )
 
 type streamReader struct {
-	UnimplementedRemoteServer
+	DRPCRemoteUnimplementedServer
 
 	remote *Remote
 }
@@ -18,7 +18,7 @@ func newStreamReader(r *Remote) *streamReader {
 	}
 }
 
-func (r *streamReader) Receive(stream Remote_ReceiveServer) error {
+func (r *streamReader) Receive(stream DRPCRemote_ReceiveStream) error {
 	defer func() {
 		log.Warnw("[REMOTE] stream reader terminated", log.M{})
 	}()
