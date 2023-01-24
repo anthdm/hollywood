@@ -5,7 +5,6 @@ import "github.com/anthdm/hollywood/log"
 type process struct {
 	ProducerConfig
 
-	outbox   chan any
 	inbox    chan any
 	context  *Context
 	pid      *PID
@@ -22,7 +21,6 @@ func NewProcess(e *Engine, cfg ProducerConfig) *process {
 
 	return &process{
 		pid:            pid,
-		outbox:         make(chan any, 1),
 		inbox:          make(chan any, 1000),
 		ProducerConfig: cfg,
 		context:        ctx,

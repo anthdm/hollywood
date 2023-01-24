@@ -13,14 +13,14 @@ type ProducerConfig struct {
 	Producer    Producer
 	Name        string
 	MaxRestarts int
-	MailboxSize int
+	InboxSize   int
 }
 
 func DefaultProducerConfig(p Producer) ProducerConfig {
 	return ProducerConfig{
 		Producer:    p,
 		MaxRestarts: 3,
-		MailboxSize: 100,
+		InboxSize:   100,
 	}
 }
 
@@ -94,6 +94,8 @@ func (e *Engine) Request(pid *PID, msg any, timeout time.Duration) (any, error) 
 	if proc == nil {
 		return nil, fmt.Errorf("pid [%s] not found in registry", pid)
 	}
+	proc.context.respch = make(chan any, 1)
+
 	e.Send(pid, msg)
 
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
@@ -102,7 +104,8 @@ func (e *Engine) Request(pid *PID, msg any, timeout time.Duration) (any, error) 
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
-	case res := <-proc.outbox:
+	case res := <-proc.context.respch:
+		close(proc.context.respch)
 		return res, nil
 	}
 }

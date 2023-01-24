@@ -4,12 +4,11 @@ type Context struct {
 	pid     *PID
 	engine  *Engine
 	message any
+	respch  chan any
 }
 
 func (c *Context) Respond(msg any) {
-	proc := c.engine.registry.get(c.pid)
-
-	proc.outbox <- msg
+	c.respch <- msg
 }
 
 func (c *Context) PID() *PID {
