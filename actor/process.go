@@ -1,6 +1,11 @@
 package actor
 
-import "github.com/anthdm/hollywood/log"
+import (
+	"fmt"
+	"runtime/debug"
+
+	"github.com/anthdm/hollywood/log"
+)
 
 type process struct {
 	ProducerConfig
@@ -42,6 +47,7 @@ func (p *process) start() *PID {
 					"pid":         p.pid,
 					"reason":      err,
 				})
+				fmt.Println(string(debug.Stack()))
 				p.start()
 			}
 		}()

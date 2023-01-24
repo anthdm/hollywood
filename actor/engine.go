@@ -62,7 +62,7 @@ func NewEngine() *Engine {
 	return e
 }
 
-func (e *Engine) SetRemote(r Remoter) {
+func (e *Engine) WithRemote(r Remoter) {
 	e.remote = r
 	e.address = r.Address()
 }
