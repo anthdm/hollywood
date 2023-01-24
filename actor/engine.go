@@ -3,7 +3,6 @@ package actor
 import (
 	"context"
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/anthdm/hollywood/log"
@@ -12,6 +11,7 @@ import (
 type ProducerConfig struct {
 	Producer    Producer
 	Name        string
+	Tags        []string
 	MaxRestarts int
 	InboxSize   int
 }
@@ -44,19 +44,10 @@ type Remoter interface {
 }
 
 func NewEngine() *Engine {
-	var (
-		host string
-		err  error
-	)
-	host, err = os.Hostname()
-	if err != nil {
-		host = "local"
-	}
-
 	e := &Engine{
 		registry:    NewRegistry(),
 		EventStream: NewEventStream(),
-		address:     host,
+		address:     "local",
 	}
 
 	return e
@@ -71,9 +62,10 @@ func (e *Engine) SpawnConfig(cfg ProducerConfig) *PID {
 	return e.spawn(cfg)
 }
 
-func (e *Engine) Spawn(p Producer, name string) *PID {
+func (e *Engine) Spawn(p Producer, name string, tags ...string) *PID {
 	pconf := DefaultProducerConfig(p)
 	pconf.Name = name
+	pconf.Tags = tags
 	return e.spawn(pconf)
 }
 

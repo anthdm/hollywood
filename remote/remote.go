@@ -2,54 +2,12 @@ package remote
 
 import (
 	"net"
-	"strings"
 
 	"github.com/anthdm/hollywood/actor"
 	"github.com/anthdm/hollywood/log"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/proto"
 )
-
-type streamReader struct {
-	UnimplementedRemoteServer
-
-	remote *Remote
-}
-
-func newStreamReader(r *Remote) *streamReader {
-	return &streamReader{
-		remote: r,
-	}
-}
-
-func (r *streamReader) Receive(stream Remote_ReceiveServer) error {
-	defer func() {
-		log.Warnw("[REMOTE] stream reader terminated", log.M{})
-	}()
-
-	for {
-		msg, err := stream.Recv()
-		if err != nil {
-			if strings.Contains(err.Error(), "Canceled desc") {
-				break
-			}
-			log.Errorw("[REMOTE] stream receive", log.M{"err": err})
-			return err
-		}
-
-		pid := msg.Target
-		dmsg, err := deserialize(msg.Data, msg.TypeName)
-		if err != nil {
-			log.Errorw("[REMOTE] deserialize", log.M{"err": err})
-		}
-
-		apid := actor.NewPID(pid.Address, pid.ID)
-
-		r.remote.engine.Send(apid, dmsg)
-	}
-
-	return nil
-}
 
 type Config struct {
 	ListenAddr string
@@ -100,7 +58,7 @@ func (r *Remote) Send(pid *actor.PID, msg any) {
 	var swpid *actor.PID
 	swpid, ok = r.streams[pid.String()]
 	if !ok {
-		swpid = r.engine.Spawn(newStreamWriter(pid.Address), "stream/"+pid.Address)
+		swpid = r.engine.Spawn(newStreamWriter(pid.Address), "stream", pid.Address)
 		r.streams[pid.String()] = swpid
 	}
 	ws := writeStream{

@@ -18,7 +18,7 @@ type process struct {
 }
 
 func NewProcess(e *Engine, cfg ProducerConfig) *process {
-	pid := NewPID(e.address, cfg.Name)
+	pid := NewPID(e.address, cfg.Name, cfg.Tags...)
 	ctx := &Context{
 		engine: e,
 		pid:    pid,

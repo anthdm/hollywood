@@ -57,7 +57,7 @@ func (e *streamWriter) init() {
 	e.stream = stream
 	e.conn = conn
 
-	log.Debugw("[REMOTE] stream writer started", log.M{
+	log.Tracew("[REMOTE] stream writer started", log.M{
 		"writeToAddr": e.writeToAddr,
 	})
 }

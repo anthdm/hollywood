@@ -25,6 +25,7 @@ func (r *Registry) remove(pid *PID) {
 
 func (r *Registry) add(pid *PID, proc *process) {
 	r.mu.Lock()
+	defer r.mu.Unlock()
 	if _, ok := r.procs[pid.String()]; ok {
 		log.Warnw("[ACTOR] pid already registered", log.M{
 			"pid": pid,
@@ -32,7 +33,6 @@ func (r *Registry) add(pid *PID, proc *process) {
 		return
 	}
 	r.procs[pid.String()] = proc
-	r.mu.Unlock()
 }
 
 func (r *Registry) get(pid *PID) *process {

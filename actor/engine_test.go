@@ -1,6 +1,7 @@
 package actor
 
 import (
+	"strconv"
 	"sync"
 	"testing"
 
@@ -20,46 +21,33 @@ func TestSpawn(t *testing.T) {
 	wg := sync.WaitGroup{}
 	for i := 0; i < 10; i++ {
 		wg.Add(1)
-		go func() {
-			pid := e.Spawn(newDummy, "dummy")
+		go func(i int) {
+			tag := strconv.Itoa(i)
+			pid := e.Spawn(newDummy, "dummy", tag)
 			e.Send(pid, 1)
 			wg.Done()
-		}()
+		}(i)
 	}
 
 	wg.Wait()
 	assert.Equal(t, 10, len(e.registry.procs))
 }
 
-func TestEventStream(t *testing.T) {
+func TestSpawnPID(t *testing.T) {
 	e := NewEngine()
-	wg := sync.WaitGroup{}
-	subs := []*EventSub{}
-	var mu sync.RWMutex
 
-	for i := 0; i < 10; i++ {
-		wg.Add(1)
-		go func(i int) {
-			sub := e.EventStream.Subscribe(func(event any) {
-				s, ok := event.(string)
-				assert.True(t, ok)
-				assert.Equal(t, "foo", s)
-			})
+	pid := e.Spawn(newDummy, "dummy", "1")
+	assert.Equal(t, "local/dummy/1", pid.String())
+}
 
-			e.EventStream.Publish("foo")
-			mu.Lock()
-			subs = append(subs, sub)
-			mu.Unlock()
-			wg.Done()
-		}(i)
+func TestPoison(t *testing.T) {
+	e := NewEngine()
+
+	for i := 0; i < 4; i++ {
+		tag := strconv.Itoa(i)
+		pid := e.Spawn(newDummy, "dummy", tag)
+		e.Poison(pid)
 	}
 
-	wg.Wait()
-	assert.Equal(t, 10, e.EventStream.Len())
-
-	for _, sub := range subs {
-		e.EventStream.Unsubscribe(sub)
-	}
-
-	assert.Equal(t, 0, e.EventStream.Len())
+	assert.Equal(t, 0, len(e.registry.procs))
 }
