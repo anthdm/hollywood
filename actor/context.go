@@ -11,6 +11,10 @@ func (c *Context) Respond(msg any) {
 	c.respch <- msg
 }
 
+func (c *Context) Send(pid *PID, msg any) {
+	c.engine.Send(pid, msg)
+}
+
 func (c *Context) PID() *PID {
 	return c.pid
 }
