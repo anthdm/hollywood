@@ -8,7 +8,9 @@ type Context struct {
 }
 
 func (c *Context) Respond(msg any) {
-	c.respch <- msg
+	go func() {
+		c.respch <- msg
+	}()
 }
 
 func (c *Context) Send(pid *PID, msg any) {

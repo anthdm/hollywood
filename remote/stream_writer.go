@@ -70,5 +70,9 @@ func (e *streamWriter) handleWriteStream(ws writeStream) {
 		})
 	}
 
-	e.stream.Send(msg)
+	if err := e.stream.Send(msg); err != nil {
+		log.Errorw("[REMOTE] failed sending message", log.M{
+			"err": err,
+		})
+	}
 }
