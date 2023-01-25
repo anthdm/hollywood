@@ -41,6 +41,7 @@ type Engine struct {
 type Remoter interface {
 	Address() string
 	Send(*PID, any)
+	Start()
 }
 
 func NewEngine() *Engine {
@@ -56,6 +57,7 @@ func NewEngine() *Engine {
 func (e *Engine) WithRemote(r Remoter) {
 	e.remote = r
 	e.address = r.Address()
+	r.Start()
 }
 
 func (e *Engine) SpawnConfig(cfg ProducerConfig) *PID {

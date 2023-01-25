@@ -48,7 +48,7 @@ func (r *Remote) Start() {
 	})
 
 	ctx := context.Background()
-	s.Serve(ctx, ln)
+	go s.Serve(ctx, ln)
 }
 
 func (r *Remote) Send(pid *actor.PID, msg any) {
