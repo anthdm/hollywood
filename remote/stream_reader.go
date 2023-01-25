@@ -1,7 +1,8 @@
 package remote
 
 import (
-	"strings"
+	"context"
+	errors "errors"
 
 	"github.com/anthdm/hollywood/log"
 )
@@ -26,7 +27,7 @@ func (r *streamReader) Receive(stream DRPCRemote_ReceiveStream) error {
 	for {
 		msg, err := stream.Recv()
 		if err != nil {
-			if strings.Contains(err.Error(), "context canceled") {
+			if errors.Is(err, context.Canceled) {
 				break
 			}
 			log.Errorw("[STREAM READER] receive", log.M{"err": err})

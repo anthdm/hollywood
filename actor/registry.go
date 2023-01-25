@@ -1,43 +1,57 @@
 package actor
 
 import (
-	"sync"
-
 	"github.com/anthdm/hollywood/log"
+	cmap "github.com/orcaman/concurrent-map/v2"
 )
 
-type Registry struct {
-	mu    sync.RWMutex
-	procs map[string]*process
+type registry struct {
+	lookup cmap.ConcurrentMap[string, cmap.ConcurrentMap[string, *process]]
 }
 
-func NewRegistry() *Registry {
-	return &Registry{
-		procs: make(map[string]*process),
+func newRegistry() *registry {
+	return &registry{
+		lookup: cmap.New[cmap.ConcurrentMap[string, *process]](),
 	}
 }
 
-func (r *Registry) remove(pid *PID) {
-	r.mu.Lock()
-	delete(r.procs, pid.String())
-	r.mu.Unlock()
-}
-
-func (r *Registry) add(pid *PID, proc *process) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	if _, ok := r.procs[pid.String()]; ok {
-		log.Warnw("[ACTOR] pid already registered", log.M{
-			"pid": pid,
-		})
+func (r *registry) remove(pid *PID) {
+	addrs, ok := r.lookup.Get(pid.Address)
+	if !ok {
 		return
 	}
-	r.procs[pid.String()] = proc
+	addrs.Remove(pid.ID)
+	if addrs.Count() == 0 {
+		r.lookup.Remove(pid.Address)
+	}
 }
 
-func (r *Registry) get(pid *PID) *process {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+func (r *registry) add(proc *process) {
+	pid := proc.pid
+	if addrs, ok := r.lookup.Get(pid.Address); ok {
+		if !addrs.Has(pid.ID) {
+			addrs.Set(pid.ID, proc)
+		} else {
+			log.Warnw("[REGISTRY] process already registered", log.M{
+				"pid": pid,
+			})
+		}
+		return
+	}
 
-	return r.procs[pid.String()]
+	addrs := cmap.New[*process]()
+	addrs.Set(pid.ID, proc)
+	r.lookup.Set(pid.Address, addrs)
+}
+
+func (r *registry) get(pid *PID) *process {
+	maddr, ok := r.lookup.Get(pid.Address)
+	if !ok {
+		panic("deadletter")
+	}
+	proc, ok := maddr.Get(pid.ID)
+	if !ok {
+		panic("deadletter")
+	}
+	return proc
 }

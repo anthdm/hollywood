@@ -6,19 +6,19 @@ import (
 )
 
 func NewPID(address, id string, tags ...string) *PID {
-	return &PID{
+	p := &PID{
 		Address: address,
 		ID:      id,
 		Tags:    tags,
 	}
+	if len(p.Tags) > 0 {
+		p.ID = p.ID + "/" + strings.Join(p.Tags, "/")
+	}
+	return p
 }
 
 func (pid *PID) String() string {
-	if len(pid.Tags) == 0 {
-		return fmt.Sprintf("%s/%s", pid.Address, pid.ID)
-	}
-	tagstr := strings.Join(pid.Tags, "/")
-	return fmt.Sprintf("%s/%s/%s", pid.Address, pid.ID, tagstr)
+	return fmt.Sprintf("%s/%s", pid.Address, pid.ID)
 }
 
 func (pid *PID) HasTag(tag string) bool {

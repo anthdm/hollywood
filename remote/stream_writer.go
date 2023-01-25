@@ -11,7 +11,7 @@ import (
 	"storj.io/drpc/drpcconn"
 )
 
-const connIdleTimeout = time.Second * 5
+const connIdleTimeout = time.Minute * 10
 
 type writeToStream struct {
 	sender *actor.PID

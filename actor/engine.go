@@ -34,7 +34,7 @@ type Engine struct {
 	EventStream *EventStream
 
 	address  string
-	registry *Registry
+	registry *registry
 	remote   Remoter
 }
 
@@ -45,7 +45,7 @@ type Remoter interface {
 
 func NewEngine() *Engine {
 	e := &Engine{
-		registry:    NewRegistry(),
+		registry:    newRegistry(),
 		EventStream: NewEventStream(),
 		address:     "local",
 	}
@@ -70,9 +70,9 @@ func (e *Engine) Spawn(p Producer, name string, tags ...string) *PID {
 }
 
 func (e *Engine) spawn(cfg ProducerConfig) *PID {
-	proc := NewProcess(e, cfg)
+	proc := newProcess(e, cfg)
 	proc.start()
-	e.registry.add(proc.pid, proc)
+	e.registry.add(proc)
 
 	return proc.pid
 }

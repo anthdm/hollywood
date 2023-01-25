@@ -17,7 +17,7 @@ type process struct {
 	quitch   chan struct{}
 }
 
-func NewProcess(e *Engine, cfg ProducerConfig) *process {
+func newProcess(e *Engine, cfg ProducerConfig) *process {
 	pid := NewPID(e.address, cfg.Name, cfg.Tags...)
 	ctx := &Context{
 		engine: e,
