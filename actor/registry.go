@@ -38,7 +38,6 @@ func (r *registry) add(proc *process) {
 		}
 		return
 	}
-
 	addrs := cmap.New[*process]()
 	addrs.Set(pid.ID, proc)
 	r.lookup.Set(pid.Address, addrs)
@@ -47,11 +46,21 @@ func (r *registry) add(proc *process) {
 func (r *registry) get(pid *PID) *process {
 	maddr, ok := r.lookup.Get(pid.Address)
 	if !ok {
-		panic("deadletter")
+		return nil
 	}
 	proc, ok := maddr.Get(pid.ID)
 	if !ok {
-		panic("deadletter")
+		return nil
 	}
+	return proc
+}
+
+// always local
+func (r *registry) getByID(id string) *process {
+	addrs, ok := r.lookup.Get("local")
+	if !ok {
+		return nil
+	}
+	proc, _ := addrs.Get(id)
 	return proc
 }

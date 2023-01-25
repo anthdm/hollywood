@@ -1,6 +1,7 @@
 package actor
 
 type Started struct{}
+
 type Stopped struct{}
 
 type DeadLetter struct {

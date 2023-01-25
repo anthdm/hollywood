@@ -3,6 +3,7 @@ package actor
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/anthdm/hollywood/log"
@@ -33,9 +34,10 @@ type Producer func() Receiver
 type Engine struct {
 	EventStream *EventStream
 
-	address  string
-	registry *registry
-	remote   Remoter
+	address       string
+	registry      *registry
+	remote        Remoter
+	deadletterPID *PID
 }
 
 type Remoter interface {
@@ -46,11 +48,11 @@ type Remoter interface {
 
 func NewEngine() *Engine {
 	e := &Engine{
-		registry:    newRegistry(),
 		EventStream: NewEventStream(),
 		address:     "local",
+		registry:    newRegistry(),
 	}
-
+	e.deadletterPID = e.Spawn(newDeadletter, "deadletter")
 	return e
 }
 
@@ -81,6 +83,17 @@ func (e *Engine) spawn(cfg ProducerConfig) *PID {
 
 func (e *Engine) Address() string {
 	return e.address
+}
+
+// GetPID returns the PID associated with the given ID.
+// If the registry cannot find a process associated with
+// that ID, nil will be returned.
+func (e *Engine) GetPID(id string, tags ...string) *PID {
+	proc := e.registry.getByID(id + "/" + strings.Join(tags, "/"))
+	if proc != nil {
+		return proc.pid
+	}
+	return nil
 }
 
 func (e *Engine) Request(pid *PID, msg any, timeout time.Duration) (any, error) {
@@ -129,8 +142,7 @@ func (e *Engine) sendLocal(pid *PID, msg any) {
 		Message: msg,
 		Sender:  nil,
 	}
-
-	log.Warnw("DEADLETTER", log.M{"pid": dl.PID, "sender": dl.Sender})
+	e.sendLocal(e.deadletterPID, dl)
 }
 
 func (e Engine) Poison(pid *PID) {

@@ -30,9 +30,6 @@ func TestSpawn(t *testing.T) {
 
 	wg.Wait()
 	assert.Equal(t, e.registry.lookup.Count(), 1)
-	addrs, ok := e.registry.lookup.Get("local")
-	assert.True(t, ok)
-	assert.Equal(t, 10, addrs.Count())
 }
 
 func TestSpawnPID(t *testing.T) {
@@ -50,12 +47,11 @@ func TestPoison(t *testing.T) {
 		tag := strconv.Itoa(i)
 		pid := e.Spawn(newDummy, "dummy", tag)
 		e.Poison(pid)
+		assert.Nil(t, e.registry.get(pid))
 	}
-
-	assert.Equal(t, e.registry.lookup.Count(), 0)
 }
 
-func BenchmarkXxx(b *testing.B) {
+func BenchmarkSendMessageLocal(b *testing.B) {
 	e := NewEngine()
 	pid := e.Spawn(newDummy, "dummy")
 

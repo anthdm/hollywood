@@ -63,7 +63,7 @@ func (p *process) start() *PID {
 				break loop
 			}
 		}
-		log.Tracew("[PROCESS] mailbox shutdown", log.M{
+		log.Tracew("[PROCESS] inbox shutdown", log.M{
 			"pid": p.pid,
 		})
 	}()
