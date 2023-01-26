@@ -2,11 +2,6 @@ package actor
 
 import "github.com/anthdm/hollywood/log"
 
-type WithSender struct {
-	Message any
-	Sender  *PID
-}
-
 type Context struct {
 	pid     *PID
 	sender  *PID

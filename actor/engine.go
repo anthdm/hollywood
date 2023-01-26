@@ -121,7 +121,6 @@ func (e Engine) Poison(pid *PID) {
 func (e *Engine) spawn(cfg ProducerConfig) processer {
 	proc := newProcess(e, cfg)
 	e.registry.add(proc)
-
 	return proc
 }
 
