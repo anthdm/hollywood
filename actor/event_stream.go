@@ -56,10 +56,10 @@ func (e *EventStream) Subscribe(f EventStreamFunc) *EventSub {
 
 func (e *EventStream) Publish(msg any) {
 	e.mu.RLock()
+	defer e.mu.RUnlock()
 	for _, f := range e.subs {
 		go f(msg)
 	}
-	e.mu.RUnlock()
 }
 
 func (e *EventStream) Len() int {

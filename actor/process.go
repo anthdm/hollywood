@@ -7,6 +7,12 @@ import (
 	"github.com/anthdm/hollywood/log"
 )
 
+type processer interface {
+	PID() *PID
+	Send(*PID, any)
+	Shutdown()
+}
+
 type process struct {
 	ProducerConfig
 
@@ -23,14 +29,15 @@ func newProcess(e *Engine, cfg ProducerConfig) *process {
 		engine: e,
 		pid:    pid,
 	}
-
-	return &process{
+	p := &process{
 		pid:            pid,
 		inbox:          make(chan any, 1000),
 		ProducerConfig: cfg,
 		context:        ctx,
 		quitch:         make(chan struct{}, 1),
 	}
+	p.start()
+	return p
 }
 
 func (p *process) start() *PID {
@@ -69,4 +76,16 @@ func (p *process) start() *PID {
 	}()
 
 	return p.pid
+}
+
+func (p *process) PID() *PID {
+	return p.pid
+}
+
+func (p *process) Send(_ *PID, msg any) {
+	p.inbox <- msg
+}
+
+func (p *process) Shutdown() {
+	close(p.quitch)
 }

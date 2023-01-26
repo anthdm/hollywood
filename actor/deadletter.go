@@ -6,18 +6,22 @@ import (
 	"github.com/anthdm/hollywood/log"
 )
 
-type deadletter struct{}
-
-func newDeadletter() Receiver {
-	return &deadletter{}
+type deadLetter struct {
+	pid *PID
 }
 
-func (d *deadletter) Receive(ctx *Context) {
-	if msg, ok := ctx.Message().(*DeadLetter); ok {
-		log.Warnw("[DEADLETTER]", log.M{
-			"dest":   msg.PID,
-			"msg":    reflect.TypeOf(msg.Message),
-			"sender": nil,
-		})
+func newDeadLetter() *deadLetter {
+	return &deadLetter{
+		pid: NewPID(localLookupAddr, "deadLetter"),
 	}
+}
+
+func (d *deadLetter) PID() *PID { return d.pid }
+func (d *deadLetter) Shutdown() {}
+func (d *deadLetter) Send(dest *PID, msg any) {
+	log.Warnw("[DEADLETTER]", log.M{
+		"dest":   dest,
+		"msg":    reflect.TypeOf(msg),
+		"sender": nil,
+	})
 }
