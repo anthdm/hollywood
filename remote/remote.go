@@ -3,6 +3,7 @@ package remote
 import (
 	"context"
 	"net"
+	"reflect"
 
 	"github.com/anthdm/hollywood/actor"
 	"github.com/anthdm/hollywood/log"
@@ -52,15 +53,22 @@ func (r *Remote) Start() {
 }
 
 func (r *Remote) Send(pid *actor.PID, msg any) {
-	m, ok := msg.(proto.Message)
-	if !ok {
+	switch m := msg.(type) {
+	case proto.Message:
+		r.engine.Send(r.streamRouterPID, routeToStream{pid: pid, msg: m})
+	case *actor.WithSender:
+		rs := routeToStream{
+			pid:    pid,
+			msg:    m.Message.(proto.Message),
+			sender: m.Sender,
+		}
+		r.engine.Send(r.streamRouterPID, rs)
+	default:
 		log.Errorw("[REMOTE] failed to send message", log.M{
-			"error": "given message is not of type proto.Message",
+			"error": "given message is not of type proto.Message or WithSender",
+			"type":  reflect.TypeOf(m),
 		})
-		return
 	}
-
-	r.engine.Send(r.streamRouterPID, routeToStream{pid: pid, msg: m})
 }
 
 func (r *Remote) Address() string {

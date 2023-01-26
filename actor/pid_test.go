@@ -1,6 +1,7 @@
 package actor
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -15,6 +16,8 @@ func TestPID(t *testing.T) {
 
 	pid = NewPID(address, id, "100")
 	assert.Equal(t, address+"/"+id+"/"+"100", pid.String())
+	fmt.Printf("%#+v\n", pid)
+	fmt.Println(newKeyWriter().writePIDKey(pid))
 
 	pid = NewPID(address, id, "100", "bar")
 	assert.Equal(t, address+"/"+id+"/100"+"/bar", pid.String())

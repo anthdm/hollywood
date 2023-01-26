@@ -1,6 +1,8 @@
 package actor
 
 import (
+	"time"
+
 	"github.com/anthdm/hollywood/log"
 )
 
@@ -71,6 +73,23 @@ func (e *Engine) Spawn(p Producer, name string, tags ...string) *PID {
 	pconf.Name = name
 	pconf.Tags = tags
 	return e.spawn(pconf).PID()
+}
+
+func (e *Engine) Request(pid *PID, msg any, timeout time.Duration) *Response {
+	resp := NewResponse(e, timeout)
+	e.registry.add(resp)
+
+	e.SendWithSender(pid, msg, resp.PID())
+
+	return resp
+}
+
+func (e *Engine) SendWithSender(pid *PID, msg any, sender *PID) {
+	m := &WithSender{
+		Sender:  sender,
+		Message: msg,
+	}
+	e.Send(pid, m)
 }
 
 func (e *Engine) Send(pid *PID, msg any) {

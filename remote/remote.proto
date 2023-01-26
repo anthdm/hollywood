@@ -10,7 +10,10 @@ service Remote {
 message Message {
 	bytes data = 1;
 	actor.PID target = 2;
-	int32 sender = 3;
+	actor.PID sender = 3;
 	string typeName = 4;
 }
 
+message TestMessage { 
+	bytes data = 1;
+}

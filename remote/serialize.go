@@ -7,7 +7,7 @@ import (
 	"google.golang.org/protobuf/reflect/protoregistry"
 )
 
-func serialize(pid *actor.PID, msg proto.Message) (*Message, error) {
+func serialize(pid *actor.PID, sender *actor.PID, msg proto.Message) (*Message, error) {
 	b, err := proto.Marshal(msg)
 	if err != nil {
 		return nil, err
@@ -16,8 +16,8 @@ func serialize(pid *actor.PID, msg proto.Message) (*Message, error) {
 		Data:     b,
 		TypeName: string(proto.MessageName(msg)),
 		Target:   pid,
+		Sender:   sender,
 	}
-
 	return m, nil
 }
 

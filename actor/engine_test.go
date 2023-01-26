@@ -1,9 +1,11 @@
 package actor
 
 import (
+	"fmt"
 	"strconv"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -13,7 +15,15 @@ type dummy struct{}
 func newDummy() Receiver {
 	return &dummy{}
 }
-func (d *dummy) Receive(_ *Context) {}
+func (d *dummy) Receive(ctx *Context) {
+	switch msg := ctx.Message().(type) {
+	case string:
+		_ = msg
+		fmt.Println("receiving:", ctx.Message())
+		ctx.Respond("ksjfkdjfkdjfkdfjkdfjkdf")
+	default:
+	}
+}
 
 func TestSpawn(t *testing.T) {
 	e := NewEngine()
@@ -65,4 +75,16 @@ func BenchmarkSendMessageLocal(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		e.Send(pid, pid)
 	}
+}
+
+func TestRequestResponse(t *testing.T) {
+	e := NewEngine()
+	pid := e.Spawn(newDummy, "dummy")
+	resp := e.Request(pid, "foo", time.Millisecond)
+	res, err := resp.Result()
+	assert.Nil(t, err)
+	fmt.Println(resp.PID())
+	fmt.Println(res)
+	// deadletter
+	fmt.Println(e.registry.get(resp.pid).PID())
 }

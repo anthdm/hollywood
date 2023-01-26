@@ -7,8 +7,9 @@ import (
 )
 
 type routeToStream struct {
-	pid *actor.PID
-	msg proto.Message
+	sender *actor.PID
+	pid    *actor.PID
+	msg    proto.Message
 }
 
 type terminateStream struct {
@@ -68,8 +69,9 @@ func (s *streamRouter) handleRouteToStream(msg routeToStream) {
 		})
 	}
 	ws := writeToStream{
-		pid: msg.pid,
-		msg: msg.msg,
+		pid:    msg.pid,
+		msg:    msg.msg,
+		sender: msg.sender,
 	}
 	s.engine.Send(swpid, ws)
 }

@@ -25,6 +25,8 @@ func newRegistry(e *Engine) *registry {
 }
 
 func (r *registry) remove(pid *PID) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	key := r.keyWriter.writePIDKey(pid)
 	delete(r.lookup, key)
 }
@@ -63,7 +65,6 @@ func newKeyWriter() *keyWriter {
 }
 
 func (w *keyWriter) writePIDKey(pid *PID) string {
-	w.buf.Reset()
 	w.buf.WriteString(pid.Address)
 	w.buf.WriteString("/")
 	w.buf.WriteString(pid.ID)
@@ -71,5 +72,7 @@ func (w *keyWriter) writePIDKey(pid *PID) string {
 		w.buf.WriteString("/")
 		w.buf.WriteString(tag)
 	}
-	return w.buf.String()
+	key := w.buf.String()
+	w.buf.Reset()
+	return key
 }

@@ -86,7 +86,7 @@ func (e *streamWriter) handleWriteStream(ws writeToStream) {
 	if e.stream == nil {
 		return
 	}
-	msg, err := serialize(ws.pid, ws.msg)
+	msg, err := serialize(ws.pid, ws.sender, ws.msg)
 	if err != nil {
 		log.Errorw("[REMOTE] failed serializing message", log.M{
 			"err": err,

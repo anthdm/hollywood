@@ -85,7 +85,13 @@ func (p *process) start() *PID {
 		for {
 			select {
 			case msg := <-p.inbox:
-				p.context.message = msg
+				switch m := msg.(type) {
+				case *WithSender:
+					p.context.sender = m.Sender
+					p.context.message = m.Message
+				default:
+					p.context.message = m
+				}
 				recv.Receive(p.context)
 			case <-p.quitch:
 				close(p.inbox)
