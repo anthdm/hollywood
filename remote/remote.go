@@ -71,6 +71,7 @@ func (r *Remote) Send(pid *actor.PID, msg any) {
 	}
 }
 
+// Address returns the listen address of the remote.
 func (r *Remote) Address() string {
 	return r.config.ListenAddr
 }

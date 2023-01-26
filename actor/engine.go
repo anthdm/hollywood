@@ -64,6 +64,9 @@ func (e *Engine) SpawnConfig(cfg ProducerConfig) *PID {
 	return e.spawn(cfg).PID()
 }
 
+// Address returns the address of the actor engine. When there is
+// no remote configured, the "local" address will be used, otherwise
+// the listen address of the remote.
 func (e *Engine) Address() string {
 	return e.address
 }

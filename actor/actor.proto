@@ -7,7 +7,3 @@ message PID {
 	string ID = 2;
 	repeated string tags = 3;
 }
-
-message TestMessage { 
-	bytes data = 1;
-}
