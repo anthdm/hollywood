@@ -43,32 +43,33 @@ func (s *streamRouter) Receive(ctx *actor.Context) {
 }
 
 func (s *streamRouter) handleTerminateStream(msg terminateStream) {
+	streamWriterPID := s.streams[msg.address]
+	s.engine.Poison(streamWriterPID)
 	delete(s.streams, msg.address)
 	log.Tracew("[STREAM ROUTER] terminating stream", log.M{
-		"stream": msg.address,
+		"dest": msg.address,
+		"pid":  streamWriterPID,
 	})
 }
 
 func (s *streamRouter) handleRouteToStream(msg routeToStream) {
 	var (
-		swpid *actor.PID
-		ok    bool
+		swpid   *actor.PID
+		ok      bool
+		address = msg.pid.Address
 	)
 
-	address := msg.pid.Address
 	swpid, ok = s.streams[address]
 	if !ok {
 		swpid = s.engine.Spawn(newStreamWriter(s.engine, s.pid, address), "stream", address)
 		s.streams[address] = swpid
 		log.Tracew("[STREAM ROUTER] new stream route", log.M{
-			"route": swpid,
+			"pid": swpid,
 		})
 	}
-
 	ws := writeToStream{
 		pid: msg.pid,
 		msg: msg.msg,
 	}
-
 	s.engine.Send(swpid, ws)
 }

@@ -3,6 +3,7 @@ package actor
 import (
 	"fmt"
 	"runtime/debug"
+	"time"
 
 	"github.com/anthdm/hollywood/log"
 )
@@ -40,6 +41,11 @@ func newProcess(e *Engine, cfg ProducerConfig) *process {
 	return p
 }
 
+type InternalError struct {
+	From string
+	Err  error
+}
+
 func (p *process) start() *PID {
 	recv := p.Producer()
 	p.inbox <- Started{}
@@ -47,8 +53,24 @@ func (p *process) start() *PID {
 	go func() {
 		defer func() {
 			if err := recover(); err != nil {
+				if msg, ok := err.(*InternalError); ok {
+					time.Sleep(time.Second * 1)
+					log.Errorw(msg.From, log.M{
+						"error": msg.Err,
+					})
+					p.start()
+					return
+				}
+
 				p.restarts++
-				log.Errorw("[ACTOR] restarting", log.M{
+				if p.restarts == p.MaxRestarts {
+					log.Errorw("[PROCESS] max restarts exceeded, shutting down...", log.M{
+						"pid": p.pid,
+					})
+					close(p.quitch)
+				}
+
+				log.Errorw("[PROCESS] actor restarting", log.M{
 					"n":           p.restarts,
 					"maxRestarts": p.MaxRestarts,
 					"pid":         p.pid,
@@ -70,6 +92,7 @@ func (p *process) start() *PID {
 				break loop
 			}
 		}
+		p.context.engine.registry.remove(p.pid)
 		log.Tracew("[PROCESS] inbox shutdown", log.M{
 			"pid": p.pid,
 		})
@@ -78,14 +101,6 @@ func (p *process) start() *PID {
 	return p.pid
 }
 
-func (p *process) PID() *PID {
-	return p.pid
-}
-
-func (p *process) Send(_ *PID, msg any) {
-	p.inbox <- msg
-}
-
-func (p *process) Shutdown() {
-	close(p.quitch)
-}
+func (p *process) PID() *PID            { return p.pid }
+func (p *process) Send(_ *PID, msg any) { p.inbox <- msg }
+func (p *process) Shutdown()            { close(p.quitch) }

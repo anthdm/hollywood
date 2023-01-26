@@ -2,6 +2,8 @@ package remote
 
 import (
 	context "context"
+	errors "errors"
+	"io"
 	"net"
 	"time"
 
@@ -50,10 +52,7 @@ func (e *streamWriter) Receive(ctx *actor.Context) {
 func (e *streamWriter) init() {
 	rawconn, err := net.Dial("tcp", e.writeToAddr)
 	if err != nil {
-		log.Fatalw("[REMOTE] failed to dial pid", log.M{
-			"err":         err,
-			"writeToAddr": e.writeToAddr,
-		})
+		panic(&actor.InternalError{Err: err, From: "[STREAM WRITER]"})
 	}
 	e.rawconn = rawconn
 	rawconn.SetDeadline(time.Now().Add(connIdleTimeout))
@@ -63,7 +62,7 @@ func (e *streamWriter) init() {
 
 	stream, err := client.Receive(context.Background())
 	if err != nil {
-		log.Errorw("[STREAM WRITER] streaming receive error", log.M{
+		log.Errorw("[STREAM WRITER] receive error", log.M{
 			"err":         err,
 			"writeToAddr": e.writeToAddr,
 		})
@@ -72,25 +71,32 @@ func (e *streamWriter) init() {
 	e.stream = stream
 	e.conn = conn
 
-	log.Tracew("[REMOTE] stream writer started", log.M{
+	log.Tracew("[STREAM WRITER] started", log.M{
 		"writeToAddr": e.writeToAddr,
 	})
 
 	go func() {
 		<-e.conn.Closed()
+		e.stream.Close()
 		e.engine.Send(e.routerPID, terminateStream{address: e.writeToAddr})
 	}()
 }
 
 func (e *streamWriter) handleWriteStream(ws writeToStream) {
+	if e.stream == nil {
+		return
+	}
 	msg, err := serialize(ws.pid, ws.msg)
 	if err != nil {
 		log.Errorw("[REMOTE] failed serializing message", log.M{
 			"err": err,
 		})
 	}
-
 	if err := e.stream.Send(msg); err != nil {
+		if errors.Is(err, io.EOF) {
+			e.conn.Close()
+			return
+		}
 		log.Errorw("[REMOTE] failed sending message", log.M{
 			"err": err,
 		})
