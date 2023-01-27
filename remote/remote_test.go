@@ -31,14 +31,14 @@ func TestWithSender(t *testing.T) {
 }
 
 func TestRequestResponse(t *testing.T) {
-	a := makeRemoteEngine("127.0.0.1:4000")
+	a := makeRemoteEngine("127.0.0.1:4001")
 	pid := a.Spawn(actor.NewTestReceiver(t, func(t *testing.T, ctx *actor.Context) {
 		if _, ok := ctx.Message().(*TestMessage); ok {
 			ctx.Respond(&TestMessage{Data: []byte("foo")})
 		}
 	}), "test")
 
-	b := makeRemoteEngine("127.0.0.1:5000")
+	b := makeRemoteEngine("127.0.0.1:5001")
 	resp, err := b.Request(pid, &TestMessage{}, time.Second).Result()
 	require.Nil(t, err)
 	assert.Equal(t, resp.(*TestMessage).Data, []byte("foo"))

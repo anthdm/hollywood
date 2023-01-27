@@ -6,4 +6,5 @@ message PID {
 	string address = 1;
 	string ID = 2;
 	repeated string tags = 3;
+	string lookupKey = 4;
 }
