@@ -16,7 +16,7 @@ func TestWithSender(t *testing.T) {
 		wg        = sync.WaitGroup{}
 		senderPID = actor.NewPID("a", "b")
 	)
-	pid := a.Spawn(actor.NewTestReceiver(t, func(t *testing.T, ctx *actor.Context) {
+	pid := a.Spawn(actor.NewTestProducer(t, func(t *testing.T, ctx *actor.Context) {
 		if _, ok := ctx.Message().(*TestMessage); ok {
 			wg.Done()
 			assert.Equal(t, senderPID.Address, ctx.Sender().Address)
@@ -32,7 +32,7 @@ func TestWithSender(t *testing.T) {
 
 func TestRequestResponse(t *testing.T) {
 	a := makeRemoteEngine("127.0.0.1:4001")
-	pid := a.Spawn(actor.NewTestReceiver(t, func(t *testing.T, ctx *actor.Context) {
+	pid := a.Spawn(actor.NewTestProducer(t, func(t *testing.T, ctx *actor.Context) {
 		if _, ok := ctx.Message().(*TestMessage); ok {
 			ctx.Respond(&TestMessage{Data: []byte("foo")})
 		}

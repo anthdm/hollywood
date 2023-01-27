@@ -9,7 +9,7 @@ type TestReceiver struct {
 	t         *testing.T
 }
 
-func NewTestReceiver(t *testing.T, f TestReceiveFunc) Producer {
+func NewTestProducer(t *testing.T, f TestReceiveFunc) Producer {
 	return func() Receiver {
 		return &TestReceiver{
 			OnReceive: f,

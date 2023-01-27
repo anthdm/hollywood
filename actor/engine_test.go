@@ -17,7 +17,7 @@ func TestSpawn(t *testing.T) {
 		wg.Add(1)
 		go func(i int) {
 			tag := strconv.Itoa(i)
-			pid := e.Spawn(NewTestReceiver(t, func(t *testing.T, ctx *Context) {
+			pid := e.Spawn(NewTestProducer(t, func(t *testing.T, ctx *Context) {
 			}), "dummy", tag)
 			e.Send(pid, 1)
 			wg.Done()
@@ -32,7 +32,7 @@ func TestPoison(t *testing.T) {
 
 	for i := 0; i < 4; i++ {
 		tag := strconv.Itoa(i)
-		pid := e.Spawn(NewTestReceiver(t, func(t *testing.T, ctx *Context) {
+		pid := e.Spawn(NewTestProducer(t, func(t *testing.T, ctx *Context) {
 
 		}), "dummy", tag)
 		e.Poison(pid)
@@ -44,7 +44,7 @@ func TestPoison(t *testing.T) {
 
 func TestRequestResponse(t *testing.T) {
 	e := NewEngine()
-	pid := e.Spawn(NewTestReceiver(t, func(t *testing.T, ctx *Context) {
+	pid := e.Spawn(NewTestProducer(t, func(t *testing.T, ctx *Context) {
 		if msg, ok := ctx.Message().(string); ok {
 			assert.Equal(t, "foo", msg)
 			ctx.Respond("bar")
@@ -62,7 +62,7 @@ func TestRequestResponse(t *testing.T) {
 
 func BenchmarkSendMessageLocal(b *testing.B) {
 	e := NewEngine()
-	pid := e.Spawn(NewTestReceiver(nil, func(_ *testing.T, _ *Context) {}), "dummy")
+	pid := e.Spawn(NewTestProducer(nil, func(_ *testing.T, _ *Context) {}), "dummy")
 
 	for i := 0; i < b.N; i++ {
 		e.Send(pid, pid)

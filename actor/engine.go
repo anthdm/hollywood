@@ -12,6 +12,7 @@ type ProducerConfig struct {
 	Tags        []string
 	MaxRestarts int
 	InboxSize   int
+	WithHooks   bool
 }
 
 func DefaultProducerConfig(p Producer) ProducerConfig {
@@ -19,15 +20,43 @@ func DefaultProducerConfig(p Producer) ProducerConfig {
 		Producer:    p,
 		MaxRestarts: 3,
 		InboxSize:   100,
+		WithHooks:   false,
 	}
 }
+
+type Remoter interface {
+	Address() string
+	Send(*PID, any)
+	Start()
+}
+
+// Producer is any function that can return a Receiver
+type Producer func() Receiver
 
 type Receiver interface {
 	Receive(*Context)
 }
 
-type Producer func() Receiver
+type hookReceiver struct {
+	r Receiver
+}
 
+type Hooker interface {
+	OnStarted(*Context)
+	OnStopped(*Context)
+}
+
+func (h hookReceiver) Receive(ctx *Context) {
+	switch ctx.Message().(type) {
+	case Started:
+		h.r.(Hooker).OnStarted(ctx)
+	case Stopped:
+		h.r.(Hooker).OnStopped(ctx)
+	}
+	h.r.Receive(ctx)
+}
+
+// Engine represents the actor engine.
 type Engine struct {
 	EventStream *EventStream
 
@@ -37,12 +66,7 @@ type Engine struct {
 	deadLetter processer
 }
 
-type Remoter interface {
-	Address() string
-	Send(*PID, any)
-	Start()
-}
-
+// NewEngine returns a new actor Engine.
 func NewEngine() *Engine {
 	e := &Engine{
 		EventStream: NewEventStream(),
@@ -54,10 +78,19 @@ func NewEngine() *Engine {
 	return e
 }
 
+// WithRemote returns a new actor Engine with the given Remoter,
+// and will call its Start function
 func (e *Engine) WithRemote(r Remoter) {
 	e.remote = r
 	e.address = r.Address()
 	r.Start()
+}
+
+func (e *Engine) Spawn(p Producer, name string, tags ...string) *PID {
+	pconf := DefaultProducerConfig(p)
+	pconf.Name = name
+	pconf.Tags = tags
+	return e.spawn(pconf).PID()
 }
 
 func (e *Engine) SpawnConfig(cfg ProducerConfig) *PID {
@@ -69,13 +102,6 @@ func (e *Engine) SpawnConfig(cfg ProducerConfig) *PID {
 // the listen address of the remote.
 func (e *Engine) Address() string {
 	return e.address
-}
-
-func (e *Engine) Spawn(p Producer, name string, tags ...string) *PID {
-	pconf := DefaultProducerConfig(p)
-	pconf.Name = name
-	pconf.Tags = tags
-	return e.spawn(pconf).PID()
 }
 
 func (e *Engine) Request(pid *PID, msg any, timeout time.Duration) *Response {

@@ -41,13 +41,11 @@ func newProcess(e *Engine, cfg ProducerConfig) *process {
 	return p
 }
 
-type InternalError struct {
-	From string
-	Err  error
-}
-
 func (p *process) start() *PID {
 	recv := p.Producer()
+	if p.WithHooks {
+		recv = hookReceiver{recv}
+	}
 	p.inbox <- Started{}
 
 	go func() {
