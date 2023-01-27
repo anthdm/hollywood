@@ -46,10 +46,7 @@ func (r *fooReceiver) Receive(ctx *actor.Context) {
 		_ = msg
 	case message:
 		fmt.Println("received and starting bar:", msg.data)
-		// r.barPID = ctx.Engine().Spawn(newBarReceiver(msg.data), "bar", msg.data)
 		r.barPID = ctx.SpawnChild(newBarReceiver(msg.data), "bar", msg.data)
-
-		fmt.Println(r.barPID)
 	case actor.Stopped:
 		fmt.Println("foo will stop")
 	}
@@ -62,10 +59,8 @@ type message struct {
 func main() {
 	e := actor.NewEngine()
 	pid := e.Spawn(newFooReceiver, "foo")
-	// for i := 0; i < 10; i++ {
 	e.Send(pid, message{data: fmt.Sprintf("msg_%d", 1)})
 	time.Sleep(time.Millisecond)
 	e.Poison(pid)
-	// }
-	time.Sleep(time.Millisecond * 100000)
+	time.Sleep(time.Millisecond * 1)
 }

@@ -6,7 +6,7 @@ import (
 	"github.com/anthdm/hollywood/log"
 )
 
-type ProducerConfig struct {
+type Opts struct {
 	Producer    Producer
 	Name        string
 	Tags        []string
@@ -15,8 +15,8 @@ type ProducerConfig struct {
 	WithHooks   bool
 }
 
-func DefaultProducerConfig(p Producer) ProducerConfig {
-	return ProducerConfig{
+func DefaultOpts(p Producer) Opts {
+	return Opts{
 		Producer:    p,
 		MaxRestarts: 3,
 		InboxSize:   100,
@@ -87,13 +87,13 @@ func (e *Engine) WithRemote(r Remoter) {
 }
 
 func (e *Engine) Spawn(p Producer, name string, tags ...string) *PID {
-	pconf := DefaultProducerConfig(p)
-	pconf.Name = name
-	pconf.Tags = tags
-	return e.spawn(pconf).PID()
+	opts := DefaultOpts(p)
+	opts.Name = name
+	opts.Tags = tags
+	return e.spawn(opts).PID()
 }
 
-func (e *Engine) SpawnConfig(cfg ProducerConfig) *PID {
+func (e *Engine) SpawnConfig(cfg Opts) *PID {
 	return e.spawn(cfg).PID()
 }
 
@@ -146,7 +146,7 @@ func (e *Engine) Poison(pid *PID) {
 	}
 }
 
-func (e *Engine) spawn(cfg ProducerConfig) processer {
+func (e *Engine) spawn(cfg Opts) processer {
 	proc := newProcess(e, cfg)
 	e.registry.add(proc)
 	return proc

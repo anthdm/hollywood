@@ -33,9 +33,12 @@ func (h *hookReceiver) OnStopped(ctx *actor.Context) {
 func main() {
 	actor.PIDSeparator = "→"
 	e := actor.NewEngine()
-	pid := e.SpawnConfig(actor.ProducerConfig{
-		Producer:  newHookReceiver,
-		Name:      "foo",
+	pid := e.SpawnConfig(actor.Opts{
+		Producer: newHookReceiver,
+		Name:     "foo",
+		// WithHooks set to true will give your receiver
+		// the ability to use the OnStarted and OnStopped hooks.
+		// NOTE: these will need to be implemented or the engine will panic
 		WithHooks: true,
 	})
 	time.Sleep(time.Millisecond)

@@ -1,20 +1,27 @@
 package actor
 
-import "github.com/anthdm/hollywood/log"
+import (
+	"github.com/anthdm/hollywood/log"
+	"github.com/anthdm/hollywood/safemap"
+)
 
 type Context struct {
-	pid      *PID
-	sender   *PID
-	engine   *Engine
-	message  any
-	children map[string]*PID
+	pid     *PID
+	sender  *PID
+	engine  *Engine
+	message any
+	// the context of the parent, if this is the context of a child.
+	// we need this so we can remove the child from the parent Context
+	// when the child dies.
+	parentCtx *Context
+	children  *safemap.SafeMap[string, *PID]
 }
 
 func newContext(e *Engine, pid *PID) *Context {
 	return &Context{
 		engine:   e,
 		pid:      pid,
-		children: make(map[string]*PID),
+		children: safemap.New[string, *PID](),
 	}
 }
 
@@ -32,15 +39,22 @@ func (c *Context) Respond(msg any) {
 // If the parent process dies, all the children will be automatically shutdown gracefully.
 // Hence, all children will receive the Stopped message.
 func (c *Context) SpawnChild(p Producer, name string, tags ...string) *PID {
-	pid := c.engine.Spawn(p, name, tags...)
-	c.children[name] = pid
-	return pid
+	cfg := Opts{
+		Producer: p,
+		Name:     name,
+		Tags:     tags,
+	}
+	proc := c.engine.spawn(cfg)
+	proc.(*process).context.parentCtx = c
+	c.children.Set(name, proc.PID())
+	return proc.PID()
 }
 
 // GetChild will return the PID of the child (if any) by the given name/id.
 // PID will be nil if it could not find it.
 func (c *Context) GetChild(id string) *PID {
-	return c.children[id]
+	pid, _ := c.children.Get(id)
+	return pid
 }
 
 func (c *Context) Send(pid *PID, msg any) {

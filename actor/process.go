@@ -15,7 +15,7 @@ type processer interface {
 }
 
 type process struct {
-	ProducerConfig
+	Opts
 
 	inbox    chan any
 	context  *Context
@@ -24,15 +24,15 @@ type process struct {
 	quitch   chan struct{}
 }
 
-func newProcess(e *Engine, cfg ProducerConfig) *process {
+func newProcess(e *Engine, cfg Opts) *process {
 	pid := NewPID(e.address, cfg.Name, cfg.Tags...)
 	ctx := newContext(e, pid)
 	p := &process{
-		pid:            pid,
-		inbox:          make(chan any, 1000),
-		ProducerConfig: cfg,
-		context:        ctx,
-		quitch:         make(chan struct{}, 1),
+		pid:     pid,
+		inbox:   make(chan any, 1000),
+		Opts:    cfg,
+		context: ctx,
+		quitch:  make(chan struct{}, 1),
 	}
 	p.start()
 	return p
@@ -93,22 +93,31 @@ func (p *process) start() *PID {
 				break loop
 			}
 		}
-		p.context.engine.registry.remove(p.pid)
-		log.Tracew("[PROCESS] inbox shutdown", log.M{
-			"pid": p.pid,
-		})
-		if len(p.context.children) > 0 {
-			for _, child := range p.context.children {
-				p.context.engine.Poison(child)
-				log.Tracew("[PROCESS] shutting down child", log.M{
-					"pid":   p.pid,
-					"child": child,
-				})
-			}
-		}
+		p.cleanup()
 	}()
 
 	return p.pid
+}
+
+func (p *process) cleanup() {
+	p.context.engine.registry.remove(p.pid)
+	// We are a child if the parent context is not nil
+	if p.context.parentCtx != nil {
+		p.context.parentCtx.children.Delete(p.Name)
+	}
+	// We are a parent if we have children running
+	if p.context.children.Len() > 0 {
+		p.context.children.ForEach(func(name string, pid *PID) {
+			p.context.engine.Poison(pid)
+			log.Tracew("[PROCESS] shutting down child", log.M{
+				"pid":   p.pid,
+				"child": pid,
+			})
+		})
+	}
+	log.Tracew("[PROCESS] inbox shutdown", log.M{
+		"pid": p.pid,
+	})
 }
 
 func (p *process) PID() *PID            { return p.pid }
