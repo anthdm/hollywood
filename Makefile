@@ -7,5 +7,6 @@ proto:
 build:
 	go build -o bin/helloworld examples/helloworld/main.go 
 	go build -o bin/hooks examples/hooks/main.go 
+	go build -o bin/hooks examples/childprocs/main.go 
 
 .PHONY: proto

@@ -26,10 +26,7 @@ type process struct {
 
 func newProcess(e *Engine, cfg ProducerConfig) *process {
 	pid := NewPID(e.address, cfg.Name, cfg.Tags...)
-	ctx := &Context{
-		engine: e,
-		pid:    pid,
-	}
+	ctx := newContext(e, pid)
 	p := &process{
 		pid:            pid,
 		inbox:          make(chan any, 1000),
@@ -100,6 +97,15 @@ func (p *process) start() *PID {
 		log.Tracew("[PROCESS] inbox shutdown", log.M{
 			"pid": p.pid,
 		})
+		if len(p.context.children) > 0 {
+			for _, child := range p.context.children {
+				p.context.engine.Poison(child)
+				log.Tracew("[PROCESS] shutting down child", log.M{
+					"pid":   p.pid,
+					"child": child,
+				})
+			}
+		}
 	}()
 
 	return p.pid
