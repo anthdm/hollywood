@@ -135,7 +135,9 @@ func (e *Engine) Send(pid *PID, msg any) {
 	e.remote.Send(pid, msg)
 }
 
-func (e Engine) Poison(pid *PID) {
+// Poison will shutdown the process that is associated with the given PID.
+// If the process had any children, they will be shutdowned too.
+func (e *Engine) Poison(pid *PID) {
 	proc := e.registry.get(pid)
 	if proc != nil {
 		e.sendLocal(pid, Stopped{})

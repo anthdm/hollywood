@@ -31,6 +31,7 @@ func (h *hookReceiver) OnStopped(ctx *actor.Context) {
 }
 
 func main() {
+	actor.PIDSeparator = "→"
 	e := actor.NewEngine()
 	pid := e.SpawnConfig(actor.ProducerConfig{
 		Producer:  newHookReceiver,

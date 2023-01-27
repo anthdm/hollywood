@@ -5,6 +5,8 @@ import (
 	"strings"
 )
 
+var PIDSeparator = "/"
+
 func NewPID(address, id string, tags ...string) *PID {
 	p := &PID{
 		Address: address,
@@ -19,9 +21,14 @@ func NewPID(address, id string, tags ...string) *PID {
 
 func (pid *PID) String() string {
 	if len(pid.Tags) > 0 {
-		return fmt.Sprintf("%s/%s/%s", pid.Address, pid.ID, strings.Join(pid.Tags, "/"))
+		return fmt.Sprintf("%s%s%s%s%s",
+			pid.Address,
+			PIDSeparator,
+			pid.ID,
+			PIDSeparator,
+			strings.Join(pid.Tags, PIDSeparator))
 	}
-	return fmt.Sprintf("%s/%s", pid.Address, pid.ID)
+	return fmt.Sprintf("%s%s%s", pid.Address, PIDSeparator, pid.ID)
 }
 
 func (pid *PID) HasTag(tag string) bool {

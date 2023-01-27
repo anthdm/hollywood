@@ -11,13 +11,13 @@ func TestPID(t *testing.T) {
 	id := "foo"
 
 	pid := NewPID(address, id)
-	assert.Equal(t, address+"/"+id, pid.String())
+	assert.Equal(t, address+PIDSeparator+id, pid.String())
 
 	pid = NewPID(address, id, "100")
-	assert.Equal(t, address+"/"+id+"/"+"100", pid.String())
+	assert.Equal(t, address+PIDSeparator+id+PIDSeparator+"100", pid.String())
 
 	pid = NewPID(address, id, "100", "bar")
-	assert.Equal(t, address+"/"+id+"/100"+"/bar", pid.LookupKey)
+	assert.Equal(t, address+PIDSeparator+id+PIDSeparator+"100"+PIDSeparator+"bar", pid.LookupKey)
 }
 
 func TestPIDHasTag(t *testing.T) {
