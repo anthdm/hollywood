@@ -33,7 +33,7 @@ func (h *hookReceiver) OnStop(ctx *actor.Context) {
 func main() {
 	actor.PIDSeparator = "→"
 	e := actor.NewEngine()
-	pid := e.SpawnConfig(actor.Opts{
+	pid := e.SpawnOpts(actor.Opts{
 		Producer: newHookReceiver,
 		Name:     "foo",
 		// WithHooks set to true will give your receiver

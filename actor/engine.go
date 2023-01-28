@@ -93,7 +93,7 @@ func (e *Engine) Spawn(p Producer, name string, tags ...string) *PID {
 	return e.spawn(opts).PID()
 }
 
-func (e *Engine) SpawnConfig(cfg Opts) *PID {
+func (e *Engine) SpawnOpts(cfg Opts) *PID {
 	return e.spawn(cfg).PID()
 }
 
