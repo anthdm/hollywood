@@ -8,6 +8,8 @@ import (
 	"github.com/anthdm/hollywood/log"
 )
 
+const restartDelay = time.Millisecond * 500
+
 type processer interface {
 	PID() *PID
 	Send(*PID, any)
@@ -20,7 +22,7 @@ type process struct {
 	inbox    chan any
 	context  *Context
 	pid      *PID
-	restarts int
+	restarts int32
 	quitch   chan struct{}
 }
 
@@ -47,32 +49,8 @@ func (p *process) start() *PID {
 
 	go func() {
 		defer func() {
-			if err := recover(); err != nil {
-				if msg, ok := err.(*InternalError); ok {
-					time.Sleep(time.Second * 1)
-					log.Errorw(msg.From, log.M{
-						"error": msg.Err,
-					})
-					p.start()
-					return
-				}
-
-				p.restarts++
-				if p.restarts == p.MaxRestarts {
-					log.Errorw("[PROCESS] max restarts exceeded, shutting down...", log.M{
-						"pid": p.pid,
-					})
-					close(p.quitch)
-				}
-
-				log.Errorw("[PROCESS] actor restarting", log.M{
-					"n":           p.restarts,
-					"maxRestarts": p.MaxRestarts,
-					"pid":         p.pid,
-					"reason":      err,
-				})
-				fmt.Println(string(debug.Stack()))
-				p.start()
+			if v := recover(); v != nil {
+				p.tryRestart(v)
 			}
 		}()
 
@@ -97,6 +75,44 @@ func (p *process) start() *PID {
 	}()
 
 	return p.pid
+}
+
+func (p *process) tryRestart(v any) {
+	fmt.Println(string(debug.Stack()))
+	p.restarts++
+	// InternalError does not take the maximum restarts into account.
+	// For now, InternalError is getting triggered when we are dialing
+	// a remote node. By doing this, we can keep dialing until it comes
+	// back up. NOTE: not sure if that is the best option. What if that
+	// node never comes back up again?
+	if msg, ok := v.(*InternalError); ok {
+		log.Errorw(msg.From, log.M{
+			"error": msg.Err,
+		})
+		time.Sleep(restartDelay)
+		p.start()
+		return
+	}
+	// If we reach the max restarts, we shutdown the inbox and clean
+	// everything up.
+	if p.restarts == p.MaxRestarts {
+		log.Errorw("[PROCESS] max restarts exceeded, shutting down...", log.M{
+			"pid":      p.pid,
+			"restarts": p.restarts,
+		})
+		close(p.quitch)
+		close(p.inbox)
+		return
+	}
+	// Restart the process after its restartDelay
+	log.Errorw("[PROCESS] actor restarting", log.M{
+		"n":           p.restarts,
+		"maxRestarts": p.MaxRestarts,
+		"pid":         p.pid,
+		"reason":      v,
+	})
+	time.Sleep(restartDelay)
+	p.start()
 }
 
 func (p *process) cleanup() {

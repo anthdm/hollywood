@@ -20,7 +20,7 @@ func newFoo() actor.Receiver {
 func (f *foo) Receive(ctx *actor.Context) {
 	switch msg := ctx.Message().(type) {
 	case actor.Started:
-		fmt.Println("foo has started")
+		fmt.Println("foo started")
 	case *message:
 		fmt.Println("foo has received", msg.data)
 	}

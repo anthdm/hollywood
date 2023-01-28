@@ -10,7 +10,7 @@ type Opts struct {
 	Producer    Producer
 	Name        string
 	Tags        []string
-	MaxRestarts int
+	MaxRestarts int32
 	InboxSize   int
 	WithHooks   bool
 }
