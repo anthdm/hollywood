@@ -9,5 +9,6 @@ build:
 	go build -o bin/hooks examples/hooks/main.go 
 	go build -o bin/childprocs examples/childprocs/main.go 
 	go build -o bin/request examples/request/main.go 
+	go build -o bin/restarts examples/restarts/main.go 
 
 .PHONY: proto
