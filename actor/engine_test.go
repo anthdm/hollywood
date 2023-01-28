@@ -1,6 +1,7 @@
 package actor
 
 import (
+	"fmt"
 	"strconv"
 	"sync"
 	"testing"
@@ -8,6 +9,42 @@ import (
 
 	"github.com/stretchr/testify/assert"
 )
+
+func TestSendWithSender(t *testing.T) {
+	e := NewEngine()
+	sender := NewPID("local", "foo")
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	pid := e.Spawn(NewTestProducer(t, func(t *testing.T, ctx *Context) {
+		if _, ok := ctx.Message().(string); ok {
+			assert.NotNil(t, ctx.Sender())
+			assert.Equal(t, sender, ctx.Sender())
+			wg.Done()
+		}
+	}), "test")
+	e.SendWithSender(pid, "data", sender)
+	wg.Wait()
+}
+
+func TestSendMsgRaceCon(t *testing.T) {
+	e := NewEngine()
+	wg := sync.WaitGroup{}
+	pid := e.Spawn(NewTestProducer(t, func(t *testing.T, ctx *Context) {
+		msg := ctx.Message()
+		if msg == nil {
+			fmt.Println("should never happen")
+		}
+	}), "test")
+
+	for i := 0; i < 100; i++ {
+		wg.Add(1)
+		go func() {
+			e.Send(pid, []byte("f"))
+			wg.Done()
+		}()
+	}
+	wg.Wait()
+}
 
 func TestSpawn(t *testing.T) {
 	e := NewEngine()
@@ -23,7 +60,6 @@ func TestSpawn(t *testing.T) {
 			wg.Done()
 		}(i)
 	}
-
 	wg.Wait()
 }
 
