@@ -78,7 +78,6 @@ func (p *process) start() *PID {
 }
 
 func (p *process) tryRestart(v any) {
-	fmt.Println(string(debug.Stack()))
 	p.restarts++
 	// InternalError does not take the maximum restarts into account.
 	// For now, InternalError is getting triggered when we are dialing
@@ -93,6 +92,8 @@ func (p *process) tryRestart(v any) {
 		p.start()
 		return
 	}
+
+	fmt.Println(string(debug.Stack()))
 	// If we reach the max restarts, we shutdown the inbox and clean
 	// everything up.
 	if p.restarts == p.MaxRestarts {
