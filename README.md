@@ -1,4 +1,8 @@
+[![Go Report Card](https://goreportcard.com/badge/github.com/anthdm/hollywood)](https://goreportcard.com/report/github.com/anthdm/hollywood)
+
 # Hollywood
+
+A blazingly fast and lightweight actor engine with all batteries included.
 
 # Installation
 
@@ -9,6 +13,7 @@ go get github.com/anthdm/hollywood
 # Quickstart
 
 > The examples folder is the best place to learn how to work with Hollywood.
+
 ```Go
 type message struct {
 	data string
@@ -36,11 +41,12 @@ func main() {
 	time.Sleep(time.Second * 1)
 }
 ```
+
 ## Spawning receivers with configuration
+
 ```Go
 // TODO
 ```
-
 
 # PIDS
 

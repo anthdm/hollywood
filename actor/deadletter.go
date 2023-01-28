@@ -7,21 +7,28 @@ import (
 )
 
 type deadLetter struct {
-	pid *PID
+	eventStream *EventStream
+	pid         *PID
 }
 
-func newDeadLetter() *deadLetter {
+func newDeadLetter(eventStream *EventStream) *deadLetter {
 	return &deadLetter{
-		pid: NewPID(localLookupAddr, "deadLetter"),
+		eventStream: eventStream,
+		pid:         NewPID(localLookupAddr, "deadLetter"),
 	}
 }
 
-func (d *deadLetter) PID() *PID { return d.pid }
-func (d *deadLetter) Shutdown() {}
 func (d *deadLetter) Send(dest *PID, msg any) {
 	log.Warnw("[DEADLETTER]", log.M{
 		"dest":   dest,
 		"msg":    reflect.TypeOf(msg),
 		"sender": nil,
 	})
+	d.eventStream.Publish(&DeadLetter{
+		Target:  dest,
+		Message: msg,
+	})
 }
+
+func (d *deadLetter) PID() *PID { return d.pid }
+func (d *deadLetter) Shutdown() {}

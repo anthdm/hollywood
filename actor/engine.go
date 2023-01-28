@@ -73,7 +73,7 @@ func NewEngine() *Engine {
 		address:     "local",
 	}
 	e.registry = newRegistry(e)
-	e.deadLetter = newDeadLetter()
+	e.deadLetter = newDeadLetter(e.EventStream)
 	e.registry.add(e.deadLetter)
 	return e
 }

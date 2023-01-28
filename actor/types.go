@@ -1,5 +1,10 @@
 package actor
 
+type DeadLetter struct {
+	Target  *PID
+	Message any
+}
+
 type InternalError struct {
 	From string
 	Err  error
