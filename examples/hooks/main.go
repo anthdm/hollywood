@@ -22,11 +22,11 @@ func (h *hookReceiver) Receive(ctx *actor.Context) {
 	}
 }
 
-func (h *hookReceiver) OnStarted(ctx *actor.Context) {
+func (h *hookReceiver) OnStart(ctx *actor.Context) {
 	fmt.Println("started from hooks, my PID: ", ctx.PID())
 }
 
-func (h *hookReceiver) OnStopped(ctx *actor.Context) {
+func (h *hookReceiver) OnStop(ctx *actor.Context) {
 	fmt.Println("the actor has stopped from hooks")
 }
 

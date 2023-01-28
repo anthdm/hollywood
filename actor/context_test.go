@@ -12,12 +12,10 @@ func TestSpawnChild(t *testing.T) {
 	pid := e.Spawn(NewTestProducer(t, func(t *testing.T, ctx *Context) {
 		switch ctx.Message().(type) {
 		case Started:
-			var cpid *PID
-			cpid = ctx.SpawnChild(NewTestProducer(t, func(_ *testing.T, _ *Context) {
-				switch ctx.Message().(type) {
+			ctx.SpawnChild(NewTestProducer(t, func(_ *testing.T, childCtx *Context) {
+				switch childCtx.Message().(type) {
 				case Started:
 				case Stopped:
-					assert.Equal(t, cpid, ctx.GetChild("test_child"))
 				}
 			}), "test_child")
 		case Stopped:

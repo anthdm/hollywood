@@ -61,6 +61,12 @@ func (c *Context) Send(pid *PID, msg any) {
 	c.engine.Send(pid, msg)
 }
 
+// Forward will forward the current received message to the given PID.
+// This will also set the "forwarder" as the sender of the message.
+func (c *Context) Forward(pid *PID) {
+	c.engine.SendWithSender(pid, c.message, c.pid)
+}
+
 func (c *Context) PID() *PID {
 	return c.pid
 }

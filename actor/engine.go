@@ -42,16 +42,16 @@ type hookReceiver struct {
 }
 
 type Hooker interface {
-	OnStarted(*Context)
-	OnStopped(*Context)
+	OnStart(*Context)
+	OnStop(*Context)
 }
 
 func (h hookReceiver) Receive(ctx *Context) {
 	switch ctx.Message().(type) {
 	case Started:
-		h.r.(Hooker).OnStarted(ctx)
+		h.r.(Hooker).OnStart(ctx)
 	case Stopped:
-		h.r.(Hooker).OnStopped(ctx)
+		h.r.(Hooker).OnStop(ctx)
 	}
 	h.r.Receive(ctx)
 }
