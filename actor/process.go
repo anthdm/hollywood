@@ -101,7 +101,6 @@ func (p *process) tryRestart(v any) {
 			"restarts": p.restarts,
 		})
 		close(p.quitch)
-		close(p.inbox)
 		return
 	}
 	// Restart the process after its restartDelay
