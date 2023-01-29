@@ -137,6 +137,8 @@ func (p *process) cleanup() {
 	log.Tracew("[PROCESS] inbox shutdown", log.M{
 		"pid": p.pid,
 	})
+	// Send termination event to the eventstream
+	p.context.engine.EventStream.Publish(&Termination{PID: p.pid})
 }
 
 func (p *process) PID() *PID            { return p.pid }

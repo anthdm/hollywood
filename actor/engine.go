@@ -100,6 +100,10 @@ func (e *Engine) SpawnOpts(cfg Opts) *PID {
 	return e.spawn(cfg).PID()
 }
 
+func (e *Engine) SpawnFunc(f func(*Context), id string, tags ...string) *PID {
+	return e.Spawn(newFuncReceiver(f), "foo", tags...)
+}
+
 // Address returns the address of the actor engine. When there is
 // no remote configured, the "local" address will be used, otherwise
 // the listen address of the remote.
@@ -164,4 +168,20 @@ func (e *Engine) sendLocal(pid *PID, msg any) {
 
 func (e *Engine) isLocalMessage(pid *PID) bool {
 	return e.address == pid.Address
+}
+
+type funcReceiver struct {
+	f func(*Context)
+}
+
+func newFuncReceiver(f func(*Context)) Producer {
+	return func() Receiver {
+		return &funcReceiver{
+			f: f,
+		}
+	}
+}
+
+func (r *funcReceiver) Receive(c *Context) {
+	r.f(c)
 }

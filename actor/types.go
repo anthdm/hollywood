@@ -5,6 +5,10 @@ type DeadLetter struct {
 	Message any
 }
 
+type Termination struct {
+	PID *PID
+}
+
 type InternalError struct {
 	From string
 	Err  error
