@@ -45,11 +45,16 @@ func (c *Context) SpawnChild(p Producer, name string, tags ...string) *PID {
 		Tags:     tags,
 	}
 	proc := c.engine.spawn(cfg)
+	procc := proc.(*process)
+	procc.context.parentCtx = c
+	procc.start()
 	proc.(*process).context.parentCtx = c
 	c.children.Set(name, proc.PID())
 	return proc.PID()
 }
 
+// SpawnChildFunc spawns the given function as a child Receiver of the current
+// Context.
 func (c *Context) SpawnChildFunc(f func(*Context), name string, tags ...string) *PID {
 	return c.SpawnChild(newFuncReceiver(f), name, tags...)
 }

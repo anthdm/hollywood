@@ -6,6 +6,11 @@ import (
 	"github.com/anthdm/hollywood/log"
 )
 
+const (
+	defaultInboxSize   = 100
+	defaultMaxRestarts = 3
+)
+
 type Opts struct {
 	Producer    Producer
 	Name        string
@@ -18,8 +23,8 @@ type Opts struct {
 func DefaultOpts(p Producer) Opts {
 	return Opts{
 		Producer:    p,
-		MaxRestarts: 3,
-		InboxSize:   1000,
+		MaxRestarts: defaultMaxRestarts,
+		InboxSize:   defaultInboxSize,
 		WithHooks:   false,
 	}
 }
@@ -97,6 +102,12 @@ func (e *Engine) Spawn(p Producer, name string, tags ...string) *PID {
 }
 
 func (e *Engine) SpawnOpts(cfg Opts) *PID {
+	if cfg.InboxSize == 0 {
+		cfg.InboxSize = defaultInboxSize
+	}
+	if cfg.MaxRestarts == 0 {
+		cfg.MaxRestarts = defaultMaxRestarts
+	}
 	return e.spawn(cfg).PID()
 }
 

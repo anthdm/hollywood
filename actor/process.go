@@ -65,6 +65,9 @@ func (p *process) start() *PID {
 			msg:    Started{},
 			sender: nil,
 		}
+		log.Debugw("[PROCESS] started", log.M{
+			"pid": p.pid,
+		})
 	loop:
 		for {
 			select {
