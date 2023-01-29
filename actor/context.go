@@ -57,8 +57,11 @@ func (c *Context) GetChild(id string) *PID {
 	return pid
 }
 
+// Send will send the given message to the given PID. The
+// receiver can call ctx.Sender() to know who has sended
+// the message.
 func (c *Context) Send(pid *PID, msg any) {
-	c.engine.Send(pid, msg)
+	c.engine.SendWithSender(pid, msg, c.pid)
 }
 
 // Forward will forward the current received message to the given PID.
