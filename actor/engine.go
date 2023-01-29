@@ -111,6 +111,9 @@ func (e *Engine) Address() string {
 	return e.address
 }
 
+// Request sends the given message to the given PID as a "Request", returning
+// a response that will resolve in the future. Calling Response.Result() will
+// block until the deadline is exceeded or the response is being resolved.
 func (e *Engine) Request(pid *PID, msg any, timeout time.Duration) *Response {
 	resp := NewResponse(e, timeout)
 	e.registry.add(resp)
@@ -120,6 +123,9 @@ func (e *Engine) Request(pid *PID, msg any, timeout time.Duration) *Response {
 	return resp
 }
 
+// SendWithSender will send the given message to the given PID with the
+// given sender. Receivers receiving this message can check the sender
+// by calling Context.Sender().
 func (e *Engine) SendWithSender(pid *PID, msg any, sender *PID) {
 	m := &WithSender{
 		Sender:  sender,
@@ -128,6 +134,9 @@ func (e *Engine) SendWithSender(pid *PID, msg any, sender *PID) {
 	e.Send(pid, m)
 }
 
+// Send sends the given message to the given PID. If the message cannot be
+// delivered due to the fact that the given process is not registered.
+// The message will be send to the DeadLetter process instead.
 func (e *Engine) Send(pid *PID, msg any) {
 	if e.isLocalMessage(pid) {
 		e.sendLocal(pid, msg)
