@@ -31,7 +31,7 @@ func newProcess(e *Engine, cfg Opts) *process {
 	ctx := newContext(e, pid)
 	p := &process{
 		pid:     pid,
-		inbox:   make(chan any, 1000),
+		inbox:   make(chan any, cfg.InboxSize),
 		Opts:    cfg,
 		context: ctx,
 		quitch:  make(chan struct{}, 1),

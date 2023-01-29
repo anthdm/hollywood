@@ -96,9 +96,34 @@ func TestRequestResponse(t *testing.T) {
 	assert.Equal(t, e.deadLetter, e.registry.get(resp.pid))
 }
 
+func TestXxx(t *testing.T) {
+	e := NewEngine()
+	pid := e.Spawn(NewTestProducer(nil, func(_ *testing.T, _ *Context) {
+		fmt.Println("redd")
+	}), "dummy")
+
+	// for i := 0; i < 1000; i++ {
+	e.Send(pid, pid)
+	time.Sleep(time.Second)
+	// }
+}
+
+func BenchmarkSendMessage(b *testing.B) {
+	x := 2
+	for i := 0; i < b.N; i++ {
+		x++
+	}
+}
+
 func BenchmarkSendMessageLocal(b *testing.B) {
 	e := NewEngine()
-	pid := e.Spawn(NewTestProducer(nil, func(_ *testing.T, _ *Context) {}), "dummy")
+	p := NewTestProducer(nil, func(_ *testing.T, _ *Context) {})
+
+	pid := e.SpawnOpts(Opts{
+		Producer:  p,
+		InboxSize: 10000,
+		Name:      "bench",
+	})
 
 	for i := 0; i < b.N; i++ {
 		e.Send(pid, pid)

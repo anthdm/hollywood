@@ -29,6 +29,8 @@ func (f *foo) Receive(ctx *actor.Context) {
 func main() {
 	engine := actor.NewEngine()
 	pid := engine.Spawn(newFoo, "foo")
-	engine.Send(pid, &message{data: "hello world!"})
+	for i := 0; i < 99; i++ {
+		engine.Send(pid, &message{data: "hello world!"})
+	}
 	time.Sleep(time.Second * 1)
 }
