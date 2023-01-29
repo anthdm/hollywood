@@ -108,13 +108,6 @@ func TestXxx(t *testing.T) {
 	// }
 }
 
-func BenchmarkSendMessage(b *testing.B) {
-	x := 2
-	for i := 0; i < b.N; i++ {
-		x++
-	}
-}
-
 func BenchmarkSendMessageLocal(b *testing.B) {
 	e := NewEngine()
 	p := NewTestProducer(nil, func(_ *testing.T, _ *Context) {})
