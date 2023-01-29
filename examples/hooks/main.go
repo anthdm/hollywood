@@ -16,18 +16,22 @@ func newHookReceiver() actor.Receiver {
 
 func (h *hookReceiver) Receive(ctx *actor.Context) {
 	switch msg := ctx.Message().(type) {
-	case actor.Started, actor.Stopped:
+	case actor.Started, actor.Stopped, actor.Initialized:
 	default:
 		fmt.Println("received: ", reflect.TypeOf(msg))
 	}
 }
 
+func (h *hookReceiver) OnInit(ctx *actor.Context) {
+	fmt.Println("[INIT] called from hooks")
+}
+
 func (h *hookReceiver) OnStart(ctx *actor.Context) {
-	fmt.Println("started from hooks, my PID: ", ctx.PID())
+	fmt.Println("[START] called from hooks, my PID: ", ctx.PID())
 }
 
 func (h *hookReceiver) OnStop(ctx *actor.Context) {
-	fmt.Println("the actor has stopped from hooks")
+	fmt.Println("[STOP] the actor has stopped from hooks")
 }
 
 func main() {

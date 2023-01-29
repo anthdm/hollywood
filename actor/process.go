@@ -45,7 +45,9 @@ func (p *process) start() *PID {
 	if p.WithHooks {
 		recv = hookReceiver{recv}
 	}
-	p.inbox <- Started{}
+
+	p.context.message = Initialized{}
+	recv.Receive(p.context)
 
 	go func() {
 		defer func() {
@@ -54,6 +56,7 @@ func (p *process) start() *PID {
 			}
 		}()
 
+		p.inbox <- Started{}
 	loop:
 		for {
 			select {

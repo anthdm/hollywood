@@ -10,6 +10,8 @@ type InternalError struct {
 	Err  error
 }
 
+type Initialized struct{}
+
 type Started struct{}
 
 type Stopped struct{}
