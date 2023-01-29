@@ -43,10 +43,9 @@ func (r *fooReceiver) Receive(ctx *actor.Context) {
 	switch msg := ctx.Message().(type) {
 	case actor.Started:
 		fmt.Println("foo started")
-		_ = msg
 	case message:
-		fmt.Println("received and starting bar:", msg.data)
 		r.barPID = ctx.SpawnChild(newBarReceiver(msg.data), "bar", msg.data)
+		fmt.Println("received and starting bar:", r.barPID)
 	case actor.Stopped:
 		fmt.Println("foo will stop")
 	}
@@ -60,7 +59,6 @@ func main() {
 	e := actor.NewEngine()
 	pid := e.Spawn(newFooReceiver, "foo")
 	e.Send(pid, message{data: fmt.Sprintf("msg_%d", 1)})
-	time.Sleep(time.Millisecond)
 	e.Poison(pid)
-	time.Sleep(time.Millisecond * 1)
+	time.Sleep(time.Second)
 }

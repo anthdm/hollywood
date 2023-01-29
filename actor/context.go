@@ -40,14 +40,13 @@ func (c *Context) Respond(msg any) {
 // Hence, all children will receive the Stopped message.
 func (c *Context) SpawnChild(p Producer, name string, tags ...string) *PID {
 	cfg := Opts{
-		Producer: p,
-		Name:     name,
-		Tags:     tags,
+		Producer:    p,
+		Name:        name,
+		Tags:        tags,
+		InboxSize:   defaultInboxSize,
+		MaxRestarts: defaultMaxRestarts,
 	}
 	proc := c.engine.spawn(cfg)
-	procc := proc.(*process)
-	procc.context.parentCtx = c
-	procc.start()
 	proc.(*process).context.parentCtx = c
 	c.children.Set(name, proc.PID())
 	return proc.PID()
