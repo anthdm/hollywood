@@ -26,7 +26,7 @@ func DefaultOpts(p Producer) Opts {
 
 type Remoter interface {
 	Address() string
-	Send(*PID, any)
+	Send(*PID, any, *PID)
 	Start()
 }
 
@@ -101,7 +101,7 @@ func (e *Engine) SpawnOpts(cfg Opts) *PID {
 }
 
 func (e *Engine) SpawnFunc(f func(*Context), id string, tags ...string) *PID {
-	return e.Spawn(newFuncReceiver(f), "foo", tags...)
+	return e.Spawn(newFuncReceiver(f), id, tags...)
 }
 
 // Address returns the address of the actor engine. When there is
@@ -127,19 +127,19 @@ func (e *Engine) Request(pid *PID, msg any, timeout time.Duration) *Response {
 // given sender. Receivers receiving this message can check the sender
 // by calling Context.Sender().
 func (e *Engine) SendWithSender(pid *PID, msg any, sender *PID) {
-	m := &WithSender{
-		Sender:  sender,
-		Message: msg,
-	}
-	e.Send(pid, m)
+	e.send(pid, msg, sender)
 }
 
 // Send sends the given message to the given PID. If the message cannot be
 // delivered due to the fact that the given process is not registered.
 // The message will be send to the DeadLetter process instead.
 func (e *Engine) Send(pid *PID, msg any) {
+	e.send(pid, msg, nil)
+}
+
+func (e *Engine) send(pid *PID, msg any, sender *PID) {
 	if e.isLocalMessage(pid) {
-		e.sendLocal(pid, msg)
+		e.sendLocal(pid, msg, sender)
 		return
 	}
 	if e.remote == nil {
@@ -148,7 +148,7 @@ func (e *Engine) Send(pid *PID, msg any) {
 		})
 		return
 	}
-	e.remote.Send(pid, msg)
+	e.remote.Send(pid, msg, sender)
 }
 
 // Poison will shutdown the process that is associated with the given PID.
@@ -156,7 +156,7 @@ func (e *Engine) Send(pid *PID, msg any) {
 func (e *Engine) Poison(pid *PID) {
 	proc := e.registry.get(pid)
 	if proc != nil {
-		e.sendLocal(pid, Stopped{})
+		e.sendLocal(pid, Stopped{}, nil)
 		proc.Shutdown()
 		e.registry.remove(pid)
 	}
@@ -168,10 +168,10 @@ func (e *Engine) spawn(cfg Opts) processer {
 	return proc
 }
 
-func (e *Engine) sendLocal(pid *PID, msg any) {
+func (e *Engine) sendLocal(pid *PID, msg any, sender *PID) {
 	proc := e.registry.get(pid)
 	if proc != nil {
-		proc.Send(pid, msg)
+		proc.Send(pid, msg, sender)
 	}
 }
 

@@ -50,6 +50,10 @@ func (c *Context) SpawnChild(p Producer, name string, tags ...string) *PID {
 	return proc.PID()
 }
 
+func (c *Context) SpawnChildFunc(f func(*Context), name string, tags ...string) *PID {
+	return c.SpawnChild(newFuncReceiver(f), name, tags...)
+}
+
 // GetChild will return the PID of the child (if any) by the given name/id.
 // PID will be nil if it could not find it.
 func (c *Context) GetChild(id string) *PID {

@@ -18,15 +18,16 @@ func newDeadLetter(eventStream *EventStream) *deadLetter {
 	}
 }
 
-func (d *deadLetter) Send(dest *PID, msg any) {
+func (d *deadLetter) Send(dest *PID, msg any, sender *PID) {
 	log.Warnw("[DEADLETTER]", log.M{
 		"dest":   dest,
 		"msg":    reflect.TypeOf(msg),
-		"sender": nil,
+		"sender": sender,
 	})
 	d.eventStream.Publish(&DeadLetterEvent{
 		Target:  dest,
 		Message: msg,
+		Sender:  sender,
 	})
 }
 

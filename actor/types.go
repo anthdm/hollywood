@@ -5,6 +5,7 @@ package actor
 type DeadLetterEvent struct {
 	Target  *PID
 	Message any
+	Sender  *PID
 }
 
 // ActivationEvent is broadcasted over the EventStream each time
