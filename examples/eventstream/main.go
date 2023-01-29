@@ -9,6 +9,25 @@ import (
 
 func main() {
 	e := actor.NewEngine()
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+
+	// Subscribe to a various list of event that are being broadcasted by
+	// the engine. But also published by you.
+	eventSub := e.EventStream.Subscribe(func(event any) {
+		switch evt := event.(type) {
+		case *actor.DeadLetterEvent:
+			fmt.Printf("deadletter event to [%s] msg: %s\n", evt.Target, evt.Message)
+		case *actor.ActivationEvent:
+			fmt.Println("process is active", evt.PID)
+		case *actor.TerminationEvent:
+			fmt.Println("process terminated:", evt.PID)
+			wg.Done()
+		default:
+			fmt.Println("received event", evt)
+		}
+	})
+
 	pid := e.SpawnFunc(func(c *actor.Context) {
 		switch msg := c.Message().(type) {
 		case actor.Started:
@@ -16,20 +35,6 @@ func main() {
 			_ = msg
 		}
 	}, "foo")
-	wg := sync.WaitGroup{}
-	wg.Add(1)
-
-	eventSub := e.EventStream.Subscribe(func(event any) {
-		switch evt := event.(type) {
-		case *actor.DeadLetter:
-			fmt.Printf("deadletter event to [%s] msg: %s\n", evt.Target, evt.Message)
-		case *actor.Termination:
-			fmt.Println("process terminated:", evt.PID)
-			wg.Done()
-		default:
-			fmt.Println("received event", evt)
-		}
-	})
 
 	deadPID := actor.NewPID("local", "bar")
 	e.Send(deadPID, "hello")

@@ -10,5 +10,6 @@ build:
 	go build -o bin/childprocs examples/childprocs/main.go 
 	go build -o bin/request examples/request/main.go 
 	go build -o bin/restarts examples/restarts/main.go 
+	go build -o bin/eventstream examples/eventstream/main.go 
 
 .PHONY: proto

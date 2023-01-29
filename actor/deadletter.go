@@ -24,7 +24,7 @@ func (d *deadLetter) Send(dest *PID, msg any) {
 		"msg":    reflect.TypeOf(msg),
 		"sender": nil,
 	})
-	d.eventStream.Publish(&DeadLetter{
+	d.eventStream.Publish(&DeadLetterEvent{
 		Target:  dest,
 		Message: msg,
 	})
