@@ -10,16 +10,21 @@ import (
 
 const restartDelay = time.Millisecond * 500
 
+type envelope struct {
+	msg    any
+	sender *PID
+}
+
 type processer interface {
 	PID() *PID
-	Send(*PID, any)
+	Send(*PID, any, *PID)
 	Shutdown()
 }
 
 type process struct {
 	Opts
 
-	inbox    chan any
+	inbox    chan envelope
 	context  *Context
 	pid      *PID
 	restarts int32
@@ -31,7 +36,7 @@ func newProcess(e *Engine, cfg Opts) *process {
 	ctx := newContext(e, pid)
 	p := &process{
 		pid:     pid,
-		inbox:   make(chan any, cfg.InboxSize),
+		inbox:   make(chan envelope, cfg.InboxSize),
 		Opts:    cfg,
 		context: ctx,
 		quitch:  make(chan struct{}, 1),
@@ -56,19 +61,16 @@ func (p *process) start() *PID {
 				p.tryRestart(v)
 			}
 		}()
-
-		p.inbox <- Started{}
+		p.inbox <- envelope{
+			msg:    Started{},
+			sender: nil,
+		}
 	loop:
 		for {
 			select {
-			case msg := <-p.inbox:
-				switch m := msg.(type) {
-				case *WithSender:
-					p.context.sender = m.Sender
-					p.context.message = m.Message
-				default:
-					p.context.message = m
-				}
+			case env := <-p.inbox:
+				p.context.sender = env.sender
+				p.context.message = env.msg
 				recv.Receive(p.context)
 			case <-p.quitch:
 				close(p.inbox)
@@ -142,6 +144,11 @@ func (p *process) cleanup() {
 	p.context.engine.EventStream.Publish(&TerminationEvent{PID: p.pid})
 }
 
-func (p *process) PID() *PID            { return p.pid }
-func (p *process) Send(_ *PID, msg any) { p.inbox <- msg }
-func (p *process) Shutdown()            { close(p.quitch) }
+func (p *process) PID() *PID { return p.pid }
+func (p *process) Send(_ *PID, msg any, sender *PID) {
+	p.inbox <- envelope{
+		msg:    msg,
+		sender: sender,
+	}
+}
+func (p *process) Shutdown() { close(p.quitch) }

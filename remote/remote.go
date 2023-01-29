@@ -52,17 +52,14 @@ func (r *Remote) Start() {
 	go s.Serve(ctx, ln)
 }
 
-func (r *Remote) Send(pid *actor.PID, msg any) {
+func (r *Remote) Send(pid *actor.PID, msg any, sender *actor.PID) {
 	switch m := msg.(type) {
 	case proto.Message:
-		r.engine.Send(r.streamRouterPID, routeToStream{pid: pid, msg: m})
-	case *actor.WithSender:
-		rs := routeToStream{
+		r.engine.Send(r.streamRouterPID, routeToStream{
 			pid:    pid,
-			msg:    m.Message.(proto.Message),
-			sender: m.Sender,
-		}
-		r.engine.Send(r.streamRouterPID, rs)
+			msg:    m,
+			sender: sender,
+		})
 	default:
 		log.Errorw("[REMOTE] failed to send message", log.M{
 			"error": "given message is not of type proto.Message or WithSender",

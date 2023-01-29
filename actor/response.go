@@ -38,7 +38,7 @@ func (r *Response) Result() (any, error) {
 	}
 }
 
-func (r *Response) Send(_ *PID, msg any) {
+func (r *Response) Send(_ *PID, msg any, _ *PID) {
 	r.result <- msg
 }
 

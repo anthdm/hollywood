@@ -110,3 +110,18 @@ func BenchmarkSendMessageLocal(b *testing.B) {
 		e.Send(pid, pid)
 	}
 }
+
+func BenchmarkSendWithSenderMessageLocal(b *testing.B) {
+	e := NewEngine()
+	p := NewTestProducer(nil, func(_ *testing.T, _ *Context) {})
+
+	pid := e.SpawnOpts(Opts{
+		Producer:  p,
+		InboxSize: 10000,
+		Name:      "bench",
+	})
+
+	for i := 0; i < b.N; i++ {
+		e.SendWithSender(pid, pid, pid)
+	}
+}

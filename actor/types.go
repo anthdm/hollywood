@@ -5,6 +5,7 @@ package actor
 type DeadLetterEvent struct {
 	Target  *PID
 	Message any
+	Sender  *PID
 }
 
 // ActivationEvent is broadcasted over the EventStream each time
@@ -33,8 +34,3 @@ type Initialized struct{}
 type Started struct{}
 
 type Stopped struct{}
-
-type WithSender struct {
-	Message any
-	Sender  *PID
-}

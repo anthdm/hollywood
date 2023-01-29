@@ -36,8 +36,8 @@ func TestSend(t *testing.T) {
 
 func TestWithSender(t *testing.T) {
 	var (
-		a         = makeRemoteEngine("127.0.0.3:4000")
-		b         = makeRemoteEngine("127.0.0.3:5000")
+		a         = makeRemoteEngine("127.0.0.4:4000")
+		b         = makeRemoteEngine("127.0.0.4:5000")
 		wg        = sync.WaitGroup{}
 		senderPID = actor.NewPID("a", "b")
 	)
