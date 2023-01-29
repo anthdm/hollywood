@@ -19,7 +19,7 @@ func DefaultOpts(p Producer) Opts {
 	return Opts{
 		Producer:    p,
 		MaxRestarts: 3,
-		InboxSize:   100,
+		InboxSize:   1000,
 		WithHooks:   false,
 	}
 }
