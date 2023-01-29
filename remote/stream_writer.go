@@ -101,5 +101,6 @@ func (e *streamWriter) handleWriteStream(ws writeToStream) {
 			"err": err,
 		})
 	}
+	// refresh the connection deadline.
 	e.rawconn.SetDeadline(time.Now().Add(connIdleTimeout))
 }
