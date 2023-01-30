@@ -23,7 +23,6 @@ func (r *barReceiver) Receive(ctx *actor.Context) {
 	switch msg := ctx.Message().(type) {
 	case actor.Started:
 		fmt.Println("bar started with initial state:", r.data)
-		_ = msg
 	case message:
 		fmt.Println(msg.data)
 	case actor.Stopped:
