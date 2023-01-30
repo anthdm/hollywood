@@ -8,7 +8,31 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+func TestProcessInitStartOrder(t *testing.T) {
+	var (
+		e             = NewEngine()
+		wg            = sync.WaitGroup{}
+		started, init bool
+	)
+	pid := e.SpawnFunc(func(c *Context) {
+		switch c.Message().(type) {
+		case Initialized:
+			wg.Add(1)
+			init = true
+		case Started:
+			require.True(t, init)
+			started = true
+		case int:
+			require.True(t, started)
+			wg.Done()
+		}
+	}, "test")
+	e.Send(pid, 1)
+	wg.Wait()
+}
 
 func TestSendWithSender(t *testing.T) {
 	e := NewEngine()

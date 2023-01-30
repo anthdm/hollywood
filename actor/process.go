@@ -61,10 +61,8 @@ func (p *process) start() *PID {
 				p.tryRestart(v)
 			}
 		}()
-		p.inbox <- envelope{
-			msg:    Started{},
-			sender: nil,
-		}
+		p.context.message = Started{}
+		recv.Receive(p.context)
 		log.Debugw("[PROCESS] started", log.M{
 			"pid": p.pid,
 		})
