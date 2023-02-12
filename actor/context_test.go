@@ -5,7 +5,22 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+func TestGetLocalPID(t *testing.T) {
+	e := NewEngine()
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	e.SpawnFunc(func(c *Context) {
+		if _, ok := c.Message().(Started); ok {
+			pid := c.GetLocalPID("foo", "bar", "baz")
+			require.True(t, pid.Equals(c.PID()))
+			wg.Done()
+		}
+	}, "foo", "bar", "baz")
+	wg.Wait()
+}
 
 func TestSpawnChild(t *testing.T) {
 	e := NewEngine()

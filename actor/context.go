@@ -27,6 +27,7 @@ func newContext(e *Engine, pid *PID) *Context {
 	}
 }
 
+// Respond will sent the given message to the sender of the current received message.
 func (c *Context) Respond(msg any) {
 	if c.sender == nil {
 		log.Warnw("[RESPOND] context got no sender", log.M{
@@ -93,6 +94,8 @@ func (c *Context) Forward(pid *PID) {
 	c.engine.SendWithSender(pid, c.message, c.pid)
 }
 
+// GetLocalPID returns the PID of the process found by the given name and tags.
+// Returns nil when it could not find any process..
 func (c *Context) GetLocalPID(name string, tags ...string) *PID {
 	name = name + PIDSeparator + strings.Join(tags, PIDSeparator)
 	proc := c.engine.registry.getByName(name)
@@ -102,18 +105,23 @@ func (c *Context) GetLocalPID(name string, tags ...string) *PID {
 	return nil
 }
 
+// PID returns the PID of the process that belongs to the context.
 func (c *Context) PID() *PID {
 	return c.pid
 }
 
+// Sender, when available, returns the PID of the process that sent the
+// current received message.
 func (c *Context) Sender() *PID {
 	return c.sender
 }
 
+// Engine returns a pointer to the underlying Engine.
 func (c *Context) Engine() *Engine {
 	return c.engine
 }
 
+// Message returns the message that is currently being received.
 func (c *Context) Message() any {
 	return c.message
 }
