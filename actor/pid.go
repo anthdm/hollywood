@@ -31,6 +31,10 @@ func (pid *PID) String() string {
 	return fmt.Sprintf("%s%s%s", pid.Address, PIDSeparator, pid.ID)
 }
 
+func (pid *PID) Equals(other *PID) bool {
+	return pid.LookupKey == other.LookupKey
+}
+
 func (pid *PID) HasTag(tag string) bool {
 	for _, t := range pid.Tags {
 		if t == tag {

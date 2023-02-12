@@ -51,6 +51,12 @@ func (c *Context) SpawnChild(p Producer, name string, tags ...string) *PID {
 
 // SpawnChildOpts will spawn a child process configured with the given options.
 func (c *Context) SpawnChildOpts(opts Opts) *PID {
+	if opts.InboxSize == 0 {
+		opts.InboxSize = defaultInboxSize
+	}
+	if opts.MaxRestarts == 0 {
+		opts.MaxRestarts = defaultMaxRestarts
+	}
 	proc := c.engine.spawn(opts)
 	proc.(*process).context.parentCtx = c
 	c.children.Set(opts.Name, proc.PID())

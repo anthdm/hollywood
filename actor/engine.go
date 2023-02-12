@@ -101,14 +101,14 @@ func (e *Engine) Spawn(p Producer, name string, tags ...string) *PID {
 	return e.spawn(opts).PID()
 }
 
-func (e *Engine) SpawnOpts(cfg Opts) *PID {
-	if cfg.InboxSize == 0 {
-		cfg.InboxSize = defaultInboxSize
+func (e *Engine) SpawnOpts(opts Opts) *PID {
+	if opts.InboxSize == 0 {
+		opts.InboxSize = defaultInboxSize
 	}
-	if cfg.MaxRestarts == 0 {
-		cfg.MaxRestarts = defaultMaxRestarts
+	if opts.MaxRestarts == 0 {
+		opts.MaxRestarts = defaultMaxRestarts
 	}
-	return e.spawn(cfg).PID()
+	return e.spawn(opts).PID()
 }
 
 func (e *Engine) SpawnFunc(f func(*Context), id string, tags ...string) *PID {
