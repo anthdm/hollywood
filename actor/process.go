@@ -31,13 +31,13 @@ type process struct {
 	quitch   chan struct{}
 }
 
-func newProcess(e *Engine, cfg Opts) *process {
-	pid := NewPID(e.address, cfg.Name, cfg.Tags...)
+func newProcess(e *Engine, opts Opts) *process {
+	pid := NewPID(e.address, opts.Name, opts.Tags...)
 	ctx := newContext(e, pid)
 	p := &process{
 		pid:     pid,
-		inbox:   make(chan envelope, cfg.InboxSize),
-		Opts:    cfg,
+		inbox:   make(chan envelope, opts.InboxSize),
+		Opts:    opts,
 		context: ctx,
 		quitch:  make(chan struct{}, 1),
 	}
