@@ -39,16 +39,21 @@ func (c *Context) Respond(msg any) {
 // If the parent process dies, all the children will be automatically shutdown gracefully.
 // Hence, all children will receive the Stopped message.
 func (c *Context) SpawnChild(p Producer, name string, tags ...string) *PID {
-	cfg := Opts{
+	opts := Opts{
 		Producer:    p,
 		Name:        name,
 		Tags:        tags,
 		InboxSize:   defaultInboxSize,
 		MaxRestarts: defaultMaxRestarts,
 	}
-	proc := c.engine.spawn(cfg)
+	return c.SpawnChildOpts(opts)
+}
+
+// SpawnChildOpts will spawn a child process configured with the given options.
+func (c *Context) SpawnChildOpts(opts Opts) *PID {
+	proc := c.engine.spawn(opts)
 	proc.(*process).context.parentCtx = c
-	c.children.Set(name, proc.PID())
+	c.children.Set(opts.Name, proc.PID())
 	return proc.PID()
 }
 

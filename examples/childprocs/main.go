@@ -7,6 +7,8 @@ import (
 	"github.com/anthdm/hollywood/actor"
 )
 
+var restarts = 0
+
 type barReceiver struct {
 	data string
 }
@@ -22,7 +24,12 @@ func newBarReceiver(data string) actor.Producer {
 func (r *barReceiver) Receive(ctx *actor.Context) {
 	switch msg := ctx.Message().(type) {
 	case actor.Started:
-		fmt.Println("bar started with initial state:", r.data)
+		time.Sleep(time.Second)
+		if restarts < 2 {
+			restarts++
+			panic("I will need to restart")
+		}
+		fmt.Println("bar recovered and started with initial state:", r.data)
 	case message:
 		fmt.Println(msg.data)
 	case actor.Stopped:
@@ -58,6 +65,7 @@ func main() {
 	e := actor.NewEngine()
 	pid := e.Spawn(newFooReceiver, "foo")
 	e.Send(pid, message{data: fmt.Sprintf("msg_%d", 1)})
+	time.Sleep(time.Second * 8)
 	e.Poison(pid)
 	time.Sleep(time.Second)
 }
