@@ -1,6 +1,7 @@
 package actor
 
 import (
+	"strings"
 	"sync"
 
 	"github.com/anthdm/hollywood/log"
@@ -34,6 +35,21 @@ func (r *registry) get(pid *PID) processer {
 		return proc
 	}
 	return r.engine.deadLetter
+}
+
+func (r *registry) getByName(name string) processer {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	for key, proc := range r.lookup {
+		parts := strings.SplitN(key, PIDSeparator, 2)
+		if len(parts) < 2 {
+			return nil
+		}
+		if parts[1] == name {
+			return proc
+		}
+	}
+	return nil
 }
 
 func (r *registry) add(proc processer) {
