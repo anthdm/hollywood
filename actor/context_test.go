@@ -23,21 +23,30 @@ func TestGetLocalPID(t *testing.T) {
 }
 
 func TestSpawnChild(t *testing.T) {
-	e := NewEngine()
-	wg := sync.WaitGroup{}
+	var (
+		e      = NewEngine()
+		wg     = sync.WaitGroup{}
+		stopwg = sync.WaitGroup{}
+	)
+
+	wg.Add(1)
+	stopwg.Add(1)
 	pid := e.SpawnFunc(func(ctx *Context) {
 		if _, ok := ctx.Message().(Started); ok {
-			wg.Add(1)
+			wg.Done()
 			ctx.SpawnChildFunc(func(cc *Context) {
 				switch cc.Message().(type) {
 				case Stopped:
-					wg.Done()
+					stopwg.Done()
 				}
 			}, "child")
 		}
 	}, "parent")
-	e.Poison(pid)
+
 	wg.Wait()
+	e.Poison(pid)
+
+	stopwg.Wait()
 	assert.Equal(t, e.deadLetter, e.registry.get(NewPID("local", "child")))
 	assert.Equal(t, e.deadLetter, e.registry.get(pid))
 }
