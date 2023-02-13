@@ -71,6 +71,12 @@ func (p *process) start() *PID {
 			select {
 			case env := <-p.inbox:
 				p.context.sender = env.sender
+				if _, ok := env.msg.(poisonPill); ok {
+					close(p.inbox)
+					p.context.message = Stopped{}
+					recv.Receive(p.context)
+					break loop
+				}
 				p.context.message = env.msg
 				recv.Receive(p.context)
 			case <-p.quitch:

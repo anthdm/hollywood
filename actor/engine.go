@@ -162,14 +162,13 @@ func (e *Engine) send(pid *PID, msg any, sender *PID) {
 	e.remote.Send(pid, msg, sender)
 }
 
-// Poison will shutdown the process that is associated with the given PID.
-// If the process had any children, they will be shutdowned too.
+// Poison will send a poisonPill to the process that is associated with the given PID.
+// The process will shut down once it processed all its messages before the poisonPill
+// was received.
 func (e *Engine) Poison(pid *PID) {
 	proc := e.registry.get(pid)
 	if proc != nil {
-		e.sendLocal(pid, Stopped{}, nil)
-		proc.Shutdown()
-		e.registry.remove(pid)
+		e.sendLocal(pid, poisonPill{}, nil)
 	}
 }
 

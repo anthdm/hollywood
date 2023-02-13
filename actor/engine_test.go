@@ -88,14 +88,27 @@ func TestSpawn(t *testing.T) {
 }
 
 func TestPoison(t *testing.T) {
-	e := NewEngine()
-
+	var (
+		e      = NewEngine()
+		wg     = sync.WaitGroup{}
+		stopwg = sync.WaitGroup{}
+	)
 	for i := 0; i < 4; i++ {
+		wg.Add(1)
+		stopwg.Add(1)
 		tag := strconv.Itoa(i)
-		pid := e.Spawn(NewTestProducer(t, func(t *testing.T, ctx *Context) {
+		pid := e.SpawnFunc(func(c *Context) {
+			switch c.Message().(type) {
+			case Started:
+				wg.Done()
+			case Stopped:
+				stopwg.Done()
+			}
+		}, "foo", tag)
 
-		}), "dummy", tag)
+		wg.Wait()
 		e.Poison(pid)
+		stopwg.Wait()
 		// When a process is poisoned it should be removed from the registry.
 		// Hence, we should get the dead letter process here.
 		assert.Equal(t, e.deadLetter, e.registry.get(pid))

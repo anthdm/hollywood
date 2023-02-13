@@ -21,16 +21,12 @@ type TerminationEvent struct {
 	PID *PID
 }
 
-type SpawnEvent struct {
-}
-
 type InternalError struct {
 	From string
 	Err  error
 }
 
+type poisonPill struct{}
 type Initialized struct{}
-
 type Started struct{}
-
 type Stopped struct{}
