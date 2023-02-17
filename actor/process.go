@@ -47,13 +47,11 @@ func newProcess(e *Engine, opts Opts) *process {
 
 func (p *process) start() *PID {
 	recv := p.Producer()
-	// if p.WithHooks {
-	// 	recv = hookReceiver{recv}
-	// }
 
 	p.context.engine.EventStream.Publish(&ActivationEvent{PID: p.pid})
+	p.context.receiver = recv
 	p.context.message = Initialized{}
-	recv.Receive(p.context)
+	p.Opts.Middleware(recv.Receive)(p.context)
 
 	go func() {
 		defer func() {
@@ -62,7 +60,7 @@ func (p *process) start() *PID {
 			}
 		}()
 		p.context.message = Started{}
-		recv.Receive(p.context)
+		p.Opts.Middleware(recv.Receive)(p.context)
 		log.Debugw("[PROCESS] started", log.M{
 			"pid": p.pid,
 		})
@@ -74,11 +72,12 @@ func (p *process) start() *PID {
 				if _, ok := env.msg.(poisonPill); ok {
 					close(p.inbox)
 					p.context.message = Stopped{}
+					p.Opts.Middleware(recv.Receive)(p.context)
 					recv.Receive(p.context)
 					break loop
 				}
 				p.context.message = env.msg
-				recv.Receive(p.context)
+				p.Opts.Middleware(recv.Receive)(p.context)
 			case <-p.quitch:
 				close(p.inbox)
 				break loop

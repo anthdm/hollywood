@@ -8,10 +8,11 @@ import (
 )
 
 type Context struct {
-	pid     *PID
-	sender  *PID
-	engine  *Engine
-	message any
+	pid      *PID
+	sender   *PID
+	engine   *Engine
+	receiver Receiver
+	message  any
 	// the context of the parent, if this is the context of a child.
 	// we need this so we can remove the child from the parent Context
 	// when the child dies.
@@ -25,6 +26,10 @@ func newContext(e *Engine, pid *PID) *Context {
 		pid:      pid,
 		children: safemap.New[string, *PID](),
 	}
+}
+
+func (c *Context) Receiver() Receiver {
+	return c.receiver
 }
 
 // Respond will sent the given message to the sender of the current received message.
@@ -81,9 +86,9 @@ func (c *Context) Forward(pid *PID) {
 	c.engine.SendWithSender(pid, c.message, c.pid)
 }
 
-// GetLocalPID returns the PID of the process found by the given name and tags.
+// GetPID returns the PID of the process found by the given name and tags.
 // Returns nil when it could not find any process..
-func (c *Context) GetLocalPID(name string, tags ...string) *PID {
+func (c *Context) GetPID(name string, tags ...string) *PID {
 	name = name + PIDSeparator + strings.Join(tags, PIDSeparator)
 	proc := c.engine.registry.getByName(name)
 	if proc != nil {
