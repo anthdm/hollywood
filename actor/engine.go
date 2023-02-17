@@ -15,6 +15,7 @@ type Remoter interface {
 // Producer is any function that can return a Receiver
 type Producer func() Receiver
 
+// Receiver is an interface that can receive and process messages.
 type Receiver interface {
 	Receive(*Context)
 }
