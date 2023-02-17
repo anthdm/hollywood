@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"reflect"
-	"time"
 
 	"github.com/anthdm/hollywood/actor"
 )
@@ -35,17 +34,16 @@ func (h *hookReceiver) OnStop(ctx *actor.Context) {
 }
 
 func main() {
-	actor.PIDSeparator = "→"
-	e := actor.NewEngine()
-	pid := e.SpawnOpts(actor.Opts{
-		Producer: newHookReceiver,
-		Name:     "foo",
-		// WithHooks set to true will give your receiver
-		// the ability to use the OnStarted and OnStopped hooks.
-		// NOTE: these will need to be implemented or the engine will panic
-		WithHooks: true,
-	})
-	time.Sleep(time.Millisecond)
-	e.Poison(pid)
-	time.Sleep(time.Second)
+	// actor.PIDSeparator = "→"
+	// e := actor.NewEngine()
+	// pid := e.SpawnOpts(actor.Opts{
+	// 	Producer: newHookReceiver,
+	// 	Name:     "foo",
+	// 	// WithHooks set to true will give your receiver
+	// 	// the ability to use the OnStarted and OnStopped hooks.
+	// 	// NOTE: these will need to be implemented or the engine will panic
+	// })
+	// time.Sleep(time.Millisecond)
+	// e.Poison(pid)
+	// time.Sleep(time.Second)
 }

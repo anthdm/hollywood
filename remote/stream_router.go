@@ -62,7 +62,7 @@ func (s *streamRouter) handleRouteToStream(msg routeToStream) {
 
 	swpid, ok = s.streams[address]
 	if !ok {
-		swpid = s.engine.Spawn(newStreamWriter(s.engine, s.pid, address), "stream", address)
+		swpid = s.engine.Spawn(newStreamWriter(s.engine, s.pid, address), "stream", actor.WithTags(address))
 		s.streams[address] = swpid
 		log.Tracew("[STREAM ROUTER] new stream route", log.M{
 			"pid": swpid,

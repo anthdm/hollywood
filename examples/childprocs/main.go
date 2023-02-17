@@ -50,7 +50,7 @@ func (r *fooReceiver) Receive(ctx *actor.Context) {
 	case actor.Started:
 		fmt.Println("foo started")
 	case message:
-		r.barPID = ctx.SpawnChild(newBarReceiver(msg.data), "bar", msg.data)
+		r.barPID = ctx.SpawnChild(newBarReceiver(msg.data), "bar", actor.WithTags(msg.data))
 		fmt.Println("received and starting bar:", r.barPID)
 	case actor.Stopped:
 		fmt.Println("foo will stop")

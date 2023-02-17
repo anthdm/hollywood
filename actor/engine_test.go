@@ -11,6 +11,23 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type foo struct{}
+
+func newFoo() Receiver { return &foo{} }
+
+func (foo) Receive(*Context) {}
+
+func TestXxx(t *testing.T) {
+	e := NewEngine()
+	e.Spawn(newFoo, "foo",
+		WithInboxSize(99),
+		WithMaxRestarts(1),
+		WithTags("1", "2", "bar"),
+	)
+
+	time.Sleep(time.Second)
+}
+
 func TestProcessInitStartOrder(t *testing.T) {
 	var (
 		e             = NewEngine()
@@ -79,7 +96,7 @@ func TestSpawn(t *testing.T) {
 		go func(i int) {
 			tag := strconv.Itoa(i)
 			pid := e.Spawn(NewTestProducer(t, func(t *testing.T, ctx *Context) {
-			}), "dummy", tag)
+			}), "dummy", WithTags(tag))
 			e.Send(pid, 1)
 			wg.Done()
 		}(i)
@@ -104,7 +121,7 @@ func TestPoison(t *testing.T) {
 			case Stopped:
 				stopwg.Done()
 			}
-		}, "foo", tag)
+		}, "foo", WithTags(tag))
 
 		wg.Wait()
 		e.Poison(pid)
@@ -136,12 +153,7 @@ func TestRequestResponse(t *testing.T) {
 func BenchmarkSendMessageLocal(b *testing.B) {
 	e := NewEngine()
 	p := NewTestProducer(nil, func(_ *testing.T, _ *Context) {})
-
-	pid := e.SpawnOpts(Opts{
-		Producer:  p,
-		InboxSize: 10000,
-		Name:      "bench",
-	})
+	pid := e.Spawn(p, "bench", WithInboxSize(10000))
 
 	for i := 0; i < b.N; i++ {
 		e.Send(pid, pid)
@@ -151,12 +163,7 @@ func BenchmarkSendMessageLocal(b *testing.B) {
 func BenchmarkSendWithSenderMessageLocal(b *testing.B) {
 	e := NewEngine()
 	p := NewTestProducer(nil, func(_ *testing.T, _ *Context) {})
-
-	pid := e.SpawnOpts(Opts{
-		Producer:  p,
-		InboxSize: 10000,
-		Name:      "bench",
-	})
+	pid := e.Spawn(p, "bench", WithInboxSize(10000))
 
 	for i := 0; i < b.N; i++ {
 		e.SendWithSender(pid, pid, pid)

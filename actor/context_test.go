@@ -18,7 +18,7 @@ func TestGetLocalPID(t *testing.T) {
 			require.True(t, pid.Equals(c.PID()))
 			wg.Done()
 		}
-	}, "foo", "bar", "baz")
+	}, "foo", WithTags("bar", "baz"))
 	wg.Wait()
 }
 

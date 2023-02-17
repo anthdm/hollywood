@@ -6,29 +6,6 @@ import (
 	"github.com/anthdm/hollywood/log"
 )
 
-const (
-	defaultInboxSize   = 100
-	defaultMaxRestarts = 3
-)
-
-type Opts struct {
-	Producer    Producer
-	Name        string
-	Tags        []string
-	MaxRestarts int32
-	InboxSize   int
-	WithHooks   bool
-}
-
-func DefaultOpts(p Producer) Opts {
-	return Opts{
-		Producer:    p,
-		MaxRestarts: defaultMaxRestarts,
-		InboxSize:   defaultInboxSize,
-		WithHooks:   false,
-	}
-}
-
 type Remoter interface {
 	Address() string
 	Send(*PID, any, *PID)
@@ -40,28 +17,6 @@ type Producer func() Receiver
 
 type Receiver interface {
 	Receive(*Context)
-}
-
-type hookReceiver struct {
-	r Receiver
-}
-
-type Hooker interface {
-	OnInit(*Context)
-	OnStart(*Context)
-	OnStop(*Context)
-}
-
-func (h hookReceiver) Receive(ctx *Context) {
-	switch ctx.Message().(type) {
-	case Started:
-		h.r.(Hooker).OnStart(ctx)
-	case Stopped:
-		h.r.(Hooker).OnStop(ctx)
-	case Initialized:
-		h.r.(Hooker).OnInit(ctx)
-	}
-	h.r.Receive(ctx)
 }
 
 // Engine represents the actor engine.
@@ -94,25 +49,19 @@ func (e *Engine) WithRemote(r Remoter) {
 	r.Start()
 }
 
-func (e *Engine) Spawn(p Producer, name string, tags ...string) *PID {
-	opts := DefaultOpts(p)
-	opts.Name = name
-	opts.Tags = tags
-	return e.spawn(opts).PID()
+// Spawn spawns a process that will producer by the given Producer and
+// can be configured with the given opts.
+func (e *Engine) Spawn(p Producer, name string, opts ...OptFunc) *PID {
+	options := DefaultOpts(p)
+	options.Name = name
+	for _, opt := range opts {
+		opt(&options)
+	}
+	return e.spawn(options).PID()
 }
 
-func (e *Engine) SpawnOpts(opts Opts) *PID {
-	if opts.InboxSize == 0 {
-		opts.InboxSize = defaultInboxSize
-	}
-	if opts.MaxRestarts == 0 {
-		opts.MaxRestarts = defaultMaxRestarts
-	}
-	return e.spawn(opts).PID()
-}
-
-func (e *Engine) SpawnFunc(f func(*Context), id string, tags ...string) *PID {
-	return e.Spawn(newFuncReceiver(f), id, tags...)
+func (e *Engine) SpawnFunc(f func(*Context), id string, opts ...OptFunc) *PID {
+	return e.Spawn(newFuncReceiver(f), id, opts...)
 }
 
 // Address returns the address of the actor engine. When there is

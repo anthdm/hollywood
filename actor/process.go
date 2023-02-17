@@ -47,9 +47,9 @@ func newProcess(e *Engine, opts Opts) *process {
 
 func (p *process) start() *PID {
 	recv := p.Producer()
-	if p.WithHooks {
-		recv = hookReceiver{recv}
-	}
+	// if p.WithHooks {
+	// 	recv = hookReceiver{recv}
+	// }
 
 	p.context.engine.EventStream.Publish(&ActivationEvent{PID: p.pid})
 	p.context.message = Initialized{}
