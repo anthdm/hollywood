@@ -45,24 +45,31 @@ func newProcess(e *Engine, opts Opts) *process {
 	return p
 }
 
+func applyMiddleware(rcv ReceiveFunc, middleware ...MiddlewareFunc) ReceiveFunc {
+	for i := len(middleware) - 1; i >= 0; i-- {
+		rcv = middleware[i](rcv)
+	}
+	return rcv
+}
+
 func (p *process) start() *PID {
 	recv := p.Producer()
-	if p.WithHooks {
-		recv = hookReceiver{recv}
-	}
 
 	p.context.engine.EventStream.Publish(&ActivationEvent{PID: p.pid})
+	p.context.receiver = recv
 	p.context.message = Initialized{}
-	recv.Receive(p.context)
+	applyMiddleware(recv.Receive, p.Opts.Middleware...)(p.context)
 
 	go func() {
 		defer func() {
-			if v := recover(); v != nil {
-				p.tryRestart(v)
+			if p.MaxRestarts > 0 {
+				if v := recover(); v != nil {
+					p.tryRestart(v)
+				}
 			}
 		}()
 		p.context.message = Started{}
-		recv.Receive(p.context)
+		applyMiddleware(recv.Receive, p.Opts.Middleware...)(p.context)
 		log.Debugw("[PROCESS] started", log.M{
 			"pid": p.pid,
 		})
@@ -74,11 +81,11 @@ func (p *process) start() *PID {
 				if _, ok := env.msg.(poisonPill); ok {
 					close(p.inbox)
 					p.context.message = Stopped{}
-					recv.Receive(p.context)
+					applyMiddleware(recv.Receive, p.Opts.Middleware...)(p.context)
 					break loop
 				}
 				p.context.message = env.msg
-				recv.Receive(p.context)
+				applyMiddleware(recv.Receive, p.Opts.Middleware...)(p.context)
 			case <-p.quitch:
 				close(p.inbox)
 				break loop

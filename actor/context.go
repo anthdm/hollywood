@@ -8,10 +8,11 @@ import (
 )
 
 type Context struct {
-	pid     *PID
-	sender  *PID
-	engine  *Engine
-	message any
+	pid      *PID
+	sender   *PID
+	engine   *Engine
+	receiver Receiver
+	message  any
 	// the context of the parent, if this is the context of a child.
 	// we need this so we can remove the child from the parent Context
 	// when the child dies.
@@ -25,6 +26,10 @@ func newContext(e *Engine, pid *PID) *Context {
 		pid:      pid,
 		children: safemap.New[string, *PID](),
 	}
+}
+
+func (c *Context) Receiver() Receiver {
+	return c.receiver
 }
 
 // Respond will sent the given message to the sender of the current received message.
@@ -41,35 +46,22 @@ func (c *Context) Respond(msg any) {
 // SpawnChild will spawn the given Producer as a child of the current Context.
 // If the parent process dies, all the children will be automatically shutdown gracefully.
 // Hence, all children will receive the Stopped message.
-func (c *Context) SpawnChild(p Producer, name string, tags ...string) *PID {
-	opts := Opts{
-		Producer:    p,
-		Name:        name,
-		Tags:        tags,
-		InboxSize:   defaultInboxSize,
-		MaxRestarts: defaultMaxRestarts,
+func (c *Context) SpawnChild(p Producer, name string, opts ...OptFunc) *PID {
+	options := DefaultOpts(p)
+	options.Name = name
+	for _, opt := range opts {
+		opt(&options)
 	}
-	return c.SpawnChildOpts(opts)
-}
-
-// SpawnChildOpts will spawn a child process configured with the given options.
-func (c *Context) SpawnChildOpts(opts Opts) *PID {
-	if opts.InboxSize == 0 {
-		opts.InboxSize = defaultInboxSize
-	}
-	if opts.MaxRestarts == 0 {
-		opts.MaxRestarts = defaultMaxRestarts
-	}
-	proc := c.engine.spawn(opts)
+	proc := c.engine.spawn(options)
 	proc.(*process).context.parentCtx = c
-	c.children.Set(opts.Name, proc.PID())
+	c.children.Set(options.Name, proc.PID())
 	return proc.PID()
 }
 
 // SpawnChildFunc spawns the given function as a child Receiver of the current
 // Context.
-func (c *Context) SpawnChildFunc(f func(*Context), name string, tags ...string) *PID {
-	return c.SpawnChild(newFuncReceiver(f), name, tags...)
+func (c *Context) SpawnChildFunc(f func(*Context), name string, opts ...OptFunc) *PID {
+	return c.SpawnChild(newFuncReceiver(f), name, opts...)
 }
 
 // GetChild will return the PID of the child (if any) by the given name/id.
@@ -94,9 +86,9 @@ func (c *Context) Forward(pid *PID) {
 	c.engine.SendWithSender(pid, c.message, c.pid)
 }
 
-// GetLocalPID returns the PID of the process found by the given name and tags.
+// GetPID returns the PID of the process found by the given name and tags.
 // Returns nil when it could not find any process..
-func (c *Context) GetLocalPID(name string, tags ...string) *PID {
+func (c *Context) GetPID(name string, tags ...string) *PID {
 	name = name + PIDSeparator + strings.Join(tags, PIDSeparator)
 	proc := c.engine.registry.getByName(name)
 	if proc != nil {
