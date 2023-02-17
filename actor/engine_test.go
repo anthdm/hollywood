@@ -11,47 +11,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type foo struct{}
-
-func newFoo() Receiver { return &foo{} }
-
-func (foo) Receive(c *Context) {
-	fmt.Println(c.Message())
-}
-
-func (foo) Start() {
-	fmt.Println("I'm starting")
-}
-
-func Kaas(next ReceiveFunc) ReceiveFunc {
-	return func(c *Context) {
-		fmt.Println("hello from mw")
-		next(c)
-	}
-}
-
-func MiddlewareFunc(c *Context) {
-	fmt.Println("received this", c.Message())
-}
-
-func WithReceiver(recv Receiver) func(ReceiveFunc) ReceiveFunc {
-	v := recv.(*foo)
-	v.Start()
-	return func(next ReceiveFunc) ReceiveFunc {
-		return func(c *Context) {
-			fmt.Println("something new mw")
-			next(c)
-		}
-	}
-}
-
-func TestXxx(t *testing.T) {
-	e := NewEngine()
-	pid := e.Spawn(newFoo, "foo", WithMiddleware(WithReceiver(&foo{})))
-	e.Send(pid, "hello")
-	time.Sleep(time.Second)
-}
-
 func TestProcessInitStartOrder(t *testing.T) {
 	var (
 		e             = NewEngine()
