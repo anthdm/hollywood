@@ -4,6 +4,14 @@
 
 A blazingly fast and lightweight actor engine with all batteries included.
 
+## Features
+
+- dRPC as the transport layer
+- built and optimized for speed
+- ProtoBuffers, but without reflection
+- lightweight and highly customizable
+- fastest actor engine on the market
+
 # Installation
 
 ```
@@ -12,7 +20,7 @@ go get github.com/anthdm/hollywood
 
 # Quickstart
 
-> The examples folder is the best place to learn how to work with Hollywood.
+> The **[examples](https://github.com/anthdm/hollywood/tree/master/examples)** folder is the best place to learn and explore Hollywood.
 
 ```Go
 type message struct {
@@ -45,7 +53,47 @@ func main() {
 ## Spawning receivers with configuration
 
 ```Go
-// TODO
+e.Spawn(newFoo, "foo",
+	actor.WithMaxRestarts(4),
+	actor.WithInboxSize(999),
+	actor.WithTags("bar", "1"),
+)
+```
+
+## Listening to the Eventstream
+
+```go
+e := actor.NewEngine()
+
+// Subscribe to a various list of event that are being broadcasted by
+// the engine. But also published by you.
+eventSub := e.EventStream.Subscribe(func(event any) {
+	switch evt := event.(type) {
+	case *actor.DeadLetterEvent:
+		fmt.Printf("deadletter event to [%s] msg: %s\n", evt.Target, evt.Message)
+	case *actor.ActivationEvent:
+		fmt.Println("process is active", evt.PID)
+	case *actor.TerminationEvent:
+		fmt.Println("process terminated:", evt.PID)
+		wg.Done()
+	default:
+		fmt.Println("received event", evt)
+	}
+})
+
+// Cleanup subscription
+defer e.EventStream.Unsubscribe(eventSub)
+
+// Spawning receiver as a function
+e.SpawnFunc(func(c *actor.Context) {
+	switch msg := c.Message().(type) {
+	case actor.Started:
+		fmt.Println("started")
+		_ = msg
+	}
+}, "foo")
+
+time.Sleep(time.Second)
 ```
 
 # PIDS
@@ -67,7 +115,3 @@ Will result in the following PID
 ```
 make test
 ```
-
-# Contributing
-
-TODO
