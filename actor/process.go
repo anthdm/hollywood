@@ -85,7 +85,12 @@ func (p *process) start() *PID {
 					break loop
 				}
 				p.context.message = env.msg
-				applyMiddleware(recv.Receive, p.Opts.Middleware...)(p.context)
+				// Avoid 1 allocation when there is no middleware
+				if len(p.Opts.Middleware) > 0 {
+					applyMiddleware(recv.Receive, p.Opts.Middleware...)(p.context)
+				} else {
+					recv.Receive(p.context)
+				}
 			case <-p.quitch:
 				close(p.inbox)
 				break loop

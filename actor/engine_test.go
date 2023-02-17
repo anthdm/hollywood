@@ -153,17 +153,20 @@ func TestRequestResponse(t *testing.T) {
 func BenchmarkSendMessageLocal(b *testing.B) {
 	e := NewEngine()
 	p := NewTestProducer(nil, func(_ *testing.T, _ *Context) {})
-	pid := e.Spawn(p, "bench", WithInboxSize(10000))
+	pid := e.Spawn(p, "bench", WithInboxSize(100))
 
-	for i := 0; i < b.N; i++ {
-		e.Send(pid, pid)
-	}
+	b.ResetTimer()
+	b.Run("x", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			e.Send(pid, pid)
+		}
+	})
 }
 
 func BenchmarkSendWithSenderMessageLocal(b *testing.B) {
 	e := NewEngine()
 	p := NewTestProducer(nil, func(_ *testing.T, _ *Context) {})
-	pid := e.Spawn(p, "bench", WithInboxSize(10000))
+	pid := e.Spawn(p, "bench", WithInboxSize(100))
 
 	for i := 0; i < b.N; i++ {
 		e.SendWithSender(pid, pid, pid)
