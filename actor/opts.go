@@ -5,12 +5,17 @@ const (
 	defaultMaxRestarts = 3
 )
 
+type ReceiveFunc = func(*Context)
+
+type MiddlewareFunc = func(ReceiveFunc) ReceiveFunc
+
 type Opts struct {
 	Producer    Producer
 	Name        string
 	Tags        []string
 	MaxRestarts int32
 	InboxSize   int
+	Middleware  []MiddlewareFunc
 }
 
 type OptFunc func(*Opts)
@@ -21,6 +26,13 @@ func DefaultOpts(p Producer) Opts {
 		Producer:    p,
 		MaxRestarts: defaultMaxRestarts,
 		InboxSize:   defaultInboxSize,
+		Middleware:  []MiddlewareFunc{},
+	}
+}
+
+func WithMiddleware(mw ...MiddlewareFunc) OptFunc {
+	return func(opts *Opts) {
+		opts.Middleware = append(opts.Middleware, mw...)
 	}
 }
 

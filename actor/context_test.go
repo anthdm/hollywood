@@ -8,13 +8,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestGetLocalPID(t *testing.T) {
+func TestGetPID(t *testing.T) {
 	e := NewEngine()
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 	e.SpawnFunc(func(c *Context) {
 		if _, ok := c.Message().(Started); ok {
-			pid := c.GetLocalPID("foo", "bar", "baz")
+			pid := c.GetPID("foo", "bar", "baz")
 			require.True(t, pid.Equals(c.PID()))
 			wg.Done()
 		}
@@ -31,17 +31,21 @@ func TestSpawnChild(t *testing.T) {
 
 	wg.Add(1)
 	stopwg.Add(1)
-	pid := e.SpawnFunc(func(ctx *Context) {
-		if _, ok := ctx.Message().(Started); ok {
-			wg.Done()
-			ctx.SpawnChildFunc(func(cc *Context) {
-				switch cc.Message().(type) {
-				case Stopped:
-					stopwg.Done()
-				}
-			}, "child")
+
+	childFunc := func(c *Context) {
+		switch c.Message().(type) {
+		case Stopped:
+			stopwg.Done()
 		}
-	}, "parent")
+	}
+
+	pid := e.SpawnFunc(func(ctx *Context) {
+		switch ctx.Message().(type) {
+		case Started:
+			ctx.SpawnChildFunc(childFunc, "child", WithMaxRestarts(0))
+			wg.Done()
+		}
+	}, "parent", WithMaxRestarts(0))
 
 	wg.Wait()
 	e.Poison(pid)
