@@ -63,18 +63,21 @@ func applyMiddleware(rcv ReceiveFunc, middleware ...MiddlewareFunc) ReceiveFunc 
 	return rcv
 }
 
-func (p *process) call(msg envelope) {
-	if _, ok := msg.msg.(poisonPill); ok {
-		p.cleanup()
-		return
-	}
-	p.context.message = msg.msg
-	p.context.sender = msg.sender
-	recv := p.context.receiver
-	if len(p.Opts.Middleware) > 0 {
-		applyMiddleware(recv.Receive, p.Opts.Middleware...)(p.context)
-	} else {
-		recv.Receive(p.context)
+func (p *process) call(msgs []envelope) {
+	for i := 0; i < len(msgs); i++ {
+		msg := msgs[i]
+		if _, ok := msg.msg.(poisonPill); ok {
+			p.cleanup()
+			return
+		}
+		p.context.message = msg.msg
+		p.context.sender = msg.sender
+		recv := p.context.receiver
+		if len(p.Opts.Middleware) > 0 {
+			applyMiddleware(recv.Receive, p.Opts.Middleware...)(p.context)
+		} else {
+			recv.Receive(p.context)
+		}
 	}
 }
 

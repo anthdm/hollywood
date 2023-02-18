@@ -8,21 +8,34 @@ const reserv = 1
 
 type inbox struct {
 	ringBuffer []envelope
-	bufferMask int
+	bufferMask int64
 	proc       *process
 }
 
 func newInbox(size int) *inbox {
 	return &inbox{
-		ringBuffer: make([]envelope, size),
-		bufferMask: size - 1,
+		ringBuffer: make([]envelope, size, size),
+		bufferMask: int64(size) - 1,
 	}
 }
 
 func (in *inbox) Consume(lower, upper int64) {
-	for ; lower <= upper; lower++ {
-		message := in.ringBuffer[lower&int64(in.bufferMask)]
-		in.proc.call(message)
+	nmsg := (upper - lower) + reserv
+	from := lower & in.bufferMask
+	till := from + nmsg
+
+	maxlen := int64(len(in.ringBuffer))
+	if till > maxlen {
+		msgs := in.ringBuffer[from:maxlen]
+		in.proc.call(msgs)
+
+		trunc := till - maxlen
+		till = maxlen
+		msgs = in.ringBuffer[0:trunc]
+		in.proc.call(msgs)
+	} else {
+		msgs := in.ringBuffer[from:till]
+		in.proc.call(msgs)
 	}
 }
 
@@ -44,6 +57,6 @@ func (in *inbox) Close() error {
 
 func (in *inbox) send(msg envelope) {
 	seq := in.proc.disruptor.Reserve(reserv)
-	in.ringBuffer[seq&int64(in.bufferMask)] = msg
+	in.ringBuffer[seq&in.bufferMask] = msg
 	in.proc.disruptor.Commit(seq-reserv+1, seq)
 }

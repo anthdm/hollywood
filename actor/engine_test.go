@@ -141,7 +141,7 @@ func TestRequestResponse(t *testing.T) {
 func BenchmarkSendMessageLocal(b *testing.B) {
 	e := NewEngine()
 	p := NewTestProducer(nil, func(_ *testing.T, _ *Context) {})
-	pid := e.Spawn(p, "bench", WithInboxSize(1024*32))
+	pid := e.Spawn(p, "bench", WithInboxSize(1024*64))
 
 	b.ResetTimer()
 	b.Run("x", func(b *testing.B) {

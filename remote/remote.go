@@ -42,7 +42,7 @@ func (r *Remote) Start() {
 	DRPCRegisterRemote(mux, r.streamReader)
 	s := drpcserver.New(mux)
 
-	r.streamRouterPID = r.engine.Spawn(newStreamRouter(r.engine), "router")
+	r.streamRouterPID = r.engine.Spawn(newStreamRouter(r.engine), "router", actor.WithInboxSize(1024*32))
 
 	log.Infow("[REMOTE] server started", log.M{
 		"listenAddr": r.config.ListenAddr,
