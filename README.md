@@ -6,11 +6,11 @@ A blazingly fast and lightweight actor engine with all batteries included.
 
 ## Features
 
+- LMAX disruptor message queue for low latency messaging
 - dRPC as the transport layer
-- built and optimized for speed
-- ProtoBuffers, but without reflection
+- Optimized protoBuffers without reflection
 - lightweight and highly customizable
-- fastest actor engine on the market
+- built and optimized for speed
 
 # Installation
 
