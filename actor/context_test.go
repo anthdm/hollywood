@@ -19,6 +19,7 @@ func TestGetPID(t *testing.T) {
 			wg.Done()
 		}
 	}, "foo", WithTags("bar", "baz"))
+
 	wg.Wait()
 }
 

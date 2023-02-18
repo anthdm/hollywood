@@ -1,6 +1,7 @@
 package actor
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/anthdm/hollywood/log"
@@ -90,6 +91,7 @@ func (c *Context) Forward(pid *PID) {
 // Returns nil when it could not find any process..
 func (c *Context) GetPID(name string, tags ...string) *PID {
 	name = name + PIDSeparator + strings.Join(tags, PIDSeparator)
+	fmt.Println(name)
 	proc := c.engine.registry.getByName(name)
 	if proc != nil {
 		return proc.PID()

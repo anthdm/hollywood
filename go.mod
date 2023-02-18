@@ -10,6 +10,7 @@ require (
 )
 
 require (
+	github.com/anthdm/disruptor v0.0.0-20230217211901-12edb05f1028 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/google/go-cmp v0.5.6 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect

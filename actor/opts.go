@@ -1,7 +1,7 @@
 package actor
 
 const (
-	defaultInboxSize   = 100
+	defaultInboxSize   = 1024
 	defaultMaxRestarts = 3
 )
 

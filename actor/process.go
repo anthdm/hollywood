@@ -5,6 +5,7 @@ import (
 	"runtime/debug"
 	"time"
 
+	"github.com/anthdm/disruptor"
 	"github.com/anthdm/hollywood/log"
 )
 
@@ -24,24 +25,34 @@ type processer interface {
 type process struct {
 	Opts
 
-	inbox    chan envelope
-	context  *Context
-	pid      *PID
-	restarts int32
-	quitch   chan struct{}
+	disruptor disruptor.Disruptor
+	inbox     *inbox
+	context   *Context
+	pid       *PID
+	restarts  int32
 }
 
 func newProcess(e *Engine, opts Opts) *process {
 	pid := NewPID(e.address, opts.Name, opts.Tags...)
 	ctx := newContext(e, pid)
+
+	in := newInbox(opts.InboxSize)
+	dis := disruptor.New(
+		disruptor.WithCapacity(int64(opts.InboxSize)),
+		disruptor.WithConsumerGroup(in),
+	)
+
 	p := &process{
-		pid:     pid,
-		inbox:   make(chan envelope, opts.InboxSize),
-		Opts:    opts,
-		context: ctx,
-		quitch:  make(chan struct{}, 1),
+		pid:       pid,
+		inbox:     in,
+		disruptor: dis,
+		Opts:      opts,
+		context:   ctx,
 	}
+
+	e.registry.add(p)
 	p.start()
+
 	return p
 }
 
@@ -52,57 +63,48 @@ func applyMiddleware(rcv ReceiveFunc, middleware ...MiddlewareFunc) ReceiveFunc 
 	return rcv
 }
 
-func (p *process) start() *PID {
-	recv := p.Producer()
+func (p *process) call(msg envelope) {
+	if _, ok := msg.msg.(poisonPill); ok {
+		p.cleanup()
+		return
+	}
+	p.context.message = msg.msg
+	p.context.sender = msg.sender
+	recv := p.context.receiver
+	if len(p.Opts.Middleware) > 0 {
+		applyMiddleware(recv.Receive, p.Opts.Middleware...)(p.context)
+	} else {
+		recv.Receive(p.context)
+	}
+}
 
-	p.context.engine.EventStream.Publish(&ActivationEvent{PID: p.pid})
+func (p *process) start() {
+	defer func() {
+		if p.MaxRestarts > 0 {
+			if v := recover(); v != nil {
+				p.tryRestart(v)
+			}
+		}
+	}()
+
+	recv := p.Producer()
 	p.context.receiver = recv
 	p.context.message = Initialized{}
 	applyMiddleware(recv.Receive, p.Opts.Middleware...)(p.context)
 
-	go func() {
-		defer func() {
-			if p.MaxRestarts > 0 {
-				if v := recover(); v != nil {
-					p.tryRestart(v)
-				}
-			}
-		}()
-		p.context.message = Started{}
-		applyMiddleware(recv.Receive, p.Opts.Middleware...)(p.context)
-		log.Debugw("[PROCESS] started", log.M{
-			"pid": p.pid,
-		})
-	loop:
-		for {
-			select {
-			case env := <-p.inbox:
-				p.context.sender = env.sender
-				if _, ok := env.msg.(poisonPill); ok {
-					close(p.inbox)
-					p.context.message = Stopped{}
-					applyMiddleware(recv.Receive, p.Opts.Middleware...)(p.context)
-					break loop
-				}
-				p.context.message = env.msg
-				// Avoid 1 allocation when there is no middleware
-				if len(p.Opts.Middleware) > 0 {
-					applyMiddleware(recv.Receive, p.Opts.Middleware...)(p.context)
-				} else {
-					recv.Receive(p.context)
-				}
-			case <-p.quitch:
-				close(p.inbox)
-				break loop
-			}
-		}
-		p.cleanup()
-	}()
+	p.inbox.run(p)
 
-	return p.pid
+	p.context.message = Started{}
+	applyMiddleware(recv.Receive, p.Opts.Middleware...)(p.context)
+	p.context.engine.EventStream.Publish(&ActivationEvent{PID: p.pid})
+
+	log.Tracew("[PROCESS] started", log.M{
+		"pid": p.pid,
+	})
 }
 
 func (p *process) tryRestart(v any) {
+	p.inbox.close()
 	p.restarts++
 	// InternalError does not take the maximum restarts into account.
 	// For now, InternalError is getting triggered when we are dialing
@@ -126,7 +128,6 @@ func (p *process) tryRestart(v any) {
 			"pid":      p.pid,
 			"restarts": p.restarts,
 		})
-		close(p.quitch)
 		return
 	}
 	// Restart the process after its restartDelay
@@ -141,6 +142,11 @@ func (p *process) tryRestart(v any) {
 }
 
 func (p *process) cleanup() {
+	p.inbox.close()
+
+	p.context.message = Stopped{}
+	applyMiddleware(p.context.receiver.Receive, p.Opts.Middleware...)(p.context)
+
 	p.context.engine.registry.remove(p.pid)
 	// We are a child if the parent context is not nil
 	if p.context.parentCtx != nil {
@@ -156,7 +162,7 @@ func (p *process) cleanup() {
 			})
 		})
 	}
-	log.Tracew("[PROCESS] inbox shutdown", log.M{
+	log.Tracew("[PROCESS] shutdown", log.M{
 		"pid": p.pid,
 	})
 	// Send TerminationEvent to the eventstream
@@ -165,9 +171,6 @@ func (p *process) cleanup() {
 
 func (p *process) PID() *PID { return p.pid }
 func (p *process) Send(_ *PID, msg any, sender *PID) {
-	p.inbox <- envelope{
-		msg:    msg,
-		sender: sender,
-	}
+	p.inbox.send(envelope{msg: msg, sender: sender})
 }
-func (p *process) Shutdown() { close(p.quitch) }
+func (p *process) Shutdown() { p.cleanup() }

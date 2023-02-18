@@ -123,9 +123,7 @@ func (e *Engine) Poison(pid *PID) {
 }
 
 func (e *Engine) spawn(cfg Opts) processer {
-	proc := newProcess(e, cfg)
-	e.registry.add(proc)
-	return proc
+	return newProcess(e, cfg)
 }
 
 func (e *Engine) sendLocal(pid *PID, msg any, sender *PID) {
