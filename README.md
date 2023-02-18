@@ -2,7 +2,7 @@
 
 # Hollywood
 
-A blazingly fast and lightweight actor engine with all batteries included.
+A blazingly fast, low latency, and lightweight actor engine with all batteries included.
 
 ## Features
 

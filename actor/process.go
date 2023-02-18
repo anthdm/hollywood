@@ -143,11 +143,10 @@ func (p *process) tryRestart(v any) {
 
 func (p *process) cleanup() {
 	p.inbox.close()
-
+	p.context.engine.registry.remove(p.pid)
 	p.context.message = Stopped{}
 	applyMiddleware(p.context.receiver.Receive, p.Opts.Middleware...)(p.context)
 
-	p.context.engine.registry.remove(p.pid)
 	// We are a child if the parent context is not nil
 	if p.context.parentCtx != nil {
 		p.context.parentCtx.children.Delete(p.Name)
