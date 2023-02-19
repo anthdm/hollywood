@@ -15,7 +15,7 @@ type batch struct {
 func newBatch(fn func([]writeToStream)) *batch {
 	return &batch{
 		timeout:  time.Millisecond * 5,
-		items:    make([]writeToStream, 1024*2),
+		items:    make([]writeToStream, 1024),
 		sendFunc: fn,
 	}
 }
