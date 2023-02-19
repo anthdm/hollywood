@@ -5,17 +5,17 @@ import (
 )
 
 type batch struct {
-	items    []writeToStream
+	items    []*streamDeliver
 	timeout  time.Duration
 	size     int
 	timer    *time.Timer
-	sendFunc func([]writeToStream)
+	sendFunc func([]*streamDeliver)
 }
 
-func newBatch(fn func([]writeToStream)) *batch {
+func newBatch(fn func([]*streamDeliver)) *batch {
 	return &batch{
 		timeout:  time.Millisecond * 5,
-		items:    make([]writeToStream, 1024*2),
+		items:    make([]*streamDeliver, 1000),
 		sendFunc: fn,
 	}
 }
@@ -29,7 +29,7 @@ func (b *batch) flush() {
 	b.size = 0
 }
 
-func (b *batch) add(msg writeToStream) {
+func (b *batch) add(msg *streamDeliver) {
 	b.items[b.size] = msg
 	b.size++
 

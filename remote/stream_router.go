@@ -5,6 +5,12 @@ import (
 	"github.com/anthdm/hollywood/log"
 )
 
+type streamDeliver struct {
+	sender *actor.PID
+	target *actor.PID
+	msg    Marshaler
+}
+
 type routeToStream struct {
 	sender *actor.PID
 	pid    *actor.PID
@@ -35,8 +41,8 @@ func (s *streamRouter) Receive(ctx *actor.Context) {
 	switch msg := ctx.Message().(type) {
 	case actor.Started:
 		s.pid = ctx.PID()
-	case routeToStream:
-		s.handleRouteToStream(msg)
+	case *streamDeliver:
+		s.deliverStream(msg)
 	case terminateStream:
 		s.handleTerminateStream(msg)
 	}
@@ -52,11 +58,11 @@ func (s *streamRouter) handleTerminateStream(msg terminateStream) {
 	})
 }
 
-func (s *streamRouter) handleRouteToStream(msg routeToStream) {
+func (s *streamRouter) deliverStream(msg *streamDeliver) {
 	var (
 		swpid   *actor.PID
 		ok      bool
-		address = msg.pid.Address
+		address = msg.target.Address
 	)
 
 	swpid, ok = s.streams[address]
@@ -69,10 +75,5 @@ func (s *streamRouter) handleRouteToStream(msg routeToStream) {
 			"pid": swpid,
 		})
 	}
-	ws := writeToStream{
-		pid:    msg.pid,
-		msg:    msg.msg,
-		sender: msg.sender,
-	}
-	s.engine.Send(swpid, ws)
+	s.engine.Send(swpid, msg)
 }

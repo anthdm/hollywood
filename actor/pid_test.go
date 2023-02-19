@@ -6,6 +6,19 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func BenchmarkLookupKey(b *testing.B) {
+	pid := NewPID("127.0.0.1:3000", "foo")
+	for i := 0; i < b.N; i++ {
+		pid.lookupKey()
+	}
+}
+
+func BenchmarkNewPID(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		NewPID("127.0.0.1:3000", "foo")
+	}
+}
+
 func TestPID(t *testing.T) {
 	address := "127.0.0.1:3000"
 	id := "foo"
@@ -17,20 +30,5 @@ func TestPID(t *testing.T) {
 	assert.Equal(t, address+PIDSeparator+id+PIDSeparator+"100", pid.String())
 
 	pid = NewPID(address, id, "100", "bar")
-	assert.Equal(t, address+PIDSeparator+id+PIDSeparator+"100"+PIDSeparator+"bar", pid.LookupKey)
-}
-
-func TestPIDHasTag(t *testing.T) {
-	address := "127.0.0.1:3000"
-	id := "foo"
-
-	pid := NewPID(address, id)
-	assert.False(t, pid.HasTag("bar"))
-
-	pid = NewPID(address, id, "bar")
-	assert.True(t, pid.HasTag("bar"))
-
-	pid = NewPID(address, id, "bar", "123")
-	assert.True(t, pid.HasTag("bar"))
-	assert.True(t, pid.HasTag("123"))
+	assert.Equal(t, address+PIDSeparator+id+PIDSeparator+"100"+PIDSeparator+"bar", pid.String())
 }

@@ -100,7 +100,7 @@ func (e *Engine) Send(pid *PID, msg any) {
 
 func (e *Engine) send(pid *PID, msg any, sender *PID) {
 	if e.isLocalMessage(pid) {
-		e.sendLocal(pid, msg, sender)
+		e.SendLocal(pid, msg, sender)
 		return
 	}
 	if e.remote == nil {
@@ -118,7 +118,7 @@ func (e *Engine) send(pid *PID, msg any, sender *PID) {
 func (e *Engine) Poison(pid *PID) {
 	proc := e.registry.get(pid)
 	if proc != nil {
-		e.sendLocal(pid, poisonPill{}, nil)
+		e.SendLocal(pid, poisonPill{}, nil)
 	}
 }
 
@@ -126,7 +126,7 @@ func (e *Engine) spawn(cfg Opts) processer {
 	return newProcess(e, cfg)
 }
 
-func (e *Engine) sendLocal(pid *PID, msg any, sender *PID) {
+func (e *Engine) SendLocal(pid *PID, msg any, sender *PID) {
 	proc := e.registry.get(pid)
 	if proc != nil {
 		proc.Send(pid, msg, sender)

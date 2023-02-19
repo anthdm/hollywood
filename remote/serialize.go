@@ -15,11 +15,11 @@ type Unmarshaler interface {
 	UnmarshalVT([]byte) error
 }
 
-func makeEnvelope(streams []writeToStream) (*Envelope, error) {
+func makeEnvelope(streams []*streamDeliver) (*Envelope, error) {
 	protos := make([]*Message, len(streams))
 	for i := 0; i < len(streams); i++ {
 		msg := streams[i]
-		pmsg, err := serialize(msg.pid, msg.sender, msg.msg)
+		pmsg, err := serialize(msg.target, msg.sender, msg.msg)
 		if err != nil {
 			return nil, err
 		}

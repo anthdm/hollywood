@@ -54,10 +54,10 @@ func (r *Remote) Start() {
 func (r *Remote) Send(pid *actor.PID, msg any, sender *actor.PID) {
 	switch m := msg.(type) {
 	case Marshaler:
-		r.engine.Send(r.streamRouterPID, routeToStream{
-			pid:    pid,
-			msg:    m,
+		r.engine.Send(r.streamRouterPID, &streamDeliver{
+			target: pid,
 			sender: sender,
+			msg:    m,
 		})
 	default:
 		log.Errorw("[REMOTE] failed to send message", log.M{

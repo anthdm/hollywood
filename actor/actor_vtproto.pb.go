@@ -24,14 +24,8 @@ func (m *PID) CloneVT() *PID {
 		return (*PID)(nil)
 	}
 	r := &PID{
-		Address:   m.Address,
-		ID:        m.ID,
-		LookupKey: m.LookupKey,
-	}
-	if rhs := m.Tags; rhs != nil {
-		tmpContainer := make([]string, len(rhs))
-		copy(tmpContainer, rhs)
-		r.Tags = tmpContainer
+		Address: m.Address,
+		ID:      m.ID,
 	}
 	if len(m.unknownFields) > 0 {
 		r.unknownFields = make([]byte, len(m.unknownFields))
@@ -54,18 +48,6 @@ func (this *PID) EqualVT(that *PID) bool {
 		return false
 	}
 	if this.ID != that.ID {
-		return false
-	}
-	if len(this.Tags) != len(that.Tags) {
-		return false
-	}
-	for i, vx := range this.Tags {
-		vy := that.Tags[i]
-		if vx != vy {
-			return false
-		}
-	}
-	if this.LookupKey != that.LookupKey {
 		return false
 	}
 	return string(this.unknownFields) == string(that.unknownFields)
@@ -107,22 +89,6 @@ func (m *PID) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 	if m.unknownFields != nil {
 		i -= len(m.unknownFields)
 		copy(dAtA[i:], m.unknownFields)
-	}
-	if len(m.LookupKey) > 0 {
-		i -= len(m.LookupKey)
-		copy(dAtA[i:], m.LookupKey)
-		i = encodeVarint(dAtA, i, uint64(len(m.LookupKey)))
-		i--
-		dAtA[i] = 0x22
-	}
-	if len(m.Tags) > 0 {
-		for iNdEx := len(m.Tags) - 1; iNdEx >= 0; iNdEx-- {
-			i -= len(m.Tags[iNdEx])
-			copy(dAtA[i:], m.Tags[iNdEx])
-			i = encodeVarint(dAtA, i, uint64(len(m.Tags[iNdEx])))
-			i--
-			dAtA[i] = 0x1a
-		}
 	}
 	if len(m.ID) > 0 {
 		i -= len(m.ID)
@@ -182,22 +148,6 @@ func (m *PID) MarshalToSizedBufferVTStrict(dAtA []byte) (int, error) {
 		i -= len(m.unknownFields)
 		copy(dAtA[i:], m.unknownFields)
 	}
-	if len(m.LookupKey) > 0 {
-		i -= len(m.LookupKey)
-		copy(dAtA[i:], m.LookupKey)
-		i = encodeVarint(dAtA, i, uint64(len(m.LookupKey)))
-		i--
-		dAtA[i] = 0x22
-	}
-	if len(m.Tags) > 0 {
-		for iNdEx := len(m.Tags) - 1; iNdEx >= 0; iNdEx-- {
-			i -= len(m.Tags[iNdEx])
-			copy(dAtA[i:], m.Tags[iNdEx])
-			i = encodeVarint(dAtA, i, uint64(len(m.Tags[iNdEx])))
-			i--
-			dAtA[i] = 0x1a
-		}
-	}
 	if len(m.ID) > 0 {
 		i -= len(m.ID)
 		copy(dAtA[i:], m.ID)
@@ -226,16 +176,6 @@ func (m *PID) SizeVT() (n int) {
 		n += 1 + l + sov(uint64(l))
 	}
 	l = len(m.ID)
-	if l > 0 {
-		n += 1 + l + sov(uint64(l))
-	}
-	if len(m.Tags) > 0 {
-		for _, s := range m.Tags {
-			l = len(s)
-			n += 1 + l + sov(uint64(l))
-		}
-	}
-	l = len(m.LookupKey)
 	if l > 0 {
 		n += 1 + l + sov(uint64(l))
 	}
@@ -341,70 +281,6 @@ func (m *PID) UnmarshalVT(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			m.ID = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 3:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Tags", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflow
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLength
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLength
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Tags = append(m.Tags, string(dAtA[iNdEx:postIndex]))
-			iNdEx = postIndex
-		case 4:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field LookupKey", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflow
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLength
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLength
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.LookupKey = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex

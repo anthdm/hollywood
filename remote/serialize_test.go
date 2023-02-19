@@ -32,10 +32,10 @@ func BenchmarkMakeEnvelope(b *testing.B) {
 	)
 
 	n := 1024
-	streams := make([]writeToStream, n)
+	streams := make([]*streamDeliver, n)
 	for i := 0; i < n; i++ {
-		streams[i] = writeToStream{
-			pid:    pid,
+		streams[i] = &streamDeliver{
+			target: pid,
 			sender: sender,
 			msg:    payload,
 		}

@@ -3,22 +3,18 @@ package remote
 import (
 	context "context"
 	errors "errors"
+	fmt "fmt"
 	"io"
 	"net"
 	"time"
 
 	"github.com/anthdm/hollywood/actor"
 	"github.com/anthdm/hollywood/log"
+	proto "google.golang.org/protobuf/proto"
 	"storj.io/drpc/drpcconn"
 )
 
 const connIdleTimeout = time.Minute * 10
-
-type writeToStream struct {
-	sender *actor.PID
-	pid    *actor.PID
-	msg    Marshaler
-}
 
 type streamWriter struct {
 	writeToAddr string
@@ -45,7 +41,7 @@ func (e *streamWriter) Receive(ctx *actor.Context) {
 	case actor.Started:
 		e.init()
 		e.batch = newBatch(e.send)
-	case writeToStream:
+	case *streamDeliver:
 		e.batch.add(msg)
 	}
 }
@@ -83,7 +79,7 @@ func (e *streamWriter) init() {
 	}()
 }
 
-func (e *streamWriter) send(streams []writeToStream) {
+func (e *streamWriter) send(streams []*streamDeliver) {
 	env, err := makeEnvelope(streams)
 	if err != nil {
 		log.Errorw("[STREAM WRITER] failed creating message envelope", log.M{
@@ -91,6 +87,8 @@ func (e *streamWriter) send(streams []writeToStream) {
 		})
 		return
 	}
+	fmt.Println("env len", len(env.Messages))
+	fmt.Println("env total size", proto.Size(env))
 	if err := e.stream.Send(env); err != nil {
 		if errors.Is(err, io.EOF) {
 			e.conn.Close()

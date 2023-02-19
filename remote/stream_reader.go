@@ -42,11 +42,7 @@ func (r *streamReader) Receive(stream DRPCRemote_ReceiveStream) error {
 				continue
 			}
 
-			if msg.Sender != nil {
-				r.remote.engine.SendWithSender(pid, dmsg, msg.Sender)
-			} else {
-				r.remote.engine.Send(pid, dmsg)
-			}
+			r.remote.engine.SendLocal(pid, dmsg, msg.Sender)
 		}
 	}
 
