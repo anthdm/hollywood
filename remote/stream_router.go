@@ -3,13 +3,12 @@ package remote
 import (
 	"github.com/anthdm/hollywood/actor"
 	"github.com/anthdm/hollywood/log"
-	"google.golang.org/protobuf/proto"
 )
 
 type routeToStream struct {
 	sender *actor.PID
 	pid    *actor.PID
-	msg    proto.Message
+	msg    Marshaler
 }
 
 type terminateStream struct {
@@ -64,7 +63,7 @@ func (s *streamRouter) handleRouteToStream(msg routeToStream) {
 	if !ok {
 		swpid = s.engine.Spawn(
 			newStreamWriter(s.engine, s.pid, address),
-			"stream", actor.WithTags(address), actor.WithInboxSize(1024*64))
+			"stream", actor.WithTags(address), actor.WithInboxSize(1024*1024))
 		s.streams[address] = swpid
 		log.Tracew("[STREAM ROUTER] new stream route", log.M{
 			"pid": swpid,

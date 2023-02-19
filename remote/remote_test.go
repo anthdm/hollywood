@@ -10,6 +10,24 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestBatchx(t *testing.T) {
+	var (
+		a = makeRemoteEngine("127.0.0.2:4000")
+		b = makeRemoteEngine("127.0.0.2:5000")
+	)
+
+	pid := a.SpawnFunc(func(c *actor.Context) {
+		switch c.Message().(type) {
+		}
+	}, "foo")
+
+	for i := 0; i < 100; i++ {
+		b.Send(pid, pid)
+	}
+
+	time.Sleep(time.Second)
+}
+
 func TestSend(t *testing.T) {
 	var (
 		a  = makeRemoteEngine("127.0.0.2:4000")

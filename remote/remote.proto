@@ -4,8 +4,12 @@ option go_package = "github.com/anthdm/hollywood/remote";
 import "actor.proto";
 
 service Remote {
-	rpc Receive(stream Message) returns (stream Message) {}
+	rpc Receive(stream Envelope) returns (stream Envelope) {}
 } 
+
+message Envelope {
+	repeated Message Messages = 1;
+}
 
 message Message {
 	bytes data = 1;

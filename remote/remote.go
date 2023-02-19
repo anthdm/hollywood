@@ -7,7 +7,6 @@ import (
 
 	"github.com/anthdm/hollywood/actor"
 	"github.com/anthdm/hollywood/log"
-	"google.golang.org/protobuf/proto"
 	"storj.io/drpc/drpcmux"
 	"storj.io/drpc/drpcserver"
 )
@@ -42,7 +41,7 @@ func (r *Remote) Start() {
 	DRPCRegisterRemote(mux, r.streamReader)
 	s := drpcserver.New(mux)
 
-	r.streamRouterPID = r.engine.Spawn(newStreamRouter(r.engine), "router", actor.WithInboxSize(1024*32))
+	r.streamRouterPID = r.engine.Spawn(newStreamRouter(r.engine), "router", actor.WithInboxSize(1024*1024))
 
 	log.Infow("[REMOTE] server started", log.M{
 		"listenAddr": r.config.ListenAddr,
@@ -54,7 +53,7 @@ func (r *Remote) Start() {
 
 func (r *Remote) Send(pid *actor.PID, msg any, sender *actor.PID) {
 	switch m := msg.(type) {
-	case proto.Message:
+	case Marshaler:
 		r.engine.Send(r.streamRouterPID, routeToStream{
 			pid:    pid,
 			msg:    m,
@@ -71,4 +70,8 @@ func (r *Remote) Send(pid *actor.PID, msg any, sender *actor.PID) {
 // Address returns the listen address of the remote.
 func (r *Remote) Address() string {
 	return r.config.ListenAddr
+}
+
+func init() {
+	RegisterType(&actor.PID{})
 }

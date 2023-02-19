@@ -25,7 +25,7 @@ func (r *streamReader) Receive(stream DRPCRemote_ReceiveStream) error {
 	}()
 
 	for {
-		msg, err := stream.Recv()
+		envelope, err := stream.Recv()
 		if err != nil {
 			if errors.Is(err, context.Canceled) {
 				break
@@ -34,17 +34,19 @@ func (r *streamReader) Receive(stream DRPCRemote_ReceiveStream) error {
 			return err
 		}
 
-		pid := msg.Target
-		dmsg, err := deserialize(msg.Data, msg.TypeName)
-		if err != nil {
-			log.Warnw("[STREAM READER] deserialize", log.M{"err": err})
-			continue
-		}
+		for _, msg := range envelope.Messages {
+			pid := msg.Target
+			dmsg, err := deserialize(msg.Data, msg.TypeName)
+			if err != nil {
+				log.Warnw("[STREAM READER] deserialize", log.M{"err": err})
+				continue
+			}
 
-		if msg.Sender != nil {
-			r.remote.engine.SendWithSender(pid, dmsg, msg.Sender)
-		} else {
-			r.remote.engine.Send(pid, dmsg)
+			if msg.Sender != nil {
+				r.remote.engine.SendWithSender(pid, dmsg, msg.Sender)
+			} else {
+				r.remote.engine.Send(pid, dmsg)
+			}
 		}
 	}
 

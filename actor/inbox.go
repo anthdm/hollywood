@@ -14,7 +14,7 @@ type inbox struct {
 
 func newInbox(size int) *inbox {
 	return &inbox{
-		ringBuffer: make([]envelope, size, size),
+		ringBuffer: make([]envelope, size),
 		bufferMask: int64(size) - 1,
 	}
 }

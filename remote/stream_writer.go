@@ -9,7 +9,6 @@ import (
 
 	"github.com/anthdm/hollywood/actor"
 	"github.com/anthdm/hollywood/log"
-	"google.golang.org/protobuf/proto"
 	"storj.io/drpc/drpcconn"
 )
 
@@ -18,7 +17,7 @@ const connIdleTimeout = time.Minute * 10
 type writeToStream struct {
 	sender *actor.PID
 	pid    *actor.PID
-	msg    proto.Message
+	msg    Marshaler
 }
 
 type streamWriter struct {
@@ -28,6 +27,7 @@ type streamWriter struct {
 	stream      DRPCRemote_ReceiveStream
 	engine      *actor.Engine
 	routerPID   *actor.PID
+	batch       *batch
 }
 
 func newStreamWriter(e *actor.Engine, rpid *actor.PID, address string) actor.Producer {
@@ -44,8 +44,9 @@ func (e *streamWriter) Receive(ctx *actor.Context) {
 	switch msg := ctx.Message().(type) {
 	case actor.Started:
 		e.init()
+		e.batch = newBatch(e.send)
 	case writeToStream:
-		e.handleWriteStream(msg)
+		e.batch.add(msg)
 	}
 }
 
@@ -82,17 +83,15 @@ func (e *streamWriter) init() {
 	}()
 }
 
-func (e *streamWriter) handleWriteStream(ws writeToStream) {
-	if e.stream == nil {
-		return
-	}
-	msg, err := serialize(ws.pid, ws.sender, ws.msg)
+func (e *streamWriter) send(streams []writeToStream) {
+	env, err := makeEnvelope(streams)
 	if err != nil {
-		log.Errorw("[REMOTE] failed serializing message", log.M{
+		log.Errorw("[STREAM WRITER] failed creating message envelope", log.M{
 			"err": err,
 		})
+		return
 	}
-	if err := e.stream.Send(msg); err != nil {
+	if err := e.stream.Send(env); err != nil {
 		if errors.Is(err, io.EOF) {
 			e.conn.Close()
 			return
