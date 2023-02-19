@@ -29,6 +29,33 @@ func (m *Envelope) CloneVT() *Envelope {
 		return (*Envelope)(nil)
 	}
 	r := &Envelope{}
+	if rhs := m.TypeNames; rhs != nil {
+		tmpContainer := make([]string, len(rhs))
+		copy(tmpContainer, rhs)
+		r.TypeNames = tmpContainer
+	}
+	if rhs := m.Targets; rhs != nil {
+		tmpContainer := make([]*actor.PID, len(rhs))
+		for k, v := range rhs {
+			if vtpb, ok := interface{}(v).(interface{ CloneVT() *actor.PID }); ok {
+				tmpContainer[k] = vtpb.CloneVT()
+			} else {
+				tmpContainer[k] = proto.Clone(v).(*actor.PID)
+			}
+		}
+		r.Targets = tmpContainer
+	}
+	if rhs := m.Senders; rhs != nil {
+		tmpContainer := make([]*actor.PID, len(rhs))
+		for k, v := range rhs {
+			if vtpb, ok := interface{}(v).(interface{ CloneVT() *actor.PID }); ok {
+				tmpContainer[k] = vtpb.CloneVT()
+			} else {
+				tmpContainer[k] = proto.Clone(v).(*actor.PID)
+			}
+		}
+		r.Senders = tmpContainer
+	}
 	if rhs := m.Messages; rhs != nil {
 		tmpContainer := make([]*Message, len(rhs))
 		for k, v := range rhs {
@@ -52,26 +79,14 @@ func (m *Message) CloneVT() *Message {
 		return (*Message)(nil)
 	}
 	r := &Message{
-		TypeName: m.TypeName,
+		TargetIndex:   m.TargetIndex,
+		SenderIndex:   m.SenderIndex,
+		TypeNameIndex: m.TypeNameIndex,
 	}
 	if rhs := m.Data; rhs != nil {
 		tmpBytes := make([]byte, len(rhs))
 		copy(tmpBytes, rhs)
 		r.Data = tmpBytes
-	}
-	if rhs := m.Target; rhs != nil {
-		if vtpb, ok := interface{}(rhs).(interface{ CloneVT() *actor.PID }); ok {
-			r.Target = vtpb.CloneVT()
-		} else {
-			r.Target = proto.Clone(rhs).(*actor.PID)
-		}
-	}
-	if rhs := m.Sender; rhs != nil {
-		if vtpb, ok := interface{}(rhs).(interface{ CloneVT() *actor.PID }); ok {
-			r.Sender = vtpb.CloneVT()
-		} else {
-			r.Sender = proto.Clone(rhs).(*actor.PID)
-		}
 	}
 	if len(m.unknownFields) > 0 {
 		r.unknownFields = make([]byte, len(m.unknownFields))
@@ -111,6 +126,57 @@ func (this *Envelope) EqualVT(that *Envelope) bool {
 	} else if this == nil || that == nil {
 		return false
 	}
+	if len(this.TypeNames) != len(that.TypeNames) {
+		return false
+	}
+	for i, vx := range this.TypeNames {
+		vy := that.TypeNames[i]
+		if vx != vy {
+			return false
+		}
+	}
+	if len(this.Targets) != len(that.Targets) {
+		return false
+	}
+	for i, vx := range this.Targets {
+		vy := that.Targets[i]
+		if p, q := vx, vy; p != q {
+			if p == nil {
+				p = &actor.PID{}
+			}
+			if q == nil {
+				q = &actor.PID{}
+			}
+			if equal, ok := interface{}(p).(interface{ EqualVT(*actor.PID) bool }); ok {
+				if !equal.EqualVT(q) {
+					return false
+				}
+			} else if !proto.Equal(p, q) {
+				return false
+			}
+		}
+	}
+	if len(this.Senders) != len(that.Senders) {
+		return false
+	}
+	for i, vx := range this.Senders {
+		vy := that.Senders[i]
+		if p, q := vx, vy; p != q {
+			if p == nil {
+				p = &actor.PID{}
+			}
+			if q == nil {
+				q = &actor.PID{}
+			}
+			if equal, ok := interface{}(p).(interface{ EqualVT(*actor.PID) bool }); ok {
+				if !equal.EqualVT(q) {
+					return false
+				}
+			} else if !proto.Equal(p, q) {
+				return false
+			}
+		}
+	}
 	if len(this.Messages) != len(that.Messages) {
 		return false
 	}
@@ -147,21 +213,13 @@ func (this *Message) EqualVT(that *Message) bool {
 	if string(this.Data) != string(that.Data) {
 		return false
 	}
-	if equal, ok := interface{}(this.Target).(interface{ EqualVT(*actor.PID) bool }); ok {
-		if !equal.EqualVT(that.Target) {
-			return false
-		}
-	} else if !proto.Equal(this.Target, that.Target) {
+	if this.TargetIndex != that.TargetIndex {
 		return false
 	}
-	if equal, ok := interface{}(this.Sender).(interface{ EqualVT(*actor.PID) bool }); ok {
-		if !equal.EqualVT(that.Sender) {
-			return false
-		}
-	} else if !proto.Equal(this.Sender, that.Sender) {
+	if this.SenderIndex != that.SenderIndex {
 		return false
 	}
-	if this.TypeName != that.TypeName {
+	if this.TypeNameIndex != that.TypeNameIndex {
 		return false
 	}
 	return string(this.unknownFields) == string(that.unknownFields)
@@ -356,6 +414,63 @@ func (m *Envelope) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 			i -= size
 			i = encodeVarint(dAtA, i, uint64(size))
 			i--
+			dAtA[i] = 0x22
+		}
+	}
+	if len(m.Senders) > 0 {
+		for iNdEx := len(m.Senders) - 1; iNdEx >= 0; iNdEx-- {
+			if vtmsg, ok := interface{}(m.Senders[iNdEx]).(interface {
+				MarshalToSizedBufferVT([]byte) (int, error)
+			}); ok {
+				size, err := vtmsg.MarshalToSizedBufferVT(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarint(dAtA, i, uint64(size))
+			} else {
+				encoded, err := proto.Marshal(m.Senders[iNdEx])
+				if err != nil {
+					return 0, err
+				}
+				i -= len(encoded)
+				copy(dAtA[i:], encoded)
+				i = encodeVarint(dAtA, i, uint64(len(encoded)))
+			}
+			i--
+			dAtA[i] = 0x1a
+		}
+	}
+	if len(m.Targets) > 0 {
+		for iNdEx := len(m.Targets) - 1; iNdEx >= 0; iNdEx-- {
+			if vtmsg, ok := interface{}(m.Targets[iNdEx]).(interface {
+				MarshalToSizedBufferVT([]byte) (int, error)
+			}); ok {
+				size, err := vtmsg.MarshalToSizedBufferVT(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarint(dAtA, i, uint64(size))
+			} else {
+				encoded, err := proto.Marshal(m.Targets[iNdEx])
+				if err != nil {
+					return 0, err
+				}
+				i -= len(encoded)
+				copy(dAtA[i:], encoded)
+				i = encodeVarint(dAtA, i, uint64(len(encoded)))
+			}
+			i--
+			dAtA[i] = 0x12
+		}
+	}
+	if len(m.TypeNames) > 0 {
+		for iNdEx := len(m.TypeNames) - 1; iNdEx >= 0; iNdEx-- {
+			i -= len(m.TypeNames[iNdEx])
+			copy(dAtA[i:], m.TypeNames[iNdEx])
+			i = encodeVarint(dAtA, i, uint64(len(m.TypeNames[iNdEx])))
+			i--
 			dAtA[i] = 0xa
 		}
 	}
@@ -392,56 +507,20 @@ func (m *Message) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 		i -= len(m.unknownFields)
 		copy(dAtA[i:], m.unknownFields)
 	}
-	if len(m.TypeName) > 0 {
-		i -= len(m.TypeName)
-		copy(dAtA[i:], m.TypeName)
-		i = encodeVarint(dAtA, i, uint64(len(m.TypeName)))
+	if m.TypeNameIndex != 0 {
+		i = encodeVarint(dAtA, i, uint64(m.TypeNameIndex))
 		i--
-		dAtA[i] = 0x22
+		dAtA[i] = 0x20
 	}
-	if m.Sender != nil {
-		if vtmsg, ok := interface{}(m.Sender).(interface {
-			MarshalToSizedBufferVT([]byte) (int, error)
-		}); ok {
-			size, err := vtmsg.MarshalToSizedBufferVT(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarint(dAtA, i, uint64(size))
-		} else {
-			encoded, err := proto.Marshal(m.Sender)
-			if err != nil {
-				return 0, err
-			}
-			i -= len(encoded)
-			copy(dAtA[i:], encoded)
-			i = encodeVarint(dAtA, i, uint64(len(encoded)))
-		}
+	if m.SenderIndex != 0 {
+		i = encodeVarint(dAtA, i, uint64(m.SenderIndex))
 		i--
-		dAtA[i] = 0x1a
+		dAtA[i] = 0x18
 	}
-	if m.Target != nil {
-		if vtmsg, ok := interface{}(m.Target).(interface {
-			MarshalToSizedBufferVT([]byte) (int, error)
-		}); ok {
-			size, err := vtmsg.MarshalToSizedBufferVT(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarint(dAtA, i, uint64(size))
-		} else {
-			encoded, err := proto.Marshal(m.Target)
-			if err != nil {
-				return 0, err
-			}
-			i -= len(encoded)
-			copy(dAtA[i:], encoded)
-			i = encodeVarint(dAtA, i, uint64(len(encoded)))
-		}
+	if m.TargetIndex != 0 {
+		i = encodeVarint(dAtA, i, uint64(m.TargetIndex))
 		i--
-		dAtA[i] = 0x12
+		dAtA[i] = 0x10
 	}
 	if len(m.Data) > 0 {
 		i -= len(m.Data)
@@ -543,6 +622,63 @@ func (m *Envelope) MarshalToSizedBufferVTStrict(dAtA []byte) (int, error) {
 			i -= size
 			i = encodeVarint(dAtA, i, uint64(size))
 			i--
+			dAtA[i] = 0x22
+		}
+	}
+	if len(m.Senders) > 0 {
+		for iNdEx := len(m.Senders) - 1; iNdEx >= 0; iNdEx-- {
+			if vtmsg, ok := interface{}(m.Senders[iNdEx]).(interface {
+				MarshalToSizedBufferVTStrict([]byte) (int, error)
+			}); ok {
+				size, err := vtmsg.MarshalToSizedBufferVTStrict(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarint(dAtA, i, uint64(size))
+			} else {
+				encoded, err := proto.Marshal(m.Senders[iNdEx])
+				if err != nil {
+					return 0, err
+				}
+				i -= len(encoded)
+				copy(dAtA[i:], encoded)
+				i = encodeVarint(dAtA, i, uint64(len(encoded)))
+			}
+			i--
+			dAtA[i] = 0x1a
+		}
+	}
+	if len(m.Targets) > 0 {
+		for iNdEx := len(m.Targets) - 1; iNdEx >= 0; iNdEx-- {
+			if vtmsg, ok := interface{}(m.Targets[iNdEx]).(interface {
+				MarshalToSizedBufferVTStrict([]byte) (int, error)
+			}); ok {
+				size, err := vtmsg.MarshalToSizedBufferVTStrict(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarint(dAtA, i, uint64(size))
+			} else {
+				encoded, err := proto.Marshal(m.Targets[iNdEx])
+				if err != nil {
+					return 0, err
+				}
+				i -= len(encoded)
+				copy(dAtA[i:], encoded)
+				i = encodeVarint(dAtA, i, uint64(len(encoded)))
+			}
+			i--
+			dAtA[i] = 0x12
+		}
+	}
+	if len(m.TypeNames) > 0 {
+		for iNdEx := len(m.TypeNames) - 1; iNdEx >= 0; iNdEx-- {
+			i -= len(m.TypeNames[iNdEx])
+			copy(dAtA[i:], m.TypeNames[iNdEx])
+			i = encodeVarint(dAtA, i, uint64(len(m.TypeNames[iNdEx])))
+			i--
 			dAtA[i] = 0xa
 		}
 	}
@@ -579,56 +715,20 @@ func (m *Message) MarshalToSizedBufferVTStrict(dAtA []byte) (int, error) {
 		i -= len(m.unknownFields)
 		copy(dAtA[i:], m.unknownFields)
 	}
-	if len(m.TypeName) > 0 {
-		i -= len(m.TypeName)
-		copy(dAtA[i:], m.TypeName)
-		i = encodeVarint(dAtA, i, uint64(len(m.TypeName)))
+	if m.TypeNameIndex != 0 {
+		i = encodeVarint(dAtA, i, uint64(m.TypeNameIndex))
 		i--
-		dAtA[i] = 0x22
+		dAtA[i] = 0x20
 	}
-	if m.Sender != nil {
-		if vtmsg, ok := interface{}(m.Sender).(interface {
-			MarshalToSizedBufferVTStrict([]byte) (int, error)
-		}); ok {
-			size, err := vtmsg.MarshalToSizedBufferVTStrict(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarint(dAtA, i, uint64(size))
-		} else {
-			encoded, err := proto.Marshal(m.Sender)
-			if err != nil {
-				return 0, err
-			}
-			i -= len(encoded)
-			copy(dAtA[i:], encoded)
-			i = encodeVarint(dAtA, i, uint64(len(encoded)))
-		}
+	if m.SenderIndex != 0 {
+		i = encodeVarint(dAtA, i, uint64(m.SenderIndex))
 		i--
-		dAtA[i] = 0x1a
+		dAtA[i] = 0x18
 	}
-	if m.Target != nil {
-		if vtmsg, ok := interface{}(m.Target).(interface {
-			MarshalToSizedBufferVTStrict([]byte) (int, error)
-		}); ok {
-			size, err := vtmsg.MarshalToSizedBufferVTStrict(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarint(dAtA, i, uint64(size))
-		} else {
-			encoded, err := proto.Marshal(m.Target)
-			if err != nil {
-				return 0, err
-			}
-			i -= len(encoded)
-			copy(dAtA[i:], encoded)
-			i = encodeVarint(dAtA, i, uint64(len(encoded)))
-		}
+	if m.TargetIndex != 0 {
+		i = encodeVarint(dAtA, i, uint64(m.TargetIndex))
 		i--
-		dAtA[i] = 0x12
+		dAtA[i] = 0x10
 	}
 	if len(m.Data) > 0 {
 		i -= len(m.Data)
@@ -686,6 +786,36 @@ func (m *Envelope) SizeVT() (n int) {
 	}
 	var l int
 	_ = l
+	if len(m.TypeNames) > 0 {
+		for _, s := range m.TypeNames {
+			l = len(s)
+			n += 1 + l + sov(uint64(l))
+		}
+	}
+	if len(m.Targets) > 0 {
+		for _, e := range m.Targets {
+			if size, ok := interface{}(e).(interface {
+				SizeVT() int
+			}); ok {
+				l = size.SizeVT()
+			} else {
+				l = proto.Size(e)
+			}
+			n += 1 + l + sov(uint64(l))
+		}
+	}
+	if len(m.Senders) > 0 {
+		for _, e := range m.Senders {
+			if size, ok := interface{}(e).(interface {
+				SizeVT() int
+			}); ok {
+				l = size.SizeVT()
+			} else {
+				l = proto.Size(e)
+			}
+			n += 1 + l + sov(uint64(l))
+		}
+	}
 	if len(m.Messages) > 0 {
 		for _, e := range m.Messages {
 			l = e.SizeVT()
@@ -706,29 +836,14 @@ func (m *Message) SizeVT() (n int) {
 	if l > 0 {
 		n += 1 + l + sov(uint64(l))
 	}
-	if m.Target != nil {
-		if size, ok := interface{}(m.Target).(interface {
-			SizeVT() int
-		}); ok {
-			l = size.SizeVT()
-		} else {
-			l = proto.Size(m.Target)
-		}
-		n += 1 + l + sov(uint64(l))
+	if m.TargetIndex != 0 {
+		n += 1 + sov(uint64(m.TargetIndex))
 	}
-	if m.Sender != nil {
-		if size, ok := interface{}(m.Sender).(interface {
-			SizeVT() int
-		}); ok {
-			l = size.SizeVT()
-		} else {
-			l = proto.Size(m.Sender)
-		}
-		n += 1 + l + sov(uint64(l))
+	if m.SenderIndex != 0 {
+		n += 1 + sov(uint64(m.SenderIndex))
 	}
-	l = len(m.TypeName)
-	if l > 0 {
-		n += 1 + l + sov(uint64(l))
+	if m.TypeNameIndex != 0 {
+		n += 1 + sov(uint64(m.TypeNameIndex))
 	}
 	n += len(m.unknownFields)
 	return n
@@ -784,6 +899,122 @@ func (m *Envelope) UnmarshalVT(dAtA []byte) error {
 		}
 		switch fieldNum {
 		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field TypeNames", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLength
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLength
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.TypeNames = append(m.TypeNames, string(dAtA[iNdEx:postIndex]))
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Targets", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLength
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLength
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Targets = append(m.Targets, &actor.PID{})
+			if unmarshal, ok := interface{}(m.Targets[len(m.Targets)-1]).(interface {
+				UnmarshalVT([]byte) error
+			}); ok {
+				if err := unmarshal.UnmarshalVT(dAtA[iNdEx:postIndex]); err != nil {
+					return err
+				}
+			} else {
+				if err := proto.Unmarshal(dAtA[iNdEx:postIndex], m.Targets[len(m.Targets)-1]); err != nil {
+					return err
+				}
+			}
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Senders", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLength
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLength
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Senders = append(m.Senders, &actor.PID{})
+			if unmarshal, ok := interface{}(m.Senders[len(m.Senders)-1]).(interface {
+				UnmarshalVT([]byte) error
+			}); ok {
+				if err := unmarshal.UnmarshalVT(dAtA[iNdEx:postIndex]); err != nil {
+					return err
+				}
+			} else {
+				if err := proto.Unmarshal(dAtA[iNdEx:postIndex], m.Senders[len(m.Senders)-1]); err != nil {
+					return err
+				}
+			}
+			iNdEx = postIndex
+		case 4:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Messages", wireType)
 			}
@@ -903,10 +1134,10 @@ func (m *Message) UnmarshalVT(dAtA []byte) error {
 			}
 			iNdEx = postIndex
 		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Target", wireType)
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field TargetIndex", wireType)
 			}
-			var msglen int
+			m.TargetIndex = 0
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflow
@@ -916,41 +1147,16 @@ func (m *Message) UnmarshalVT(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				msglen |= int(b&0x7F) << shift
+				m.TargetIndex |= int32(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-			if msglen < 0 {
-				return ErrInvalidLength
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLength
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.Target == nil {
-				m.Target = &actor.PID{}
-			}
-			if unmarshal, ok := interface{}(m.Target).(interface {
-				UnmarshalVT([]byte) error
-			}); ok {
-				if err := unmarshal.UnmarshalVT(dAtA[iNdEx:postIndex]); err != nil {
-					return err
-				}
-			} else {
-				if err := proto.Unmarshal(dAtA[iNdEx:postIndex], m.Target); err != nil {
-					return err
-				}
-			}
-			iNdEx = postIndex
 		case 3:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Sender", wireType)
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field SenderIndex", wireType)
 			}
-			var msglen int
+			m.SenderIndex = 0
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflow
@@ -960,41 +1166,16 @@ func (m *Message) UnmarshalVT(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				msglen |= int(b&0x7F) << shift
+				m.SenderIndex |= int32(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-			if msglen < 0 {
-				return ErrInvalidLength
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLength
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.Sender == nil {
-				m.Sender = &actor.PID{}
-			}
-			if unmarshal, ok := interface{}(m.Sender).(interface {
-				UnmarshalVT([]byte) error
-			}); ok {
-				if err := unmarshal.UnmarshalVT(dAtA[iNdEx:postIndex]); err != nil {
-					return err
-				}
-			} else {
-				if err := proto.Unmarshal(dAtA[iNdEx:postIndex], m.Sender); err != nil {
-					return err
-				}
-			}
-			iNdEx = postIndex
 		case 4:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field TypeName", wireType)
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field TypeNameIndex", wireType)
 			}
-			var stringLen uint64
+			m.TypeNameIndex = 0
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflow
@@ -1004,24 +1185,11 @@ func (m *Message) UnmarshalVT(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
+				m.TypeNameIndex |= int32(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLength
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLength
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.TypeName = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skip(dAtA[iNdEx:])

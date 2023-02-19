@@ -4,6 +4,7 @@ import (
 	"context"
 	errors "errors"
 
+	"github.com/anthdm/hollywood/actor"
 	"github.com/anthdm/hollywood/log"
 )
 
@@ -35,14 +36,21 @@ func (r *streamReader) Receive(stream DRPCRemote_ReceiveStream) error {
 		}
 
 		for _, msg := range envelope.Messages {
-			pid := msg.Target
-			dmsg, err := deserialize(msg.Data, msg.TypeName)
+			payload, err := registryGetType(envelope.TypeNames[msg.TypeNameIndex])
 			if err != nil {
-				log.Warnw("[STREAM READER] deserialize", log.M{"err": err})
-				continue
+				return err
+			}
+			if err := payload.UnmarshalVT(msg.Data); err != nil {
+				return err
 			}
 
-			r.remote.engine.SendLocal(pid, dmsg, msg.Sender)
+			target := envelope.Targets[msg.TargetIndex]
+			var sender *actor.PID
+			if len(envelope.Senders) > 0 {
+				sender = envelope.Senders[msg.SenderIndex]
+			}
+
+			r.remote.engine.SendLocal(target, payload, sender)
 		}
 	}
 

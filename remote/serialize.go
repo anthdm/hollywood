@@ -1,6 +1,8 @@
 package remote
 
 import (
+	fmt "fmt"
+
 	"github.com/anthdm/hollywood/actor"
 	"google.golang.org/protobuf/proto"
 )
@@ -30,18 +32,30 @@ func makeEnvelope(streams []*streamDeliver) (*Envelope, error) {
 	}, nil
 }
 
-func serialize(pid *actor.PID, sender *actor.PID, msg Marshaler) (*Message, error) {
+func makeMessage(it int32, msg Marshaler) (*Message, error) {
 	b, err := msg.MarshalVT()
 	if err != nil {
 		return nil, err
 	}
 	m := &Message{
-		Data:     b,
-		TypeName: string(proto.MessageName(msg)),
-		Target:   pid,
-		Sender:   sender,
+		Data:          b,
+		TargetIndex:   it,
+		SenderIndex:   it,
+		TypeNameIndex: it,
 	}
 	return m, nil
+}
+
+func serialize(pid *actor.PID, sender *actor.PID, msg Marshaler) (*Message, error) {
+	x := proto.MessageName(msg)
+	fmt.Println(x)
+	// m := &Message{
+	// 	Data:     b,
+	// 	TypeName: string(proto.MessageName(msg)),
+	// 	Target:   pid,
+	// 	Sender:   sender,
+	// }
+	return nil, nil
 }
 
 func deserialize(data []byte, typeName string) (any, error) {

@@ -3,14 +3,13 @@ package remote
 import (
 	context "context"
 	errors "errors"
-	fmt "fmt"
 	"io"
 	"net"
 	"time"
 
 	"github.com/anthdm/hollywood/actor"
 	"github.com/anthdm/hollywood/log"
-	proto "google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 	"storj.io/drpc/drpcconn"
 )
 
@@ -80,15 +79,47 @@ func (e *streamWriter) init() {
 }
 
 func (e *streamWriter) send(streams []*streamDeliver) {
-	env, err := makeEnvelope(streams)
-	if err != nil {
-		log.Errorw("[STREAM WRITER] failed creating message envelope", log.M{
-			"err": err,
-		})
-		return
+	var (
+		typeLookup   = make(map[string]int32)
+		typeNames    = make([]string, 0)
+		senderLookup = make(map[uint64]int32)
+		senders      = make([]*actor.PID, 0)
+		targetLookup = make(map[uint64]int32)
+		targets      = make([]*actor.PID, 0)
+		messages     = make([]*Message, len(streams))
+	)
+
+	for i := 0; i < len(streams); i++ {
+		var (
+			stream   = streams[i]
+			typeID   int32
+			senderID int32
+			targetID int32
+		)
+		typeID, typeNames = lookupTypeName(typeLookup, string(proto.MessageName(stream.msg)), typeNames)
+		senderID, senders = lookupPIDs(senderLookup, stream.sender, senders)
+		targetID, targets = lookupPIDs(targetLookup, stream.target, targets)
+
+		b, err := stream.msg.MarshalVT()
+		if err != nil {
+			panic(err)
+		}
+
+		messages[i] = &Message{
+			Data:          b,
+			TypeNameIndex: typeID,
+			SenderIndex:   senderID,
+			TargetIndex:   targetID,
+		}
 	}
-	fmt.Println("env len", len(env.Messages))
-	fmt.Println("env total size", proto.Size(env))
+
+	env := &Envelope{
+		Senders:   senders,
+		Targets:   targets,
+		TypeNames: typeNames,
+		Messages:  messages,
+	}
+
 	if err := e.stream.Send(env); err != nil {
 		if errors.Is(err, io.EOF) {
 			e.conn.Close()
@@ -100,4 +131,31 @@ func (e *streamWriter) send(streams []*streamDeliver) {
 	}
 	// refresh the connection deadline.
 	e.rawconn.SetDeadline(time.Now().Add(connIdleTimeout))
+}
+
+func lookupPIDs(m map[uint64]int32, pid *actor.PID, pids []*actor.PID) (int32, []*actor.PID) {
+	if pid == nil {
+		return 0, pids
+	}
+	max := int32(len(m))
+	key := pid.LookupKey()
+	id, ok := m[key]
+	if !ok {
+		m[key] = max
+		id = max
+		pids = append(pids, pid)
+	}
+	return id, pids
+
+}
+
+func lookupTypeName(m map[string]int32, name string, types []string) (int32, []string) {
+	max := int32(len(m))
+	id, ok := m[name]
+	if !ok {
+		m[name] = max
+		id = max
+		types = append(types, name)
+	}
+	return id, types
 }

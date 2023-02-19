@@ -26,14 +26,14 @@ func (pid *PID) String() string {
 }
 
 func (pid *PID) Equals(other *PID) bool {
-	panic("TODO")
+	return pid.Address == other.Address && pid.ID == other.ID
 }
 
 func (pid *PID) HasTag(tag string) bool {
 	panic("TODO")
 }
 
-func (pid *PID) lookupKey() uint64 {
+func (pid *PID) LookupKey() uint64 {
 	key := []byte(pid.Address)
 	key = append(key, pid.ID...)
 	return xxh3.Hash(key)
