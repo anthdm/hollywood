@@ -53,7 +53,7 @@ func (c *Context) SpawnChild(p Producer, name string, opts ...OptFunc) *PID {
 		opt(&options)
 	}
 	proc := newProcess(c.engine, options)
-	pid := c.engine.spawn(proc)
+	pid := c.engine.SpawnProc(proc)
 	proc.context.parentCtx = c
 	c.children.Set(options.Name, pid)
 	return proc.PID()

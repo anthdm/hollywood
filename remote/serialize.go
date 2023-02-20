@@ -1,7 +1,7 @@
 package remote
 
 import (
-	fmt "fmt"
+	"fmt"
 
 	"github.com/anthdm/hollywood/actor"
 	"google.golang.org/protobuf/proto"

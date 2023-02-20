@@ -1,7 +1,7 @@
 package actor
 
 import (
-	reflect "reflect"
+	"reflect"
 
 	"github.com/anthdm/hollywood/log"
 )
@@ -17,7 +17,7 @@ type deadLetter struct {
 func newDeadLetter(eventStream *EventStream) *deadLetter {
 	return &deadLetter{
 		eventStream: eventStream,
-		pid:         NewPID(localLookupAddr, "deadLetter"),
+		pid:         NewPID(LocalLookupAddr, "deadLetter"),
 	}
 }
 
@@ -37,4 +37,4 @@ func (d *deadLetter) Send(dest *PID, msg any, sender *PID) {
 func (d *deadLetter) PID() *PID         { return d.pid }
 func (d *deadLetter) Shutdown()         {}
 func (d *deadLetter) Start()            {}
-func (d *deadLetter) Invoke([]envelope) {}
+func (d *deadLetter) Invoke([]Envelope) {}

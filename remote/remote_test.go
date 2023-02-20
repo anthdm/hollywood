@@ -1,7 +1,7 @@
 package remote
 
 import (
-	sync "sync"
+	"sync"
 	"testing"
 	"time"
 

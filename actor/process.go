@@ -10,16 +10,16 @@ import (
 
 const restartDelay = time.Millisecond * 500
 
-type envelope struct {
-	msg    any
-	sender *PID
+type Envelope struct {
+	Msg    any
+	Sender *PID
 }
 
-type processer interface {
+type Processer interface {
 	Start()
 	PID() *PID
 	Send(*PID, any, *PID)
-	Invoke([]envelope)
+	Invoke([]Envelope)
 	Shutdown()
 }
 
@@ -38,7 +38,7 @@ func newProcess(e *Engine, opts Opts) *process {
 
 	return &process{
 		pid:     pid,
-		inbox:   newInbox(opts.InboxSize),
+		inbox:   NewInbox(opts.InboxSize),
 		Opts:    opts,
 		context: ctx,
 	}
@@ -51,15 +51,15 @@ func applyMiddleware(rcv ReceiveFunc, middleware ...MiddlewareFunc) ReceiveFunc 
 	return rcv
 }
 
-func (p *process) Invoke(msgs []envelope) {
+func (p *process) Invoke(msgs []Envelope) {
 	for i := 0; i < len(msgs); i++ {
 		msg := msgs[i]
-		if _, ok := msg.msg.(poisonPill); ok {
+		if _, ok := msg.Msg.(poisonPill); ok {
 			p.cleanup()
 			return
 		}
-		p.context.message = msg.msg
-		p.context.sender = msg.sender
+		p.context.message = msg.Msg
+		p.context.sender = msg.Sender
 		recv := p.context.receiver
 		if len(p.Opts.Middleware) > 0 {
 			applyMiddleware(recv.Receive, p.Opts.Middleware...)(p.context)
@@ -161,6 +161,6 @@ func (p *process) cleanup() {
 
 func (p *process) PID() *PID { return p.pid }
 func (p *process) Send(_ *PID, msg any, sender *PID) {
-	p.inbox.Send(envelope{msg: msg, sender: sender})
+	p.inbox.Send(Envelope{Msg: msg, Sender: sender})
 }
 func (p *process) Shutdown() { p.cleanup() }

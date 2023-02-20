@@ -2,7 +2,7 @@ package remote
 
 import (
 	"context"
-	errors "errors"
+	"errors"
 
 	"github.com/anthdm/hollywood/actor"
 	"github.com/anthdm/hollywood/log"

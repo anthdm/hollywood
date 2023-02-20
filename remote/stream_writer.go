@@ -1,8 +1,8 @@
 package remote
 
 import (
-	context "context"
-	errors "errors"
+	"context"
+	"errors"
 	"io"
 	"net"
 	"time"
@@ -13,7 +13,10 @@ import (
 	"storj.io/drpc/drpcconn"
 )
 
-const connIdleTimeout = time.Minute * 10
+const (
+	connIdleTimeout       = time.Minute * 10
+	streamWriterBatchSize = 1024
+)
 
 type streamWriter struct {
 	writeToAddr string
@@ -22,25 +25,27 @@ type streamWriter struct {
 	stream      DRPCRemote_ReceiveStream
 	engine      *actor.Engine
 	routerPID   *actor.PID
+	pid         *actor.PID
+	inbox       actor.Inboxer
 }
 
-func newStreamWriter(e *actor.Engine, rpid *actor.PID, address string) actor.Producer {
-	return func() actor.Receiver {
-		return &streamWriter{
-			writeToAddr: address,
-			engine:      e,
-			routerPID:   rpid,
-		}
+func newStreamWriter(e *actor.Engine, rpid *actor.PID, address string) actor.Processer {
+	return &streamWriter{
+		writeToAddr: address,
+		engine:      e,
+		routerPID:   rpid,
+		inbox:       actor.NewInbox(streamWriterBatchSize),
+		pid:         actor.NewPID(e.Address(), "stream", address),
 	}
 }
 
-func (e *streamWriter) Receive(ctx *actor.Context) {
-	switch msg := ctx.Message().(type) {
-	case actor.Started:
-		e.init()
-	case *streamDeliver:
-		e.send([]*streamDeliver{msg})
-	}
+func (s *streamWriter) PID() *actor.PID { return s.pid }
+func (s *streamWriter) Send(_ *actor.PID, msg any, sender *actor.PID) {
+	s.inbox.Send(actor.Envelope{Msg: msg, Sender: sender})
+}
+
+func (s *streamWriter) Invoke(msgs []actor.Envelope) {
+	s.send(msgs)
 }
 
 func (e *streamWriter) init() {
@@ -76,7 +81,7 @@ func (e *streamWriter) init() {
 	}()
 }
 
-func (e *streamWriter) send(streams []*streamDeliver) {
+func (e *streamWriter) send(msgs []actor.Envelope) {
 	var (
 		typeLookup   = make(map[string]int32)
 		typeNames    = make([]string, 0)
@@ -84,12 +89,12 @@ func (e *streamWriter) send(streams []*streamDeliver) {
 		senders      = make([]*actor.PID, 0)
 		targetLookup = make(map[uint64]int32)
 		targets      = make([]*actor.PID, 0)
-		messages     = make([]*Message, len(streams))
+		messages     = make([]*Message, len(msgs))
 	)
 
-	for i := 0; i < len(streams); i++ {
+	for i := 0; i < len(msgs); i++ {
 		var (
-			stream   = streams[i]
+			stream   = msgs[i].Msg.(*streamDeliver)
 			typeID   int32
 			senderID int32
 			targetID int32
@@ -129,6 +134,12 @@ func (e *streamWriter) send(streams []*streamDeliver) {
 	}
 	// refresh the connection deadline.
 	e.rawconn.SetDeadline(time.Now().Add(connIdleTimeout))
+}
+
+func (s *streamWriter) Shutdown() {}
+func (s *streamWriter) Start() {
+	s.inbox.Start(s)
+	s.init()
 }
 
 func lookupPIDs(m map[uint64]int32, pid *actor.PID, pids []*actor.PID) (int32, []*actor.PID) {

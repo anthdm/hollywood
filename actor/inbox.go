@@ -6,23 +6,23 @@ import (
 )
 
 type Inboxer interface {
-	Send(envelope)
-	Start(processer)
+	Send(Envelope)
+	Start(Processer)
 	Close() error
 }
 
 const reserv = 1
 
-type inbox struct {
-	ringBuffer []envelope
+type Inbox struct {
+	ringBuffer []Envelope
 	bufferMask int64
-	proc       processer
+	proc       Processer
 	disruptor  disruptor.Disruptor
 }
 
-func newInbox(size int) *inbox {
-	in := &inbox{
-		ringBuffer: make([]envelope, size),
+func NewInbox(size int) *Inbox {
+	in := &Inbox{
+		ringBuffer: make([]Envelope, size),
 		bufferMask: int64(size) - 1,
 	}
 	dis := disruptor.New(
@@ -33,7 +33,7 @@ func newInbox(size int) *inbox {
 	return in
 }
 
-func (in *inbox) Consume(lower, upper int64) {
+func (in *Inbox) Consume(lower, upper int64) {
 	var (
 		nmsg   = (upper - lower) + reserv
 		from   = lower & in.bufferMask
@@ -54,20 +54,20 @@ func (in *inbox) Consume(lower, upper int64) {
 	}
 }
 
-func (in *inbox) Start(proc processer) {
+func (in *Inbox) Start(proc Processer) {
 	in.proc = proc
 	go in.disruptor.Reader.Read()
 	log.Tracew("[INBOX] started", log.M{})
 }
 
-func (in *inbox) Close() error {
+func (in *Inbox) Close() error {
 	defer func() {
 		log.Tracew("[INBOX] closed", log.M{})
 	}()
 	return in.disruptor.Reader.Close()
 }
 
-func (in *inbox) Send(msg envelope) {
+func (in *Inbox) Send(msg Envelope) {
 	seq := in.disruptor.Reserve(reserv)
 	in.ringBuffer[seq&in.bufferMask] = msg
 	in.disruptor.Commit(seq-reserv+1, seq)

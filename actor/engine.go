@@ -27,14 +27,14 @@ type Engine struct {
 	address    string
 	registry   *registry
 	remote     Remoter
-	deadLetter processer
+	deadLetter Processer
 }
 
 // NewEngine returns a new actor Engine.
 func NewEngine() *Engine {
 	e := &Engine{
 		EventStream: NewEventStream(),
-		address:     localLookupAddr,
+		address:     LocalLookupAddr,
 	}
 	e.registry = newRegistry(e)
 	e.deadLetter = newDeadLetter(e.EventStream)
@@ -59,14 +59,16 @@ func (e *Engine) Spawn(p Producer, name string, opts ...OptFunc) *PID {
 		opt(&options)
 	}
 	proc := newProcess(e, options)
-	return e.spawn(proc)
+	return e.SpawnProc(proc)
 }
 
 func (e *Engine) SpawnFunc(f func(*Context), id string, opts ...OptFunc) *PID {
 	return e.Spawn(newFuncReceiver(f), id, opts...)
 }
 
-func (e *Engine) spawn(p processer) *PID {
+// SpawnProc spawns the give Processer. This function is usefull when working
+// with custom created Processes. Take a look at the streamWriter as an example.
+func (e *Engine) SpawnProc(p Processer) *PID {
 	e.registry.add(p)
 	p.Start()
 	return p.PID()
