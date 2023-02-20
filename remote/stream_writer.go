@@ -46,44 +46,6 @@ func (s *streamWriter) Send(_ *actor.PID, msg any, sender *actor.PID) {
 }
 
 func (s *streamWriter) Invoke(msgs []actor.Envelope) {
-	s.send(msgs)
-}
-
-func (e *streamWriter) init() {
-	rawconn, err := net.Dial("tcp", e.writeToAddr)
-	if err != nil {
-		panic(&actor.InternalError{Err: err, From: "[STREAM WRITER]"})
-	}
-	e.rawconn = rawconn
-	rawconn.SetDeadline(time.Now().Add(connIdleTimeout))
-
-	conn := drpcconn.New(rawconn)
-	client := NewDRPCRemoteClient(conn)
-
-	stream, err := client.Receive(context.Background())
-	if err != nil {
-		log.Errorw("[STREAM WRITER] receive error", log.M{
-			"err":         err,
-			"writeToAddr": e.writeToAddr,
-		})
-	}
-
-	e.stream = stream
-	e.conn = conn
-
-	log.Tracew("[STREAM WRITER] started", log.M{
-		"writeToAddr": e.writeToAddr,
-	})
-
-	go func() {
-		<-e.conn.Closed()
-		e.stream.Close()
-		e.engine.Send(e.routerPID, terminateStream{address: e.writeToAddr})
-	}()
-}
-
-func (e *streamWriter) send(msgs []actor.Envelope) {
-	// fmt.Println("sending over the wire", len(msgs))
 	var (
 		typeLookup   = make(map[string]int32)
 		typeNames    = make([]string, 0)
@@ -125,9 +87,9 @@ func (e *streamWriter) send(msgs []actor.Envelope) {
 		Messages:  messages,
 	}
 
-	if err := e.stream.Send(env); err != nil {
+	if err := s.stream.Send(env); err != nil {
 		if errors.Is(err, io.EOF) {
-			e.conn.Close()
+			s.conn.Close()
 			return
 		}
 		log.Errorw("[REMOTE] failed sending message", log.M{
@@ -135,7 +97,40 @@ func (e *streamWriter) send(msgs []actor.Envelope) {
 		})
 	}
 	// refresh the connection deadline.
-	e.rawconn.SetDeadline(time.Now().Add(connIdleTimeout))
+	s.rawconn.SetDeadline(time.Now().Add(connIdleTimeout))
+}
+
+func (e *streamWriter) init() {
+	rawconn, err := net.Dial("tcp", e.writeToAddr)
+	if err != nil {
+		panic(&actor.InternalError{Err: err, From: "[STREAM WRITER]"})
+	}
+	e.rawconn = rawconn
+	rawconn.SetDeadline(time.Now().Add(connIdleTimeout))
+
+	conn := drpcconn.New(rawconn)
+	client := NewDRPCRemoteClient(conn)
+
+	stream, err := client.Receive(context.Background())
+	if err != nil {
+		log.Errorw("[STREAM WRITER] receive error", log.M{
+			"err":         err,
+			"writeToAddr": e.writeToAddr,
+		})
+	}
+
+	e.stream = stream
+	e.conn = conn
+
+	log.Tracew("[STREAM WRITER] started", log.M{
+		"writeToAddr": e.writeToAddr,
+	})
+
+	go func() {
+		<-e.conn.Closed()
+		e.stream.Close()
+		e.engine.Send(e.routerPID, terminateStream{address: e.writeToAddr})
+	}()
 }
 
 func (s *streamWriter) Shutdown() {}
