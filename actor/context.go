@@ -53,9 +53,10 @@ func (c *Context) SpawnChild(p Producer, name string, opts ...OptFunc) *PID {
 		opt(&options)
 	}
 	proc := newProcess(c.engine, options)
-	pid := c.engine.SpawnProc(proc)
 	proc.context.parentCtx = c
-	c.children.Set(options.Name, pid)
+	pid := c.engine.SpawnProc(proc)
+	c.children.Set(pid.ID, pid)
+
 	return proc.PID()
 }
 
@@ -63,13 +64,6 @@ func (c *Context) SpawnChild(p Producer, name string, opts ...OptFunc) *PID {
 // Context.
 func (c *Context) SpawnChildFunc(f func(*Context), name string, opts ...OptFunc) *PID {
 	return c.SpawnChild(newFuncReceiver(f), name, opts...)
-}
-
-// GetChild will return the PID of the child (if any) by the given name/id.
-// PID will be nil if it could not find it.
-func (c *Context) GetChild(id string) *PID {
-	pid, _ := c.children.Get(id)
-	return pid
 }
 
 // Send will send the given message to the given PID.
@@ -96,6 +90,32 @@ func (c *Context) GetPID(name string, tags ...string) *PID {
 		return proc.PID()
 	}
 	return nil
+}
+
+// Parent returns the PID of the process that spawned the current process.
+func (c *Context) Parent() *PID {
+	if c.parentCtx != nil {
+		return c.parentCtx.pid
+	}
+	return nil
+}
+
+// Child will return the PID of the child (if any) by the given name/id.
+// PID will be nil if it could not find it.
+func (c *Context) Child(id string) *PID {
+	pid, _ := c.children.Get(id)
+	return pid
+}
+
+// Children returns all child PIDs for the current process.
+func (c *Context) Children() []*PID {
+	pids := make([]*PID, c.children.Len())
+	i := 0
+	c.children.ForEach(func(_ string, child *PID) {
+		pids[i] = child
+		i++
+	})
+	return pids
 }
 
 // PID returns the PID of the process that belongs to the context.
