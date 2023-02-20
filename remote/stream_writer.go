@@ -22,7 +22,6 @@ type streamWriter struct {
 	stream      DRPCRemote_ReceiveStream
 	engine      *actor.Engine
 	routerPID   *actor.PID
-	batch       *batch
 }
 
 func newStreamWriter(e *actor.Engine, rpid *actor.PID, address string) actor.Producer {
@@ -39,9 +38,8 @@ func (e *streamWriter) Receive(ctx *actor.Context) {
 	switch msg := ctx.Message().(type) {
 	case actor.Started:
 		e.init()
-		e.batch = newBatch(e.send)
 	case *streamDeliver:
-		e.batch.add(msg)
+		e.send([]*streamDeliver{msg})
 	}
 }
 

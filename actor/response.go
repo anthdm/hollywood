@@ -42,5 +42,7 @@ func (r *Response) Send(_ *PID, msg any, _ *PID) {
 	r.result <- msg
 }
 
-func (r *Response) PID() *PID { return r.pid }
-func (r *Response) Shutdown() {}
+func (r *Response) PID() *PID         { return r.pid }
+func (r *Response) Shutdown()         {}
+func (r *Response) Start()            {}
+func (r *Response) Invoke([]envelope) {}

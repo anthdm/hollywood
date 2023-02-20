@@ -10,6 +10,23 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestTemp(t *testing.T) {
+	e := NewEngine()
+	wg := sync.WaitGroup{}
+
+	pid := e.SpawnFunc(func(c *Context) {
+		if _, ok := c.Message().(string); ok {
+			wg.Done()
+		}
+	}, "foo")
+
+	for i := 0; i < 1024*4; i++ {
+		wg.Add(1)
+		e.Send(pid, "foo")
+	}
+	wg.Wait()
+}
+
 func TestProcessInitStartOrder(t *testing.T) {
 	var (
 		e             = NewEngine()

@@ -11,12 +11,6 @@ type streamDeliver struct {
 	msg    Marshaler
 }
 
-type routeToStream struct {
-	sender *actor.PID
-	pid    *actor.PID
-	msg    Marshaler
-}
-
 type terminateStream struct {
 	address string
 }

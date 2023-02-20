@@ -6,6 +6,9 @@ import (
 	"github.com/anthdm/hollywood/log"
 )
 
+// TODO: The deadLetter is implemented as a plain Processer, but
+// can actually be implemented as a Receiver. This is a good first issue.
+
 type deadLetter struct {
 	eventStream *EventStream
 	pid         *PID
@@ -31,5 +34,7 @@ func (d *deadLetter) Send(dest *PID, msg any, sender *PID) {
 	})
 }
 
-func (d *deadLetter) PID() *PID { return d.pid }
-func (d *deadLetter) Shutdown() {}
+func (d *deadLetter) PID() *PID         { return d.pid }
+func (d *deadLetter) Shutdown()         {}
+func (d *deadLetter) Start()            {}
+func (d *deadLetter) Invoke([]envelope) {}

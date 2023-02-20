@@ -34,7 +34,7 @@ type Engine struct {
 func NewEngine() *Engine {
 	e := &Engine{
 		EventStream: NewEventStream(),
-		address:     "local",
+		address:     localLookupAddr,
 	}
 	e.registry = newRegistry(e)
 	e.deadLetter = newDeadLetter(e.EventStream)
@@ -58,11 +58,18 @@ func (e *Engine) Spawn(p Producer, name string, opts ...OptFunc) *PID {
 	for _, opt := range opts {
 		opt(&options)
 	}
-	return e.spawn(options).PID()
+	proc := newProcess(e, options)
+	return e.spawn(proc)
 }
 
 func (e *Engine) SpawnFunc(f func(*Context), id string, opts ...OptFunc) *PID {
 	return e.Spawn(newFuncReceiver(f), id, opts...)
+}
+
+func (e *Engine) spawn(p processer) *PID {
+	e.registry.add(p)
+	p.Start()
+	return p.PID()
 }
 
 // Address returns the address of the actor engine. When there is
@@ -120,10 +127,6 @@ func (e *Engine) Poison(pid *PID) {
 	if proc != nil {
 		e.SendLocal(pid, poisonPill{}, nil)
 	}
-}
-
-func (e *Engine) spawn(cfg Opts) processer {
-	return newProcess(e, cfg)
 }
 
 func (e *Engine) SendLocal(pid *PID, msg any, sender *PID) {

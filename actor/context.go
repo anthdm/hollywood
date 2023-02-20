@@ -1,7 +1,6 @@
 package actor
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/anthdm/hollywood/log"
@@ -53,9 +52,10 @@ func (c *Context) SpawnChild(p Producer, name string, opts ...OptFunc) *PID {
 	for _, opt := range opts {
 		opt(&options)
 	}
-	proc := c.engine.spawn(options)
-	proc.(*process).context.parentCtx = c
-	c.children.Set(options.Name, proc.PID())
+	proc := newProcess(c.engine, options)
+	pid := c.engine.spawn(proc)
+	proc.context.parentCtx = c
+	c.children.Set(options.Name, pid)
 	return proc.PID()
 }
 
@@ -91,8 +91,7 @@ func (c *Context) Forward(pid *PID) {
 // Returns nil when it could not find any process..
 func (c *Context) GetPID(name string, tags ...string) *PID {
 	name = name + PIDSeparator + strings.Join(tags, PIDSeparator)
-	fmt.Println(name)
-	proc := c.engine.registry.getByName(name)
+	proc := c.engine.registry.getByID(name)
 	if proc != nil {
 		return proc.PID()
 	}

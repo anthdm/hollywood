@@ -5,7 +5,6 @@ import (
 	"runtime/debug"
 	"time"
 
-	"github.com/anthdm/disruptor"
 	"github.com/anthdm/hollywood/log"
 )
 
@@ -17,43 +16,32 @@ type envelope struct {
 }
 
 type processer interface {
+	Start()
 	PID() *PID
 	Send(*PID, any, *PID)
+	Invoke([]envelope)
 	Shutdown()
 }
 
 type process struct {
 	Opts
 
-	disruptor disruptor.Disruptor
-	inbox     *inbox
-	context   *Context
-	pid       *PID
-	restarts  int32
+	inbox    Inboxer
+	context  *Context
+	pid      *PID
+	restarts int32
 }
 
 func newProcess(e *Engine, opts Opts) *process {
 	pid := NewPID(e.address, opts.Name, opts.Tags...)
 	ctx := newContext(e, pid)
 
-	in := newInbox(opts.InboxSize)
-	dis := disruptor.New(
-		disruptor.WithCapacity(int64(opts.InboxSize)),
-		disruptor.WithConsumerGroup(in),
-	)
-
-	p := &process{
-		pid:       pid,
-		inbox:     in,
-		disruptor: dis,
-		Opts:      opts,
-		context:   ctx,
+	return &process{
+		pid:     pid,
+		inbox:   newInbox(opts.InboxSize),
+		Opts:    opts,
+		context: ctx,
 	}
-
-	e.registry.add(p)
-	p.start()
-
-	return p
 }
 
 func applyMiddleware(rcv ReceiveFunc, middleware ...MiddlewareFunc) ReceiveFunc {
@@ -63,7 +51,7 @@ func applyMiddleware(rcv ReceiveFunc, middleware ...MiddlewareFunc) ReceiveFunc 
 	return rcv
 }
 
-func (p *process) call(msgs []envelope) {
+func (p *process) Invoke(msgs []envelope) {
 	for i := 0; i < len(msgs); i++ {
 		msg := msgs[i]
 		if _, ok := msg.msg.(poisonPill); ok {
@@ -81,7 +69,7 @@ func (p *process) call(msgs []envelope) {
 	}
 }
 
-func (p *process) start() {
+func (p *process) Start() {
 	defer func() {
 		if p.MaxRestarts > 0 {
 			if v := recover(); v != nil {
@@ -95,7 +83,7 @@ func (p *process) start() {
 	p.context.message = Initialized{}
 	applyMiddleware(recv.Receive, p.Opts.Middleware...)(p.context)
 
-	p.inbox.run(p)
+	p.inbox.Start(p)
 
 	p.context.message = Started{}
 	applyMiddleware(recv.Receive, p.Opts.Middleware...)(p.context)
@@ -107,7 +95,7 @@ func (p *process) start() {
 }
 
 func (p *process) tryRestart(v any) {
-	p.inbox.close()
+	p.inbox.Close()
 	p.restarts++
 	// InternalError does not take the maximum restarts into account.
 	// For now, InternalError is getting triggered when we are dialing
@@ -119,7 +107,7 @@ func (p *process) tryRestart(v any) {
 			"error": msg.Err,
 		})
 		time.Sleep(restartDelay)
-		p.start()
+		p.Start()
 		return
 	}
 
@@ -141,11 +129,11 @@ func (p *process) tryRestart(v any) {
 		"reason":      v,
 	})
 	time.Sleep(restartDelay)
-	p.start()
+	p.Start()
 }
 
 func (p *process) cleanup() {
-	p.inbox.close()
+	p.inbox.Close()
 	p.context.engine.registry.remove(p.pid)
 	p.context.message = Stopped{}
 	applyMiddleware(p.context.receiver.Receive, p.Opts.Middleware...)(p.context)
@@ -173,6 +161,6 @@ func (p *process) cleanup() {
 
 func (p *process) PID() *PID { return p.pid }
 func (p *process) Send(_ *PID, msg any, sender *PID) {
-	p.inbox.send(envelope{msg: msg, sender: sender})
+	p.inbox.Send(envelope{msg: msg, sender: sender})
 }
 func (p *process) Shutdown() { p.cleanup() }

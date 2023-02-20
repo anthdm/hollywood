@@ -38,9 +38,11 @@ func (r *streamReader) Receive(stream DRPCRemote_ReceiveStream) error {
 		for _, msg := range envelope.Messages {
 			payload, err := registryGetType(envelope.TypeNames[msg.TypeNameIndex])
 			if err != nil {
+				log.Errorw("[STREAM READER]", log.M{"err": err})
 				return err
 			}
 			if err := payload.UnmarshalVT(msg.Data); err != nil {
+				log.Errorw("[STREAM READER] unmarshal error", log.M{"err": err})
 				return err
 			}
 
