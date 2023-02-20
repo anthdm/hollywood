@@ -15,7 +15,8 @@ import (
 
 const (
 	connIdleTimeout       = time.Minute * 10
-	streamWriterBatchSize = 1024
+	streamWriterBatchSize = 1024 * 4
+	batchSize             = 1000
 )
 
 type streamWriter struct {
@@ -82,6 +83,7 @@ func (e *streamWriter) init() {
 }
 
 func (e *streamWriter) send(msgs []actor.Envelope) {
+	// fmt.Println("sending over the wire", len(msgs))
 	var (
 		typeLookup   = make(map[string]int32)
 		typeNames    = make([]string, 0)

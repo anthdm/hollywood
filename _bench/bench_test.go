@@ -5,27 +5,12 @@ import (
 
 	"github.com/anthdm/hollywood/actor"
 	"github.com/anthdm/hollywood/remote"
-	"google.golang.org/protobuf/proto"
 )
 
 // Benchmark/bench_x-12  	  604934	    1857 ns/op	    224 B/op     4 allocs/op
 // Benchmark/bench_x-12    	 1410086	   	989 ns/op	    238 B/op	 4 allocs/op
 // Benchmark/bench_x-12    	 2403045        564 ns/op	    367 B/op     4 allocs/op
 // Benchmark/bench_x-12    	 6422239      	271 ns/op	    180 B/op     2 allocs/op
-
-func BenchmarkXxddddx(b *testing.B) {
-	b.Run("proto_message", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			proto.MessageName(&actor.PID{})
-		}
-	})
-	b.Run("other_message", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			_ = "soemttype"
-		}
-	})
-}
-
 func Benchmark(b *testing.B) {
 	e := actor.NewEngine()
 	r := remote.New(e, remote.Config{ListenAddr: "127.0.0.1:5001"})
