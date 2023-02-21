@@ -102,12 +102,27 @@ func (s *streamWriter) Invoke(msgs []actor.Envelope) {
 	s.rawconn.SetDeadline(time.Now().Add(connIdleTimeout))
 }
 
-func (e *streamWriter) init() {
-	rawconn, err := net.Dial("tcp", e.writeToAddr)
-	if err != nil {
-		panic(&actor.InternalError{Err: err, From: "[STREAM WRITER]"})
+func (s *streamWriter) init() {
+	var (
+		rawconn net.Conn
+		err     error
+		delay   time.Duration = time.Millisecond * 500
+	)
+	for {
+		rawconn, err = net.Dial("tcp", s.writeToAddr)
+		if err != nil {
+			log.Errorw("[STREAM WRITER]", log.M{"err": err})
+			time.Sleep(delay)
+			continue
+		}
+		break
 	}
-	e.rawconn = rawconn
+	if rawconn == nil {
+		s.Shutdown()
+		return
+	}
+
+	s.rawconn = rawconn
 	rawconn.SetDeadline(time.Now().Add(connIdleTimeout))
 
 	conn := drpcconn.New(rawconn)
@@ -117,25 +132,35 @@ func (e *streamWriter) init() {
 	if err != nil {
 		log.Errorw("[STREAM WRITER] receive error", log.M{
 			"err":         err,
-			"writeToAddr": e.writeToAddr,
+			"writeToAddr": s.writeToAddr,
 		})
 	}
 
-	e.stream = stream
-	e.conn = conn
+	s.stream = stream
+	s.conn = conn
 
-	log.Tracew("[STREAM WRITER] started", log.M{
-		"writeToAddr": e.writeToAddr,
+	log.Tracew("[STREAM WRITER] connected", log.M{
+		"remote": s.writeToAddr,
 	})
 
 	go func() {
-		<-e.conn.Closed()
-		e.stream.Close()
-		e.engine.Send(e.routerPID, terminateStream{address: e.writeToAddr})
+		<-s.conn.Closed()
+		log.Tracew("[STREAM WRITER] lost connection", log.M{
+			"remote": s.writeToAddr,
+		})
+		s.Shutdown()
 	}()
 }
 
-func (s *streamWriter) Shutdown() {}
+func (s *streamWriter) Shutdown() {
+	s.engine.Send(s.routerPID, terminateStream{address: s.writeToAddr})
+	if s.stream != nil {
+		s.stream.Close()
+	}
+	s.inbox.Stop()
+	s.engine.Registry.Remove(s.PID())
+}
+
 func (s *streamWriter) Start() {
 	s.inbox.Start(s)
 	s.init()

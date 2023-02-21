@@ -148,7 +148,7 @@ func TestPoison(t *testing.T) {
 		stopwg.Wait()
 		// When a process is poisoned it should be removed from the registry.
 		// Hence, we should get the dead letter process here.
-		assert.Equal(t, e.deadLetter, e.registry.get(pid))
+		assert.Equal(t, e.deadLetter, e.Registry.get(pid))
 	}
 }
 
@@ -167,7 +167,7 @@ func TestRequestResponse(t *testing.T) {
 	// Response PID should be the dead letter PID. This is because
 	// the actual response process that will handle this RPC
 	// is deregistered. Test that its actually cleaned up.
-	assert.Equal(t, e.deadLetter, e.registry.get(resp.pid))
+	assert.Equal(t, e.deadLetter, e.Registry.get(resp.pid))
 }
 
 func BenchmarkSendMessageLocal(b *testing.B) {

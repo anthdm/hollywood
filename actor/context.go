@@ -85,7 +85,7 @@ func (c *Context) Forward(pid *PID) {
 // Returns nil when it could not find any process..
 func (c *Context) GetPID(name string, tags ...string) *PID {
 	name = name + PIDSeparator + strings.Join(tags, PIDSeparator)
-	proc := c.engine.registry.getByID(name)
+	proc := c.engine.Registry.getByID(name)
 	if proc != nil {
 		return proc.PID()
 	}

@@ -99,6 +99,6 @@ func TestSpawnChild(t *testing.T) {
 	e.Poison(pid)
 
 	stopwg.Wait()
-	assert.Equal(t, e.deadLetter, e.registry.get(NewPID("local", "child")))
-	assert.Equal(t, e.deadLetter, e.registry.get(pid))
+	assert.Equal(t, e.deadLetter, e.Registry.get(NewPID("local", "child")))
+	assert.Equal(t, e.deadLetter, e.Registry.get(pid))
 }

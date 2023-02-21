@@ -156,8 +156,8 @@ func (p *process) tryRestart(v any) {
 }
 
 func (p *process) cleanup() {
-	p.inbox.Close()
-	p.context.engine.registry.remove(p.pid)
+	p.inbox.Stop()
+	p.context.engine.Registry.Remove(p.pid)
 	p.context.message = Stopped{}
 	applyMiddleware(p.context.receiver.Receive, p.Opts.Middleware...)(p.context)
 

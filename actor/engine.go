@@ -23,9 +23,9 @@ type Receiver interface {
 // Engine represents the actor engine.
 type Engine struct {
 	EventStream *EventStream
+	Registry    *Registry
 
 	address    string
-	registry   *registry
 	remote     Remoter
 	deadLetter Processer
 }
@@ -36,9 +36,9 @@ func NewEngine() *Engine {
 		EventStream: NewEventStream(),
 		address:     LocalLookupAddr,
 	}
-	e.registry = newRegistry(e)
+	e.Registry = newRegistry(e)
 	e.deadLetter = newDeadLetter(e.EventStream)
-	e.registry.add(e.deadLetter)
+	e.Registry.add(e.deadLetter)
 	return e
 }
 
@@ -69,7 +69,7 @@ func (e *Engine) SpawnFunc(f func(*Context), id string, opts ...OptFunc) *PID {
 // SpawnProc spawns the give Processer. This function is usefull when working
 // with custom created Processes. Take a look at the streamWriter as an example.
 func (e *Engine) SpawnProc(p Processer) *PID {
-	e.registry.add(p)
+	e.Registry.add(p)
 	p.Start()
 	return p.PID()
 }
@@ -86,7 +86,7 @@ func (e *Engine) Address() string {
 // block until the deadline is exceeded or the response is being resolved.
 func (e *Engine) Request(pid *PID, msg any, timeout time.Duration) *Response {
 	resp := NewResponse(e, timeout)
-	e.registry.add(resp)
+	e.Registry.add(resp)
 
 	e.SendWithSender(pid, msg, resp.PID())
 
@@ -125,14 +125,14 @@ func (e *Engine) send(pid *PID, msg any, sender *PID) {
 // The process will shut down once it processed all its messages before the poisonPill
 // was received.
 func (e *Engine) Poison(pid *PID) {
-	proc := e.registry.get(pid)
+	proc := e.Registry.get(pid)
 	if proc != nil {
 		e.SendLocal(pid, poisonPill{}, nil)
 	}
 }
 
 func (e *Engine) SendLocal(pid *PID, msg any, sender *PID) {
-	proc := e.registry.get(pid)
+	proc := e.Registry.get(pid)
 	if proc != nil {
 		proc.Send(pid, msg, sender)
 	}

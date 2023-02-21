@@ -8,7 +8,7 @@ import (
 type Inboxer interface {
 	Send(Envelope)
 	Start(Processer)
-	Close() error
+	Stop() error
 }
 
 const reserv = 1
@@ -57,12 +57,12 @@ func (in *Inbox) Consume(lower, upper int64) {
 func (in *Inbox) Start(proc Processer) {
 	in.proc = proc
 	go in.disruptor.Reader.Read()
-	log.Tracew("[INBOX] started", log.M{})
+	log.Tracew("[INBOX] started", log.M{"pid": proc.PID()})
 }
 
-func (in *Inbox) Close() error {
+func (in *Inbox) Stop() error {
 	defer func() {
-		log.Tracew("[INBOX] closed", log.M{})
+		log.Tracew("[INBOX] closed", log.M{"pid": in.proc.PID()})
 	}()
 	return in.disruptor.Reader.Close()
 }

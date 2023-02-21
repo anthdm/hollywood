@@ -27,7 +27,7 @@ func (r *Response) Result() (any, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), r.timeout)
 	defer func() {
 		cancel()
-		r.engine.registry.remove(r.pid)
+		r.engine.Registry.Remove(r.pid)
 	}()
 
 	select {

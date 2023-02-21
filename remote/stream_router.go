@@ -44,11 +44,10 @@ func (s *streamRouter) Receive(ctx *actor.Context) {
 
 func (s *streamRouter) handleTerminateStream(msg terminateStream) {
 	streamWriterPID := s.streams[msg.address]
-	s.engine.Poison(streamWriterPID)
 	delete(s.streams, msg.address)
 	log.Tracew("[STREAM ROUTER] terminating stream", log.M{
-		"dest": msg.address,
-		"pid":  streamWriterPID,
+		"remote": msg.address,
+		"pid":    streamWriterPID,
 	})
 }
 
