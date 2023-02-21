@@ -11,12 +11,14 @@ import (
 type streamReader struct {
 	DRPCRemoteUnimplementedServer
 
-	remote *Remote
+	remote       *Remote
+	deserializer Deserializer
 }
 
 func newStreamReader(r *Remote) *streamReader {
 	return &streamReader{
-		remote: r,
+		remote:       r,
+		deserializer: VTProtoSerializer{},
 	}
 }
 
@@ -36,22 +38,17 @@ func (r *streamReader) Receive(stream DRPCRemote_ReceiveStream) error {
 		}
 
 		for _, msg := range envelope.Messages {
-			payload, err := registryGetType(envelope.TypeNames[msg.TypeNameIndex])
+			tname := envelope.TypeNames[msg.TypeNameIndex]
+			payload, err := r.deserializer.Deserialize(msg.Data, tname)
 			if err != nil {
-				log.Errorw("[STREAM READER]", log.M{"err": err})
+				log.Errorw("[STREAM READER] deserialize error", log.M{"err": err})
 				return err
 			}
-			if err := payload.UnmarshalVT(msg.Data); err != nil {
-				log.Errorw("[STREAM READER] unmarshal error", log.M{"err": err})
-				return err
-			}
-
 			target := envelope.Targets[msg.TargetIndex]
 			var sender *actor.PID
 			if len(envelope.Senders) > 0 {
 				sender = envelope.Senders[msg.SenderIndex]
 			}
-
 			r.remote.engine.SendLocal(target, payload, sender)
 		}
 	}

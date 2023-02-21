@@ -1,19 +1,19 @@
 package remote
 
 import (
-	fmt "fmt"
+	"fmt"
 
-	proto "google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 )
 
-var registry = map[string]Unmarshaler{}
+var registry = map[string]VTUnmarshaler{}
 
-func RegisterType(v Unmarshaler) {
+func RegisterType(v VTUnmarshaler) {
 	tname := string(proto.MessageName(v))
 	registry[tname] = v
 }
 
-func registryGetType(t string) (Unmarshaler, error) {
+func registryGetType(t string) (VTUnmarshaler, error) {
 	if m, ok := registry[t]; ok {
 		return m, nil
 	}

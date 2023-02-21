@@ -8,7 +8,7 @@ import (
 type streamDeliver struct {
 	sender *actor.PID
 	target *actor.PID
-	msg    Marshaler
+	msg    any
 }
 
 type terminateStream struct {

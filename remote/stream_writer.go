@@ -9,7 +9,6 @@ import (
 
 	"github.com/anthdm/hollywood/actor"
 	"github.com/anthdm/hollywood/log"
-	"google.golang.org/protobuf/proto"
 	"storj.io/drpc/drpcconn"
 )
 
@@ -28,6 +27,7 @@ type streamWriter struct {
 	routerPID   *actor.PID
 	pid         *actor.PID
 	inbox       actor.Inboxer
+	serializer  Serializer
 }
 
 func newStreamWriter(e *actor.Engine, rpid *actor.PID, address string) actor.Processer {
@@ -37,6 +37,7 @@ func newStreamWriter(e *actor.Engine, rpid *actor.PID, address string) actor.Pro
 		routerPID:   rpid,
 		inbox:       actor.NewInbox(streamWriterBatchSize),
 		pid:         actor.NewPID(e.Address(), "stream", address),
+		serializer:  ProtoSerializer{},
 	}
 }
 
@@ -63,13 +64,14 @@ func (s *streamWriter) Invoke(msgs []actor.Envelope) {
 			senderID int32
 			targetID int32
 		)
-		typeID, typeNames = lookupTypeName(typeLookup, string(proto.MessageName(stream.msg)), typeNames)
+		typeID, typeNames = lookupTypeName(typeLookup, s.serializer.TypeName(stream.msg), typeNames)
 		senderID, senders = lookupPIDs(senderLookup, stream.sender, senders)
 		targetID, targets = lookupPIDs(targetLookup, stream.target, targets)
 
-		b, err := stream.msg.MarshalVT()
+		b, err := s.serializer.Serialize(stream.msg)
 		if err != nil {
-			panic(err)
+			log.Errorw("[STREAM WRITER]", log.M{"err": err})
+			continue
 		}
 
 		messages[i] = &Message{

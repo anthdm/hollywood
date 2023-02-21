@@ -3,7 +3,6 @@ package remote
 import (
 	"context"
 	"net"
-	"reflect"
 
 	"github.com/anthdm/hollywood/actor"
 	"github.com/anthdm/hollywood/log"
@@ -52,19 +51,11 @@ func (r *Remote) Start() {
 }
 
 func (r *Remote) Send(pid *actor.PID, msg any, sender *actor.PID) {
-	switch m := msg.(type) {
-	case Marshaler:
-		r.engine.Send(r.streamRouterPID, &streamDeliver{
-			target: pid,
-			sender: sender,
-			msg:    m,
-		})
-	default:
-		log.Errorw("[REMOTE] failed to send message", log.M{
-			"error": "given message is not of type proto.Message or WithSender",
-			"type":  reflect.TypeOf(m),
-		})
-	}
+	r.engine.Send(r.streamRouterPID, &streamDeliver{
+		target: pid,
+		sender: sender,
+		msg:    msg,
+	})
 }
 
 // Address returns the listen address of the remote.

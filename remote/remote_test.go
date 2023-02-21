@@ -11,6 +11,7 @@ import (
 )
 
 func init() {
+	// Needed for now when having the VTProtoserializer
 	RegisterType(&TestMessage{})
 }
 

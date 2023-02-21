@@ -7,15 +7,12 @@ service Remote {
 	rpc Receive(stream Envelope) returns (stream Envelope) {}
 } 
 
-// message Envelope {
-// 	repeated Message Messages = 1;
-// }
-
 message Envelope {
 	repeated string typeNames = 1;
 	repeated actor.PID targets = 2;
 	repeated actor.PID senders = 3;
 	repeated Message messages = 4;
+	// TODO: serializer id
 }
 
 message Message {
