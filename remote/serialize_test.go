@@ -20,32 +20,3 @@ func BenchmarkSerialize(b *testing.B) {
 		serialize(pid, sender, payload)
 	}
 }
-
-// BenchmarkMakeEnvelope/xx-12 	    8151	    148228 ns/op	  155712 B/op	    2050 allocs/op
-func BenchmarkMakeEnvelope(b *testing.B) {
-	var (
-		pid     = actor.NewPID("127.0.0.1:4000", "foo")
-		sender  = actor.NewPID("127.0.0.1:8000", "bar")
-		payload = &TestMessage{
-			Data: []byte("some number of bytes in here would be nice"),
-		}
-	)
-
-	n := 1024
-	streams := make([]*streamDeliver, n)
-	for i := 0; i < n; i++ {
-		streams[i] = &streamDeliver{
-			target: pid,
-			sender: sender,
-			msg:    payload,
-		}
-	}
-
-	b.ReportAllocs()
-	b.ResetTimer()
-	b.Run("xx", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			makeEnvelope(streams)
-		}
-	})
-}

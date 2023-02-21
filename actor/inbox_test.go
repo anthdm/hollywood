@@ -1,36 +1,34 @@
 package actor
 
 import (
-	"fmt"
+	fmt "fmt"
 	"testing"
 	"time"
-
-	"github.com/stretchr/testify/require"
 )
 
-func TestDdkjfkdjfkfd(t *testing.T) {
-	x := 78225
-	size := 1024 * 64
-	mask := size - 1
-	fmt.Println(x & mask)
-	// 12689
+type testProc struct {
+	inbox Inboxer
 }
 
-func TestXxx(t *testing.T) {
-	e := NewEngine()
-	i := 0
+func (testProc) Start()    {}
+func (testProc) PID() *PID { return NewPID("foo", "foo") }
+func (t *testProc) Send(_ *PID, msg any, _ *PID) {
+	t.inbox.Send(Envelope{Msg: msg})
+}
 
-	pid := e.SpawnFunc(func(c *Context) {
-		if msg, ok := c.Message().(int); ok {
-			// fmt.Println("got", msg)
-			require.Equal(t, msg, i)
-			i++
-		}
-	}, "test", WithInboxSize(1024*64))
+func (t *testProc) Invoke(msgs []Envelope) {
+	fmt.Println("got", msgs)
+}
 
-	for i := 0; i < 1000000; i++ {
-		e.Send(pid, i)
-	}
-	fmt.Println("done")
-	time.Sleep(time.Second)
+func (testProc) Shutdown() {}
+
+func TestInbox(t *testing.T) {
+	inbox := NewInbox(1024)
+	inbox.Start(&testProc{inbox})
+	inbox.Send(Envelope{Msg: "1"})
+	inbox.Send(Envelope{Msg: "2"})
+	inbox.Send(Envelope{Msg: "3"})
+	inbox.Send(Envelope{Msg: "4"})
+	inbox.Send(Envelope{Msg: "5"})
+	time.Sleep(time.Second * 2)
 }

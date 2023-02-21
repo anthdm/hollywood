@@ -1,14 +1,14 @@
 package actor
 
 import (
-	"fmt"
-	"runtime/debug"
 	"time"
 
 	"github.com/anthdm/hollywood/log"
 )
 
-const restartDelay = time.Millisecond * 500
+const (
+	restartDelay = time.Millisecond * 500 * 2
+)
 
 type Envelope struct {
 	Msg    any
@@ -30,18 +30,22 @@ type process struct {
 	context  *Context
 	pid      *PID
 	restarts int32
+
+	mbuffer []Envelope
 }
 
 func newProcess(e *Engine, opts Opts) *process {
 	pid := NewPID(e.address, opts.Name, opts.Tags...)
 	ctx := newContext(e, pid)
-
-	return &process{
+	p := &process{
 		pid:     pid,
 		inbox:   NewInbox(opts.InboxSize),
 		Opts:    opts,
 		context: ctx,
+		mbuffer: nil,
 	}
+	p.inbox.Start(p)
+	return p
 }
 
 func applyMiddleware(rcv ReceiveFunc, middleware ...MiddlewareFunc) ReceiveFunc {
@@ -52,7 +56,27 @@ func applyMiddleware(rcv ReceiveFunc, middleware ...MiddlewareFunc) ReceiveFunc 
 }
 
 func (p *process) Invoke(msgs []Envelope) {
+	var (
+		// numbers of msgs that need to be processed.
+		nmsg = len(msgs)
+		// numbers of msgs that are processed.
+		nproc = 0
+	)
+	defer func() {
+		// If we recovered, we buffer up all the messages that we could not process
+		// so we can retry them on the next restart.
+		if v := recover(); v != nil {
+			p.mbuffer = make([]Envelope, nmsg-nproc)
+			for i := 0; i < nmsg-nproc; i++ {
+				p.mbuffer[i] = msgs[i+nproc]
+			}
+			if p.Opts.MaxRestarts > 0 {
+				p.tryRestart(v)
+			}
+		}
+	}()
 	for i := 0; i < len(msgs); i++ {
+		nproc++
 		msg := msgs[i]
 		if _, ok := msg.Msg.(poisonPill); ok {
 			p.cleanup()
@@ -70,20 +94,10 @@ func (p *process) Invoke(msgs []Envelope) {
 }
 
 func (p *process) Start() {
-	defer func() {
-		if p.MaxRestarts > 0 {
-			if v := recover(); v != nil {
-				p.tryRestart(v)
-			}
-		}
-	}()
-
 	recv := p.Producer()
 	p.context.receiver = recv
 	p.context.message = Initialized{}
 	applyMiddleware(recv.Receive, p.Opts.Middleware...)(p.context)
-
-	p.inbox.Start(p)
 
 	p.context.message = Started{}
 	applyMiddleware(recv.Receive, p.Opts.Middleware...)(p.context)
@@ -92,10 +106,16 @@ func (p *process) Start() {
 	log.Tracew("[PROCESS] started", log.M{
 		"pid": p.pid,
 	})
+
+	// If we have messages in our buffer, invoke them.
+	if len(p.mbuffer) > 0 {
+		p.Invoke(p.mbuffer)
+		p.mbuffer = nil
+	}
 }
 
 func (p *process) tryRestart(v any) {
-	p.inbox.Close()
+	// p.inbox.Close()
 	p.restarts++
 	// InternalError does not take the maximum restarts into account.
 	// For now, InternalError is getting triggered when we are dialing
@@ -111,7 +131,7 @@ func (p *process) tryRestart(v any) {
 		return
 	}
 
-	fmt.Println(string(debug.Stack()))
+	// fmt.Println(string(debug.Stack()))
 	// If we reach the max restarts, we shutdown the inbox and clean
 	// everything up.
 	if p.restarts == p.MaxRestarts {

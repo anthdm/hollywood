@@ -21,7 +21,7 @@ func TestSend(t *testing.T) {
 		wg = sync.WaitGroup{}
 	)
 
-	wg.Add(2) // send 2 messages
+	wg.Add(10) // send 2 messages
 	pid := a.SpawnFunc(func(c *actor.Context) {
 		switch msg := c.Message().(type) {
 		case *TestMessage:
@@ -30,8 +30,9 @@ func TestSend(t *testing.T) {
 		}
 	}, "dfoo")
 
-	b.Send(pid, &TestMessage{Data: []byte("foo")})
-	b.Send(pid, &TestMessage{Data: []byte("foo")})
+	for i := 0; i < 10; i++ {
+		b.Send(pid, &TestMessage{Data: []byte("foo")})
+	}
 	wg.Wait()
 }
 

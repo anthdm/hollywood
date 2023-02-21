@@ -1,6 +1,7 @@
 package actor
 
 import (
+	fmt "fmt"
 	"strconv"
 	"sync"
 	"testing"
@@ -10,20 +11,31 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestTemp(t *testing.T) {
+func TestRestarts(t *testing.T) {
 	e := NewEngine()
 	wg := sync.WaitGroup{}
+	type payload struct {
+		data int
+	}
 
+	wg.Add(1)
 	pid := e.SpawnFunc(func(c *Context) {
-		if _, ok := c.Message().(string); ok {
-			wg.Done()
+		switch msg := c.Message().(type) {
+		case Started:
+		case Stopped:
+		case payload:
+			if msg.data != 10 {
+				panic("I failed to process this message")
+			} else {
+				fmt.Println("finally processed all my messsages after borking.", msg.data)
+				wg.Done()
+			}
 		}
 	}, "foo")
 
-	for i := 0; i < 1024*4; i++ {
-		wg.Add(1)
-		e.Send(pid, "foo")
-	}
+	e.Send(pid, payload{1})
+	e.Send(pid, payload{2})
+	e.Send(pid, payload{10})
 	wg.Wait()
 }
 
@@ -36,17 +48,19 @@ func TestProcessInitStartOrder(t *testing.T) {
 	pid := e.SpawnFunc(func(c *Context) {
 		switch c.Message().(type) {
 		case Initialized:
+			fmt.Println("init")
 			wg.Add(1)
 			init = true
 		case Started:
+			fmt.Println("start")
 			require.True(t, init)
 			started = true
 		case int:
+			fmt.Println("msg")
 			require.True(t, started)
 			wg.Done()
 		}
 	}, "tst")
-
 	e.Send(pid, 1)
 	wg.Wait()
 }

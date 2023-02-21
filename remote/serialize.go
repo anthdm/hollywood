@@ -17,35 +17,6 @@ type Unmarshaler interface {
 	UnmarshalVT([]byte) error
 }
 
-func makeEnvelope(streams []*streamDeliver) (*Envelope, error) {
-	protos := make([]*Message, len(streams))
-	for i := 0; i < len(streams); i++ {
-		msg := streams[i]
-		pmsg, err := serialize(msg.target, msg.sender, msg.msg)
-		if err != nil {
-			return nil, err
-		}
-		protos[i] = pmsg
-	}
-	return &Envelope{
-		Messages: protos,
-	}, nil
-}
-
-func makeMessage(it int32, msg Marshaler) (*Message, error) {
-	b, err := msg.MarshalVT()
-	if err != nil {
-		return nil, err
-	}
-	m := &Message{
-		Data:          b,
-		TargetIndex:   it,
-		SenderIndex:   it,
-		TypeNameIndex: it,
-	}
-	return m, nil
-}
-
 func serialize(pid *actor.PID, sender *actor.PID, msg Marshaler) (*Message, error) {
 	x := proto.MessageName(msg)
 	fmt.Println(x)

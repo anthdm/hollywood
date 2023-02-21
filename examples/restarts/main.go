@@ -35,7 +35,7 @@ func (f *foo) Receive(ctx *actor.Context) {
 
 func main() {
 	engine := actor.NewEngine()
-	pid := engine.Spawn(newFoo, "foo")
+	pid := engine.Spawn(newFoo, "foo", actor.WithMaxRestarts(3))
 	wg.Add(1)
 	engine.Send(pid, &message{data: "failed"})
 	time.Sleep(time.Millisecond)
