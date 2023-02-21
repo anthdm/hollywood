@@ -27,7 +27,7 @@ func (r *Response) Result() (any, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), r.timeout)
 	defer func() {
 		cancel()
-		r.engine.registry.remove(r.pid)
+		r.engine.Registry.Remove(r.pid)
 	}()
 
 	select {
@@ -42,5 +42,7 @@ func (r *Response) Send(_ *PID, msg any, _ *PID) {
 	r.result <- msg
 }
 
-func (r *Response) PID() *PID { return r.pid }
-func (r *Response) Shutdown() {}
+func (r *Response) PID() *PID         { return r.pid }
+func (r *Response) Shutdown()         {}
+func (r *Response) Start()            {}
+func (r *Response) Invoke([]Envelope) {}

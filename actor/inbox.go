@@ -1,49 +1,74 @@
 package actor
 
 import (
+	"github.com/anthdm/disruptor"
 	"github.com/anthdm/hollywood/log"
 )
 
+type Inboxer interface {
+	Send(Envelope)
+	Start(Processer)
+	Stop() error
+}
+
 const reserv = 1
 
-type inbox struct {
-	ringBuffer []envelope
-	bufferMask int
-	proc       *process
+type Inbox struct {
+	ringBuffer []Envelope
+	bufferMask int64
+	proc       Processer
+	disruptor  disruptor.Disruptor
 }
 
-func newInbox(size int) *inbox {
-	return &inbox{
-		ringBuffer: make([]envelope, size),
-		bufferMask: size - 1,
+func NewInbox(size int) *Inbox {
+	in := &Inbox{
+		ringBuffer: make([]Envelope, size),
+		bufferMask: int64(size) - 1,
+	}
+	dis := disruptor.New(
+		disruptor.WithCapacity(int64(size)),
+		disruptor.WithConsumerGroup(in),
+	)
+	in.disruptor = dis
+	return in
+}
+
+func (in *Inbox) Consume(lower, upper int64) {
+	var (
+		nmsg   = (upper - lower) + reserv
+		from   = lower & in.bufferMask
+		till   = from + nmsg
+		maxlen = int64(len(in.ringBuffer))
+	)
+	if till > maxlen {
+		msgs := in.ringBuffer[from:maxlen]
+		in.proc.Invoke(msgs)
+
+		trunc := till - maxlen
+		till = maxlen
+		msgs = in.ringBuffer[0:trunc]
+		in.proc.Invoke(msgs)
+	} else {
+		msgs := in.ringBuffer[from:till]
+		in.proc.Invoke(msgs)
 	}
 }
 
-func (in *inbox) Consume(lower, upper int64) {
-	for ; lower <= upper; lower++ {
-		message := in.ringBuffer[lower&int64(in.bufferMask)]
-		in.proc.call(message)
-	}
-}
-
-func (in *inbox) run(proc *process) {
+func (in *Inbox) Start(proc Processer) {
 	in.proc = proc
-	go in.proc.disruptor.Reader.Read()
-	log.Tracew("[INBOX] started", log.M{})
+	go in.disruptor.Reader.Read()
+	log.Tracew("[INBOX] started", log.M{"pid": proc.PID()})
 }
 
-// NOTE: The disruptor will call Close() on the inbox when its fully closed.
-func (in *inbox) close() error {
-	return in.proc.disruptor.Reader.Close()
+func (in *Inbox) Stop() error {
+	defer func() {
+		log.Tracew("[INBOX] closed", log.M{"pid": in.proc.PID()})
+	}()
+	return in.disruptor.Reader.Close()
 }
 
-func (in *inbox) Close() error {
-	log.Tracew("[INBOX] closed", log.M{})
-	return nil
-}
-
-func (in *inbox) send(msg envelope) {
-	seq := in.proc.disruptor.Reserve(reserv)
-	in.ringBuffer[seq&int64(in.bufferMask)] = msg
-	in.proc.disruptor.Commit(seq-reserv+1, seq)
+func (in *Inbox) Send(msg Envelope) {
+	seq := in.disruptor.Reserve(reserv)
+	in.ringBuffer[seq&in.bufferMask] = msg
+	in.disruptor.Commit(seq-reserv+1, seq)
 }

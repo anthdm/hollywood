@@ -3,13 +3,12 @@ package remote
 import (
 	"github.com/anthdm/hollywood/actor"
 	"github.com/anthdm/hollywood/log"
-	"google.golang.org/protobuf/proto"
 )
 
-type routeToStream struct {
+type streamDeliver struct {
 	sender *actor.PID
-	pid    *actor.PID
-	msg    proto.Message
+	target *actor.PID
+	msg    any
 }
 
 type terminateStream struct {
@@ -36,8 +35,8 @@ func (s *streamRouter) Receive(ctx *actor.Context) {
 	switch msg := ctx.Message().(type) {
 	case actor.Started:
 		s.pid = ctx.PID()
-	case routeToStream:
-		s.handleRouteToStream(msg)
+	case *streamDeliver:
+		s.deliverStream(msg)
 	case terminateStream:
 		s.handleTerminateStream(msg)
 	}
@@ -45,33 +44,27 @@ func (s *streamRouter) Receive(ctx *actor.Context) {
 
 func (s *streamRouter) handleTerminateStream(msg terminateStream) {
 	streamWriterPID := s.streams[msg.address]
-	s.engine.Poison(streamWriterPID)
 	delete(s.streams, msg.address)
 	log.Tracew("[STREAM ROUTER] terminating stream", log.M{
-		"dest": msg.address,
-		"pid":  streamWriterPID,
+		"remote": msg.address,
+		"pid":    streamWriterPID,
 	})
 }
 
-func (s *streamRouter) handleRouteToStream(msg routeToStream) {
+func (s *streamRouter) deliverStream(msg *streamDeliver) {
 	var (
 		swpid   *actor.PID
 		ok      bool
-		address = msg.pid.Address
+		address = msg.target.Address
 	)
 
 	swpid, ok = s.streams[address]
 	if !ok {
-		swpid = s.engine.Spawn(newStreamWriter(s.engine, s.pid, address), "stream", actor.WithTags(address))
+		swpid = s.engine.SpawnProc(newStreamWriter(s.engine, s.pid, address))
 		s.streams[address] = swpid
 		log.Tracew("[STREAM ROUTER] new stream route", log.M{
 			"pid": swpid,
 		})
 	}
-	ws := writeToStream{
-		pid:    msg.pid,
-		msg:    msg.msg,
-		sender: msg.sender,
-	}
-	s.engine.Send(swpid, ws)
+	s.engine.Send(swpid, msg)
 }

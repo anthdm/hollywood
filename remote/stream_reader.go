@@ -2,20 +2,23 @@ package remote
 
 import (
 	"context"
-	errors "errors"
+	"errors"
 
+	"github.com/anthdm/hollywood/actor"
 	"github.com/anthdm/hollywood/log"
 )
 
 type streamReader struct {
 	DRPCRemoteUnimplementedServer
 
-	remote *Remote
+	remote       *Remote
+	deserializer Deserializer
 }
 
 func newStreamReader(r *Remote) *streamReader {
 	return &streamReader{
-		remote: r,
+		remote:       r,
+		deserializer: ProtoSerializer{},
 	}
 }
 
@@ -25,7 +28,7 @@ func (r *streamReader) Receive(stream DRPCRemote_ReceiveStream) error {
 	}()
 
 	for {
-		msg, err := stream.Recv()
+		envelope, err := stream.Recv()
 		if err != nil {
 			if errors.Is(err, context.Canceled) {
 				break
@@ -34,17 +37,19 @@ func (r *streamReader) Receive(stream DRPCRemote_ReceiveStream) error {
 			return err
 		}
 
-		pid := msg.Target
-		dmsg, err := deserialize(msg.Data, msg.TypeName)
-		if err != nil {
-			log.Warnw("[STREAM READER] deserialize", log.M{"err": err})
-			continue
-		}
-
-		if msg.Sender != nil {
-			r.remote.engine.SendWithSender(pid, dmsg, msg.Sender)
-		} else {
-			r.remote.engine.Send(pid, dmsg)
+		for _, msg := range envelope.Messages {
+			tname := envelope.TypeNames[msg.TypeNameIndex]
+			payload, err := r.deserializer.Deserialize(msg.Data, tname)
+			if err != nil {
+				log.Errorw("[STREAM READER] deserialize error", log.M{"err": err})
+				return err
+			}
+			target := envelope.Targets[msg.TargetIndex]
+			var sender *actor.PID
+			if len(envelope.Senders) > 0 {
+				sender = envelope.Senders[msg.SenderIndex]
+			}
+			r.remote.engine.SendLocal(target, payload, sender)
 		}
 	}
 

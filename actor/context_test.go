@@ -8,6 +8,53 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestChild(t *testing.T) {
+	var (
+		e  = NewEngine()
+		wg = sync.WaitGroup{}
+	)
+	wg.Add(1)
+	e.SpawnFunc(func(c *Context) {
+		switch c.Message().(type) {
+		case Initialized:
+			c.SpawnChildFunc(func(_ *Context) {}, "child", WithTags("1"))
+			c.SpawnChildFunc(func(_ *Context) {}, "child", WithTags("2"))
+			c.SpawnChildFunc(func(_ *Context) {}, "child", WithTags("3"))
+		case Started:
+			assert.Equal(t, 3, len(c.Children()))
+			wg.Done()
+		}
+	}, "foo", WithTags("bar", "baz"))
+	wg.Wait()
+}
+
+func TestParent(t *testing.T) {
+	var (
+		e      = NewEngine()
+		wg     = sync.WaitGroup{}
+		parent = NewPID(LocalLookupAddr, "foo", "bar", "baz")
+	)
+	wg.Add(1)
+
+	childfn := func(c *Context) {
+		switch c.Message().(type) {
+		case Started:
+			assert.True(t, c.Parent().Equals(parent))
+			assert.True(t, len(c.Children()) == 0)
+			wg.Done()
+		}
+	}
+
+	e.SpawnFunc(func(c *Context) {
+		switch c.Message().(type) {
+		case Started:
+			c.SpawnChildFunc(childfn, "child")
+		}
+	}, "foo", WithTags("bar", "baz"))
+
+	wg.Wait()
+}
+
 func TestGetPID(t *testing.T) {
 	e := NewEngine()
 	wg := sync.WaitGroup{}
@@ -52,6 +99,6 @@ func TestSpawnChild(t *testing.T) {
 	e.Poison(pid)
 
 	stopwg.Wait()
-	assert.Equal(t, e.deadLetter, e.registry.get(NewPID("local", "child")))
-	assert.Equal(t, e.deadLetter, e.registry.get(pid))
+	assert.Equal(t, e.deadLetter, e.Registry.get(NewPID("local", "child")))
+	assert.Equal(t, e.deadLetter, e.Registry.get(pid))
 }

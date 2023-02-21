@@ -23,22 +23,22 @@ type Receiver interface {
 // Engine represents the actor engine.
 type Engine struct {
 	EventStream *EventStream
+	Registry    *Registry
 
 	address    string
-	registry   *registry
 	remote     Remoter
-	deadLetter processer
+	deadLetter Processer
 }
 
 // NewEngine returns a new actor Engine.
 func NewEngine() *Engine {
 	e := &Engine{
 		EventStream: NewEventStream(),
-		address:     "local",
+		address:     LocalLookupAddr,
 	}
-	e.registry = newRegistry(e)
+	e.Registry = newRegistry(e)
 	e.deadLetter = newDeadLetter(e.EventStream)
-	e.registry.add(e.deadLetter)
+	e.Registry.add(e.deadLetter)
 	return e
 }
 
@@ -58,11 +58,20 @@ func (e *Engine) Spawn(p Producer, name string, opts ...OptFunc) *PID {
 	for _, opt := range opts {
 		opt(&options)
 	}
-	return e.spawn(options).PID()
+	proc := newProcess(e, options)
+	return e.SpawnProc(proc)
 }
 
 func (e *Engine) SpawnFunc(f func(*Context), id string, opts ...OptFunc) *PID {
 	return e.Spawn(newFuncReceiver(f), id, opts...)
+}
+
+// SpawnProc spawns the give Processer. This function is usefull when working
+// with custom created Processes. Take a look at the streamWriter as an example.
+func (e *Engine) SpawnProc(p Processer) *PID {
+	e.Registry.add(p)
+	p.Start()
+	return p.PID()
 }
 
 // Address returns the address of the actor engine. When there is
@@ -77,7 +86,7 @@ func (e *Engine) Address() string {
 // block until the deadline is exceeded or the response is being resolved.
 func (e *Engine) Request(pid *PID, msg any, timeout time.Duration) *Response {
 	resp := NewResponse(e, timeout)
-	e.registry.add(resp)
+	e.Registry.add(resp)
 
 	e.SendWithSender(pid, msg, resp.PID())
 
@@ -100,7 +109,7 @@ func (e *Engine) Send(pid *PID, msg any) {
 
 func (e *Engine) send(pid *PID, msg any, sender *PID) {
 	if e.isLocalMessage(pid) {
-		e.sendLocal(pid, msg, sender)
+		e.SendLocal(pid, msg, sender)
 		return
 	}
 	if e.remote == nil {
@@ -116,18 +125,14 @@ func (e *Engine) send(pid *PID, msg any, sender *PID) {
 // The process will shut down once it processed all its messages before the poisonPill
 // was received.
 func (e *Engine) Poison(pid *PID) {
-	proc := e.registry.get(pid)
+	proc := e.Registry.get(pid)
 	if proc != nil {
-		e.sendLocal(pid, poisonPill{}, nil)
+		e.SendLocal(pid, poisonPill{}, nil)
 	}
 }
 
-func (e *Engine) spawn(cfg Opts) processer {
-	return newProcess(e, cfg)
-}
-
-func (e *Engine) sendLocal(pid *PID, msg any, sender *PID) {
-	proc := e.registry.get(pid)
+func (e *Engine) SendLocal(pid *PID, msg any, sender *PID) {
+	proc := e.Registry.get(pid)
 	if proc != nil {
 		proc.Send(pid, msg, sender)
 	}

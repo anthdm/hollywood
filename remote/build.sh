@@ -1,1 +1,2 @@
-protoc -I=../actor --go_out=. --go_opt=paths=source_relative --go-drpc_out=. --go-drpc_opt=paths=source_relative --proto_path=. remote.proto
+protoc -I=../actor --go_out=. --go-vtproto_out=. --go_opt=paths=source_relative --go-drpc_out=. --go-drpc_opt=protolib=github.com/planetscale/vtprotobuf/codec/drpc --go-drpc_opt=paths=source_relative --proto_path=. remote.proto
+# protoc --go_out=. --go-vtproto_out=. --go-drpc_out=. --go-drpc_opt=protolib=github.com/planetscale/vtprotobuf/codec/drpc

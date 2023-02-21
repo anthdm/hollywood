@@ -7,8 +7,7 @@ package remote
 import (
 	context "context"
 	errors "errors"
-	protojson "google.golang.org/protobuf/encoding/protojson"
-	proto "google.golang.org/protobuf/proto"
+	drpc1 "github.com/planetscale/vtprotobuf/codec/drpc"
 	drpc "storj.io/drpc"
 	drpcerr "storj.io/drpc/drpcerr"
 )
@@ -16,23 +15,19 @@ import (
 type drpcEncoding_File_remote_proto struct{}
 
 func (drpcEncoding_File_remote_proto) Marshal(msg drpc.Message) ([]byte, error) {
-	return proto.Marshal(msg.(proto.Message))
-}
-
-func (drpcEncoding_File_remote_proto) MarshalAppend(buf []byte, msg drpc.Message) ([]byte, error) {
-	return proto.MarshalOptions{}.MarshalAppend(buf, msg.(proto.Message))
+	return drpc1.Marshal(msg)
 }
 
 func (drpcEncoding_File_remote_proto) Unmarshal(buf []byte, msg drpc.Message) error {
-	return proto.Unmarshal(buf, msg.(proto.Message))
+	return drpc1.Unmarshal(buf, msg)
 }
 
 func (drpcEncoding_File_remote_proto) JSONMarshal(msg drpc.Message) ([]byte, error) {
-	return protojson.Marshal(msg.(proto.Message))
+	return drpc1.JSONMarshal(msg)
 }
 
 func (drpcEncoding_File_remote_proto) JSONUnmarshal(buf []byte, msg drpc.Message) error {
-	return protojson.Unmarshal(buf, msg.(proto.Message))
+	return drpc1.JSONUnmarshal(buf, msg)
 }
 
 type DRPCRemoteClient interface {
@@ -62,27 +57,27 @@ func (c *drpcRemoteClient) Receive(ctx context.Context) (DRPCRemote_ReceiveClien
 
 type DRPCRemote_ReceiveClient interface {
 	drpc.Stream
-	Send(*Message) error
-	Recv() (*Message, error)
+	Send(*Envelope) error
+	Recv() (*Envelope, error)
 }
 
 type drpcRemote_ReceiveClient struct {
 	drpc.Stream
 }
 
-func (x *drpcRemote_ReceiveClient) Send(m *Message) error {
+func (x *drpcRemote_ReceiveClient) Send(m *Envelope) error {
 	return x.MsgSend(m, drpcEncoding_File_remote_proto{})
 }
 
-func (x *drpcRemote_ReceiveClient) Recv() (*Message, error) {
-	m := new(Message)
+func (x *drpcRemote_ReceiveClient) Recv() (*Envelope, error) {
+	m := new(Envelope)
 	if err := x.MsgRecv(m, drpcEncoding_File_remote_proto{}); err != nil {
 		return nil, err
 	}
 	return m, nil
 }
 
-func (x *drpcRemote_ReceiveClient) RecvMsg(m *Message) error {
+func (x *drpcRemote_ReceiveClient) RecvMsg(m *Envelope) error {
 	return x.MsgRecv(m, drpcEncoding_File_remote_proto{})
 }
 
@@ -121,26 +116,26 @@ func DRPCRegisterRemote(mux drpc.Mux, impl DRPCRemoteServer) error {
 
 type DRPCRemote_ReceiveStream interface {
 	drpc.Stream
-	Send(*Message) error
-	Recv() (*Message, error)
+	Send(*Envelope) error
+	Recv() (*Envelope, error)
 }
 
 type drpcRemote_ReceiveStream struct {
 	drpc.Stream
 }
 
-func (x *drpcRemote_ReceiveStream) Send(m *Message) error {
+func (x *drpcRemote_ReceiveStream) Send(m *Envelope) error {
 	return x.MsgSend(m, drpcEncoding_File_remote_proto{})
 }
 
-func (x *drpcRemote_ReceiveStream) Recv() (*Message, error) {
-	m := new(Message)
+func (x *drpcRemote_ReceiveStream) Recv() (*Envelope, error) {
+	m := new(Envelope)
 	if err := x.MsgRecv(m, drpcEncoding_File_remote_proto{}); err != nil {
 		return nil, err
 	}
 	return m, nil
 }
 
-func (x *drpcRemote_ReceiveStream) RecvMsg(m *Message) error {
+func (x *drpcRemote_ReceiveStream) RecvMsg(m *Envelope) error {
 	return x.MsgRecv(m, drpcEncoding_File_remote_proto{})
 }

@@ -1,7 +1,6 @@
 package actor
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/anthdm/hollywood/log"
@@ -53,9 +52,11 @@ func (c *Context) SpawnChild(p Producer, name string, opts ...OptFunc) *PID {
 	for _, opt := range opts {
 		opt(&options)
 	}
-	proc := c.engine.spawn(options)
-	proc.(*process).context.parentCtx = c
-	c.children.Set(options.Name, proc.PID())
+	proc := newProcess(c.engine, options)
+	proc.context.parentCtx = c
+	pid := c.engine.SpawnProc(proc)
+	c.children.Set(pid.ID, pid)
+
 	return proc.PID()
 }
 
@@ -63,13 +64,6 @@ func (c *Context) SpawnChild(p Producer, name string, opts ...OptFunc) *PID {
 // Context.
 func (c *Context) SpawnChildFunc(f func(*Context), name string, opts ...OptFunc) *PID {
 	return c.SpawnChild(newFuncReceiver(f), name, opts...)
-}
-
-// GetChild will return the PID of the child (if any) by the given name/id.
-// PID will be nil if it could not find it.
-func (c *Context) GetChild(id string) *PID {
-	pid, _ := c.children.Get(id)
-	return pid
 }
 
 // Send will send the given message to the given PID.
@@ -91,12 +85,37 @@ func (c *Context) Forward(pid *PID) {
 // Returns nil when it could not find any process..
 func (c *Context) GetPID(name string, tags ...string) *PID {
 	name = name + PIDSeparator + strings.Join(tags, PIDSeparator)
-	fmt.Println(name)
-	proc := c.engine.registry.getByName(name)
+	proc := c.engine.Registry.getByID(name)
 	if proc != nil {
 		return proc.PID()
 	}
 	return nil
+}
+
+// Parent returns the PID of the process that spawned the current process.
+func (c *Context) Parent() *PID {
+	if c.parentCtx != nil {
+		return c.parentCtx.pid
+	}
+	return nil
+}
+
+// Child will return the PID of the child (if any) by the given name/id.
+// PID will be nil if it could not find it.
+func (c *Context) Child(id string) *PID {
+	pid, _ := c.children.Get(id)
+	return pid
+}
+
+// Children returns all child PIDs for the current process.
+func (c *Context) Children() []*PID {
+	pids := make([]*PID, c.children.Len())
+	i := 0
+	c.children.ForEach(func(_ string, child *PID) {
+		pids[i] = child
+		i++
+	})
+	return pids
 }
 
 // PID returns the PID of the process that belongs to the context.

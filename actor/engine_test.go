@@ -1,6 +1,7 @@
 package actor
 
 import (
+	fmt "fmt"
 	"strconv"
 	"sync"
 	"testing"
@@ -9,6 +10,35 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestRestarts(t *testing.T) {
+	e := NewEngine()
+	wg := sync.WaitGroup{}
+	type payload struct {
+		data int
+	}
+
+	wg.Add(1)
+	pid := e.SpawnFunc(func(c *Context) {
+		switch msg := c.Message().(type) {
+		case Started:
+		case Stopped:
+			fmt.Println("stopped!")
+		case payload:
+			if msg.data != 10 {
+				panic("I failed to process this message")
+			} else {
+				fmt.Println("finally processed all my messsages after borking.", msg.data)
+				wg.Done()
+			}
+		}
+	}, "foo")
+
+	e.Send(pid, payload{1})
+	e.Send(pid, payload{2})
+	e.Send(pid, payload{10})
+	wg.Wait()
+}
 
 func TestProcessInitStartOrder(t *testing.T) {
 	var (
@@ -19,17 +49,19 @@ func TestProcessInitStartOrder(t *testing.T) {
 	pid := e.SpawnFunc(func(c *Context) {
 		switch c.Message().(type) {
 		case Initialized:
+			fmt.Println("init")
 			wg.Add(1)
 			init = true
 		case Started:
+			fmt.Println("start")
 			require.True(t, init)
 			started = true
 		case int:
+			fmt.Println("msg")
 			require.True(t, started)
 			wg.Done()
 		}
 	}, "tst")
-
 	e.Send(pid, 1)
 	wg.Wait()
 }
@@ -116,7 +148,7 @@ func TestPoison(t *testing.T) {
 		stopwg.Wait()
 		// When a process is poisoned it should be removed from the registry.
 		// Hence, we should get the dead letter process here.
-		assert.Equal(t, e.deadLetter, e.registry.get(pid))
+		assert.Equal(t, e.deadLetter, e.Registry.get(pid))
 	}
 }
 
@@ -135,13 +167,13 @@ func TestRequestResponse(t *testing.T) {
 	// Response PID should be the dead letter PID. This is because
 	// the actual response process that will handle this RPC
 	// is deregistered. Test that its actually cleaned up.
-	assert.Equal(t, e.deadLetter, e.registry.get(resp.pid))
+	assert.Equal(t, e.deadLetter, e.Registry.get(resp.pid))
 }
 
 func BenchmarkSendMessageLocal(b *testing.B) {
 	e := NewEngine()
 	p := NewTestProducer(nil, func(_ *testing.T, _ *Context) {})
-	pid := e.Spawn(p, "bench", WithInboxSize(1024*32))
+	pid := e.Spawn(p, "bench", WithInboxSize(1024*64))
 
 	b.ResetTimer()
 	b.Run("x", func(b *testing.B) {

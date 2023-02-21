@@ -3,11 +3,9 @@ package remote
 import (
 	"context"
 	"net"
-	"reflect"
 
 	"github.com/anthdm/hollywood/actor"
 	"github.com/anthdm/hollywood/log"
-	"google.golang.org/protobuf/proto"
 	"storj.io/drpc/drpcmux"
 	"storj.io/drpc/drpcserver"
 )
@@ -42,7 +40,7 @@ func (r *Remote) Start() {
 	DRPCRegisterRemote(mux, r.streamReader)
 	s := drpcserver.New(mux)
 
-	r.streamRouterPID = r.engine.Spawn(newStreamRouter(r.engine), "router")
+	r.streamRouterPID = r.engine.Spawn(newStreamRouter(r.engine), "router", actor.WithInboxSize(1024*1024))
 
 	log.Infow("[REMOTE] server started", log.M{
 		"listenAddr": r.config.ListenAddr,
@@ -53,22 +51,18 @@ func (r *Remote) Start() {
 }
 
 func (r *Remote) Send(pid *actor.PID, msg any, sender *actor.PID) {
-	switch m := msg.(type) {
-	case proto.Message:
-		r.engine.Send(r.streamRouterPID, routeToStream{
-			pid:    pid,
-			msg:    m,
-			sender: sender,
-		})
-	default:
-		log.Errorw("[REMOTE] failed to send message", log.M{
-			"error": "given message is not of type proto.Message or WithSender",
-			"type":  reflect.TypeOf(m),
-		})
-	}
+	r.engine.Send(r.streamRouterPID, &streamDeliver{
+		target: pid,
+		sender: sender,
+		msg:    msg,
+	})
 }
 
 // Address returns the listen address of the remote.
 func (r *Remote) Address() string {
 	return r.config.ListenAddr
+}
+
+func init() {
+	RegisterType(&actor.PID{})
 }
