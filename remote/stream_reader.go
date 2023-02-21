@@ -18,7 +18,7 @@ type streamReader struct {
 func newStreamReader(r *Remote) *streamReader {
 	return &streamReader{
 		remote:       r,
-		deserializer: VTProtoSerializer{},
+		deserializer: ProtoSerializer{},
 	}
 }
 
