@@ -23,6 +23,7 @@ func TestRestarts(t *testing.T) {
 		switch msg := c.Message().(type) {
 		case Started:
 		case Stopped:
+			fmt.Println("stopped!")
 		case payload:
 			if msg.data != 10 {
 				panic("I failed to process this message")

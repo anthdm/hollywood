@@ -15,6 +15,7 @@ type Envelope struct {
 	Sender *PID
 }
 
+// Processer is an interface the abstracts the way a process behaves.
 type Processer interface {
 	Start()
 	PID() *PID
@@ -66,6 +67,9 @@ func (p *process) Invoke(msgs []Envelope) {
 		// If we recovered, we buffer up all the messages that we could not process
 		// so we can retry them on the next restart.
 		if v := recover(); v != nil {
+			p.context.message = Stopped{}
+			p.context.receiver.Receive(p.context)
+
 			p.mbuffer = make([]Envelope, nmsg-nproc)
 			for i := 0; i < nmsg-nproc; i++ {
 				p.mbuffer[i] = msgs[i+nproc]
@@ -115,7 +119,6 @@ func (p *process) Start() {
 }
 
 func (p *process) tryRestart(v any) {
-	// p.inbox.Close()
 	p.restarts++
 	// InternalError does not take the maximum restarts into account.
 	// For now, InternalError is getting triggered when we are dialing
