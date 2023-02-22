@@ -3,7 +3,7 @@
 
 # Hollywood
 
-A blazingly fast, low latency, and lightweight actor engine with all batteries included.
+A blazingly fast, low latency, and lightweight actor engine with all batteries included written in Golang.
 
 ## Features
 
@@ -12,6 +12,7 @@ A blazingly fast, low latency, and lightweight actor engine with all batteries i
 - Optimized protoBuffers without reflection
 - lightweight and highly customizable
 - built and optimized for speed
+- cluster support with Consul [coming soon...]
 
 # Installation
 
