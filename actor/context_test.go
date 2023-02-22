@@ -8,6 +8,30 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestSpawnChildPID(t *testing.T) {
+	PIDSeparator = ">"
+	var (
+		e           = NewEngine()
+		wg          = sync.WaitGroup{}
+		childfn     = func(c *Context) {}
+		expectedPID = NewPID(LocalLookupAddr, "parent", "child")
+	)
+
+	wg.Add(1)
+	e.SpawnFunc(func(c *Context) {
+		switch c.Message().(type) {
+		case Started:
+			pid := c.SpawnChildFunc(childfn, "child")
+			assert.True(t, expectedPID.Equals(pid))
+			wg.Done()
+		case Stopped:
+		}
+	}, "parent")
+
+	wg.Wait()
+	PIDSeparator = "/"
+}
+
 func TestChild(t *testing.T) {
 	var (
 		e  = NewEngine()

@@ -8,6 +8,7 @@ import (
 )
 
 func TestGetByName(t *testing.T) {
+	PIDSeparator = "/"
 	e := NewEngine()
 	e.SpawnFunc(func(c *Context) {}, "foo") // local/foo
 	time.Sleep(time.Millisecond * 10)
