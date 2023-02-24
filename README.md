@@ -1,9 +1,8 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/anthdm/hollywood)](https://goreportcard.com/report/github.com/anthdm/hollywood)
 ![example workflow](https://github.com/anthdm/hollywood/actions/workflows/build.yml/badge.svg?branch=master)
 
-# Hollywood
-
-A blazingly fast, low latency, and lightweight actor engine with all batteries included written in Golang.
+# Blazingly fast, low latency actors for Golang
+Hollywood is an actor engine build for speed and low-latency applications. Benchmarks proving it will be the fastest on the market coming soon.
 
 ## Features
 
