@@ -1,6 +1,8 @@
 package actor
 
 import (
+	"fmt"
+	"runtime/debug"
 	"time"
 
 	"github.com/anthdm/hollywood/log"
@@ -134,7 +136,7 @@ func (p *process) tryRestart(v any) {
 		return
 	}
 
-	// fmt.Println(string(debug.Stack()))
+	fmt.Println(string(debug.Stack()))
 	// If we reach the max restarts, we shutdown the inbox and clean
 	// everything up.
 	if p.restarts == p.MaxRestarts {
