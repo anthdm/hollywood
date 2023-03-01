@@ -1,27 +1,22 @@
 package ggq
 
 import (
-	"sync"
+	"fmt"
 	"testing"
 )
 
 type consumer[T any] struct{}
 
 func (c *consumer[T]) Consume(t []T) {
-	//fmt.Println("len:", len(t))
+	fmt.Println("len:", len(t))
 }
 
 func TestXddd(t *testing.T) {
-	q := New[int](8, &consumer[int]{})
-	wg := sync.WaitGroup{}
+	q := New[int](1024, &consumer[int]{})
 
 	go func() {
 		for i := 0; i < 100000; i++ {
-			wg.Add(1)
-			go func(i int) {
-				q.Write(i)
-				wg.Done()
-			}(i)
+			q.Write(i)
 		}
 		q.Close()
 	}()

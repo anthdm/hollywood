@@ -33,28 +33,29 @@ type slot[T any] struct {
 }
 
 type GGQ[T any] struct {
-	_        [cacheLinePadding]byte
-	written  atomic.Uint32
-	_        [cacheLinePadding - unsafe.Sizeof(atomic.Uint32{})]byte
-	read     atomic.Uint32
-	_        [cacheLinePadding - unsafe.Sizeof(atomic.Uint32{})]byte
-	buffer   []slot[T]
-	_        [cacheLinePadding]byte
-	mask     uint32
-	consumer Consumer[T]
+	_          [cacheLinePadding]byte
+	written    atomic.Uint32
+	_          [cacheLinePadding - unsafe.Sizeof(atomic.Uint32{})]byte
+	read       atomic.Uint32
+	_          [cacheLinePadding - unsafe.Sizeof(atomic.Uint32{})]byte
+	buffer     []slot[T]
+	_          [cacheLinePadding]byte
+	mask       uint32
+	consumer   Consumer[T]
+	itemBuffer []T
 }
 
 func New[T any](size uint32, consumer Consumer[T]) *GGQ[T] {
 	return &GGQ[T]{
-		buffer:   make([]slot[T], size),
-		mask:     size - 1,
-		consumer: consumer,
+		buffer:     make([]slot[T], size),
+		mask:       size - 1,
+		consumer:   consumer,
+		itemBuffer: make([]T, size+1),
 	}
 }
 
 func (q *GGQ[T]) Write(val T) {
 	slot := &q.buffer[q.written.Add(1)&q.mask]
-	// fmt.Println(slot)
 	for !slot.CompareAndSwap(slotEmpty, slotBusy) {
 		switch slot.Load() {
 		case slotBusy, slotCommitted:
@@ -77,7 +78,6 @@ func (q *GGQ[T]) ReadN() (T, bool) {
 		upper = q.written.Load()
 
 		if lower <= upper {
-			// fmt.Printf("L %d U %d\n", lower, upper)
 			q.Consume(lower, upper)
 			q.read.Store(upper)
 			current = upper
@@ -95,21 +95,32 @@ func (q *GGQ[T]) ReadN() (T, bool) {
 }
 
 func (q *GGQ[T]) Consume(lower, upper uint32) {
-	lenSlots := upper - lower + 1
-	items := make([]T, lenSlots)
-
 	i := 0
 	for ; lower <= upper; lower++ {
 		slot := &q.buffer[lower&q.mask]
 		if slot.CompareAndSwap(slotCommitted, slotBusy) {
-			items[i] = slot.item
+			q.itemBuffer[i] = slot.item
 			slot.Store(slotEmpty)
 			i++
 		}
 	}
-
-	q.consumer.Consume(items[:i])
+	q.consumer.Consume(q.itemBuffer[:i])
 }
+
+// func (q *GGQ[T]) Consume(lower, upper uint32) {
+// 	lenSlots := upper - lower + 1
+// 	items := make([]T, lenSlots)
+// 	i := 0
+// 	for ; lower <= upper; lower++ {
+// 		slot := &q.buffer[lower&q.mask]
+// 		if slot.CompareAndSwap(slotCommitted, slotBusy) {
+// 			items[i] = slot.item
+// 			slot.Store(slotEmpty)
+// 			i++
+// 		}
+// 	}
+// 	q.consumer.Consume(items[:i])
+// }
 
 func (q *GGQ[T]) Read() (T, bool) {
 	slot := &q.buffer[q.read.Add(1)&q.mask]
