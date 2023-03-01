@@ -1,21 +1,20 @@
 package ggq
 
 import (
-	"fmt"
 	"testing"
 )
 
 type consumer[T any] struct{}
 
 func (c *consumer[T]) Consume(t []T) {
-	fmt.Println("len:", len(t))
+	// fmt.Println(len(t))
 }
 
-func TestXddd(t *testing.T) {
+func TestSingleMessageNotConsuming(t *testing.T) {
 	q := New[int](1024, &consumer[int]{})
 
 	go func() {
-		for i := 0; i < 100000; i++ {
+		for i := 0; i < 1; i++ {
 			q.Write(i)
 		}
 		q.Close()

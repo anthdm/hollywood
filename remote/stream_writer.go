@@ -3,7 +3,6 @@ package remote
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io"
 	"net"
 	"time"
@@ -58,14 +57,6 @@ func (s *streamWriter) Invoke(msgs []actor.Envelope) {
 	)
 
 	for i := 0; i < len(msgs); i++ {
-		v, ok := msgs[i].Msg.(*streamDeliver)
-		if !ok {
-			// fmt.Println(len(msgs))
-			// fmt.Printf("%+v\n", v)
-			fmt.Println(v)
-			continue
-			// os.Exit(1)
-		}
 		var (
 			stream   = msgs[i].Msg.(*streamDeliver)
 			typeID   int32

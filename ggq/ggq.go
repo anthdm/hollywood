@@ -1,8 +1,10 @@
 package ggq
 
 import (
+	"fmt"
 	"runtime"
 	"sync/atomic"
+	"time"
 	"unsafe"
 )
 
@@ -69,7 +71,6 @@ func (q *GGQ[T]) Write(val T) {
 }
 
 func (q *GGQ[T]) ReadN() (T, bool) {
-	runtime.LockOSThread()
 	var lower, upper uint32
 	current := q.read.Load()
 
@@ -85,7 +86,7 @@ func (q *GGQ[T]) ReadN() (T, bool) {
 		} else if upper := q.written.Load(); lower <= upper {
 			runtime.Gosched()
 		} else if !state.CompareAndSwap(stateClosed, stateRunning) {
-			runtime.Gosched()
+			time.Sleep(time.Microsecond)
 		} else {
 			break
 		}
@@ -95,32 +96,24 @@ func (q *GGQ[T]) ReadN() (T, bool) {
 }
 
 func (q *GGQ[T]) Consume(lower, upper uint32) {
-	i := 0
+	consumed := 0
 	for ; lower <= upper; lower++ {
 		slot := &q.buffer[lower&q.mask]
-		if slot.CompareAndSwap(slotCommitted, slotBusy) {
-			q.itemBuffer[i] = slot.item
-			slot.Store(slotEmpty)
-			i++
+		for !slot.CompareAndSwap(slotCommitted, slotBusy) {
+			switch slot.Load() {
+			case slotBusy:
+				fmt.Println("-----SLOT BUZY")
+				runtime.Gosched()
+			case slotCommitted:
+				continue
+			}
 		}
+		q.itemBuffer[consumed] = slot.item
+		slot.Store(slotEmpty)
+		consumed++
 	}
-	q.consumer.Consume(q.itemBuffer[:i])
+	q.consumer.Consume(q.itemBuffer[:consumed])
 }
-
-// func (q *GGQ[T]) Consume(lower, upper uint32) {
-// 	lenSlots := upper - lower + 1
-// 	items := make([]T, lenSlots)
-// 	i := 0
-// 	for ; lower <= upper; lower++ {
-// 		slot := &q.buffer[lower&q.mask]
-// 		if slot.CompareAndSwap(slotCommitted, slotBusy) {
-// 			items[i] = slot.item
-// 			slot.Store(slotEmpty)
-// 			i++
-// 		}
-// 	}
-// 	q.consumer.Consume(items[:i])
-// }
 
 func (q *GGQ[T]) Read() (T, bool) {
 	slot := &q.buffer[q.read.Add(1)&q.mask]
