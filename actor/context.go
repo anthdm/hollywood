@@ -2,6 +2,7 @@ package actor
 
 import (
 	"strings"
+	"time"
 
 	"github.com/anthdm/hollywood/log"
 	"github.com/anthdm/hollywood/safemap"
@@ -28,8 +29,15 @@ func newContext(e *Engine, pid *PID) *Context {
 	}
 }
 
+// Receiver returns the underlying receiver of this Context.
 func (c *Context) Receiver() Receiver {
 	return c.receiver
+}
+
+// See Engine.Request for information. This is just a helper function doing that
+// calls Request on the underlying Engine. c.Engine().Request().
+func (c *Context) Request(pid *PID, msg any, timeout time.Duration) *Response {
+	return c.engine.Request(pid, msg, timeout)
 }
 
 // Respond will sent the given message to the sender of the current received message.
