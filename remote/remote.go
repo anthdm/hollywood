@@ -21,6 +21,7 @@ type Remote struct {
 	streamRouterPID *actor.PID
 }
 
+// New creates a new "Remote" object given and engine and a Config.
 func New(e *actor.Engine, cfg Config) *Remote {
 	r := &Remote{
 		engine: e,
@@ -50,6 +51,9 @@ func (r *Remote) Start() {
 	go s.Serve(ctx, ln)
 }
 
+// Send sends the given message to the process with the given pid over the network.
+// Optional a "Sender PID" can be given to inform the receiving process who sent the
+// message.
 func (r *Remote) Send(pid *actor.PID, msg any, sender *actor.PID) {
 	r.engine.Send(r.streamRouterPID, &streamDeliver{
 		target: pid,

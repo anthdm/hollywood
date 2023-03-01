@@ -14,8 +14,7 @@ import (
 
 const (
 	connIdleTimeout       = time.Minute * 10
-	streamWriterBatchSize = 1024 * 4
-	batchSize             = 1000
+	streamWriterBatchSize = 1024 * 32
 )
 
 type streamWriter struct {

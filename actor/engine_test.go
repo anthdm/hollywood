@@ -1,7 +1,7 @@
 package actor
 
 import (
-	fmt "fmt"
+	"fmt"
 	"strconv"
 	"sync"
 	"testing"
@@ -85,27 +85,26 @@ func TestSendWithSender(t *testing.T) {
 	wg.Wait()
 }
 
-// TODO(@anthdm) double check to have concurent safe writers with the LMAX disruptor
-// func TestSendMsgRaceCon(t *testing.T) {
-// 	e := NewEngine()
-// 	wg := sync.WaitGroup{}
+func TestSendMsgRaceCon(t *testing.T) {
+	e := NewEngine()
+	wg := sync.WaitGroup{}
 
-// 	pid := e.SpawnFunc(func(c *Context) {
-// 		msg := c.Message()
-// 		if msg == nil {
-// 			fmt.Println("should never happen")
-// 		}
-// 	}, "test")
+	pid := e.SpawnFunc(func(c *Context) {
+		msg := c.Message()
+		if msg == nil {
+			fmt.Println("should never happen")
+		}
+	}, "test")
 
-// 	for i := 0; i < 100; i++ {
-// 		wg.Add(1)
-// 		go func() {
-// 			e.Send(pid, []byte("f"))
-// 			wg.Done()
-// 		}()
-// 	}
-// 	wg.Wait()
-// }
+	for i := 0; i < 100; i++ {
+		wg.Add(1)
+		go func() {
+			e.Send(pid, []byte("f"))
+			wg.Done()
+		}()
+	}
+	wg.Wait()
+}
 
 func TestSpawn(t *testing.T) {
 	e := NewEngine()
@@ -173,7 +172,8 @@ func TestRequestResponse(t *testing.T) {
 func BenchmarkSendMessageLocal(b *testing.B) {
 	e := NewEngine()
 	p := NewTestProducer(nil, func(_ *testing.T, _ *Context) {})
-	pid := e.Spawn(p, "bench", WithInboxSize(1024*64))
+	pid := e.Spawn(p, "bench", WithInboxSize(1024*32))
+	time.Sleep(time.Second)
 
 	b.ResetTimer()
 	b.Run("x", func(b *testing.B) {
@@ -186,7 +186,7 @@ func BenchmarkSendMessageLocal(b *testing.B) {
 func BenchmarkSendWithSenderMessageLocal(b *testing.B) {
 	e := NewEngine()
 	p := NewTestProducer(nil, func(_ *testing.T, _ *Context) {})
-	pid := e.Spawn(p, "bench", WithInboxSize(1024*64))
+	pid := e.Spawn(p, "bench", WithInboxSize(1024*8))
 
 	for i := 0; i < b.N; i++ {
 		e.SendWithSender(pid, pid, pid)

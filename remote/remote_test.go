@@ -65,21 +65,27 @@ func TestWithSender(t *testing.T) {
 
 func TestRequestResponse(t *testing.T) {
 	var (
-		a = makeRemoteEngine("127.0.0.1:4001")
-		b = makeRemoteEngine("127.0.0.1:5001")
+		a  = makeRemoteEngine("127.0.0.1:4001")
+		b  = makeRemoteEngine("127.0.0.1:5001")
+		wg = sync.WaitGroup{}
 	)
 
+	wg.Add(1)
 	pid := a.SpawnFunc(func(c *actor.Context) {
-		if _, ok := c.Message().(*TestMessage); ok {
+		switch c.Message().(type) {
+		case actor.Started:
+			wg.Done()
+		case *TestMessage:
 			c.Respond(&TestMessage{Data: []byte("foo")})
 		}
 	}, "test")
 
-	resp, err := b.Request(pid, &TestMessage{}, time.Second).Result()
+	wg.Wait()
+	resp, err := b.Request(pid, &TestMessage{Data: []byte("foo")}, time.Second).Result()
 	require.Nil(t, err)
 	assert.Equal(t, resp.(*TestMessage).Data, []byte("foo"))
 
-	resp, err = b.Request(pid, &TestMessage{}, time.Second).Result()
+	resp, err = b.Request(pid, &TestMessage{Data: []byte("bar")}, time.Second).Result()
 	require.Nil(t, err)
 	assert.Equal(t, resp.(*TestMessage).Data, []byte("foo"))
 }
