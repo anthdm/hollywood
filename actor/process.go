@@ -3,6 +3,7 @@ package actor
 import (
 	"fmt"
 	"runtime/debug"
+	"sync"
 	"time"
 
 	"github.com/anthdm/hollywood/log"
@@ -59,6 +60,8 @@ func applyMiddleware(rcv ReceiveFunc, middleware ...MiddlewareFunc) ReceiveFunc 
 }
 
 func (p *process) Invoke(msgs []Envelope) {
+	fmt.Println("----invoking", msgs)
+	fmt.Println("----invoking", p.pid)
 	var (
 		// numbers of msgs that need to be processed.
 		nmsg = len(msgs)
@@ -84,8 +87,8 @@ func (p *process) Invoke(msgs []Envelope) {
 	for i := 0; i < len(msgs); i++ {
 		nproc++
 		msg := msgs[i]
-		if _, ok := msg.Msg.(poisonPill); ok {
-			p.cleanup()
+		if pill, ok := msg.Msg.(poisonPill); ok {
+			p.cleanup(pill.wg)
 			return
 		}
 		p.context.message = msg.Msg
@@ -157,7 +160,7 @@ func (p *process) tryRestart(v any) {
 	p.Start()
 }
 
-func (p *process) cleanup() {
+func (p *process) cleanup(wg *sync.WaitGroup) {
 	p.inbox.Stop()
 	p.context.engine.Registry.Remove(p.pid)
 	p.context.message = Stopped{}
@@ -167,14 +170,12 @@ func (p *process) cleanup() {
 	if p.context.parentCtx != nil {
 		p.context.parentCtx.children.Delete(p.Name)
 	}
-	// We are a parent if we have children running
+	// We are a parent if we have children running, shutdown all the children.
 	if p.context.children.Len() > 0 {
 		p.context.children.ForEach(func(name string, pid *PID) {
+			// childwg := &sync.WaitGroup{}
 			p.context.engine.Poison(pid)
-			log.Tracew("[PROCESS] shutting down child", log.M{
-				"pid":   p.pid,
-				"child": pid,
-			})
+			// childwg.Wait()
 		})
 	}
 	log.Tracew("[PROCESS] shutdown", log.M{
@@ -182,10 +183,13 @@ func (p *process) cleanup() {
 	})
 	// Send TerminationEvent to the eventstream
 	p.context.engine.EventStream.Publish(&TerminationEvent{PID: p.pid})
+	if wg != nil {
+		wg.Done()
+	}
 }
 
 func (p *process) PID() *PID { return p.pid }
 func (p *process) Send(_ *PID, msg any, sender *PID) {
 	p.inbox.Send(Envelope{Msg: msg, Sender: sender})
 }
-func (p *process) Shutdown() { p.cleanup() }
+func (p *process) Shutdown() { p.cleanup(nil) }

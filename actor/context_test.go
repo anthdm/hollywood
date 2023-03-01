@@ -1,6 +1,7 @@
 package actor
 
 import (
+	fmt "fmt"
 	"sync"
 	"testing"
 
@@ -107,6 +108,7 @@ func TestSpawnChild(t *testing.T) {
 	childFunc := func(c *Context) {
 		switch c.Message().(type) {
 		case Stopped:
+			fmt.Println("----child stopping...")
 			stopwg.Done()
 		}
 	}

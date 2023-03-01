@@ -6,8 +6,8 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
-	"time"
 
 	"github.com/anthdm/hollywood/actor"
 	"github.com/anthdm/hollywood/log"
@@ -138,13 +138,12 @@ func main() {
 	e := actor.NewEngine()
 	serverPID := e.Spawn(newServer(*listenAddr), "server")
 
-	// Gracefully shutdown the server and its current connections.
-	defer func() {
-		e.Poison(serverPID)
-		time.Sleep(time.Second)
-	}()
-
 	sigch := make(chan os.Signal, 1)
 	signal.Notify(sigch, syscall.SIGINT, syscall.SIGTERM)
 	<-sigch
+
+	// wait till the server is completely shutdown.
+	wg := &sync.WaitGroup{}
+	e.Poison(serverPID, wg)
+	wg.Wait()
 }

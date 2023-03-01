@@ -1,6 +1,8 @@
 package actor
 
 import (
+	fmt "fmt"
+
 	"github.com/anthdm/hollywood/ggq"
 	"github.com/anthdm/hollywood/log"
 )
@@ -23,6 +25,7 @@ func NewInbox(size int) *Inbox {
 }
 
 func (in *Inbox) Consume(msgs []Envelope) {
+	fmt.Println("consuming", in.proc.PID())
 	in.proc.Invoke(msgs)
 }
 
