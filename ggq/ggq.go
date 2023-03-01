@@ -1,7 +1,6 @@
 package ggq
 
 import (
-	"fmt"
 	"runtime"
 	"sync/atomic"
 	"time"
@@ -102,7 +101,6 @@ func (q *GGQ[T]) Consume(lower, upper uint32) {
 		for !slot.CompareAndSwap(slotCommitted, slotBusy) {
 			switch slot.Load() {
 			case slotBusy:
-				fmt.Println("-----SLOT BUZY")
 				runtime.Gosched()
 			case slotCommitted:
 				continue
