@@ -2,11 +2,11 @@
 ![example workflow](https://github.com/anthdm/hollywood/actions/workflows/build.yml/badge.svg?branch=master)
 
 # Blazingly fast, low latency actors for Golang
-Hollywood is an actor engine build for speed and low-latency applications. Benchmarks proving it will be the fastest on the market coming soon.
+Hollywood is an actor engine build for speed and low-latency applications. Benchmarks coming soon...
 
 ## Features
 
-- LMAX disruptor message queue for low latency messaging
+- lock free LMAX based message queue for low latency messaging
 - dRPC as the transport layer
 - Optimized protoBuffers without reflection
 - lightweight and highly customizable
