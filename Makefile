@@ -11,5 +11,6 @@ build:
 	go build -o bin/request examples/request/main.go 
 	go build -o bin/restarts examples/restarts/main.go 
 	go build -o bin/eventstream examples/eventstream/main.go 
+	go build -o bin/tcpserver examples/tcpserver/main.go 
 
 .PHONY: proto
