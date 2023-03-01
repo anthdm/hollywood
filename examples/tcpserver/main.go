@@ -45,7 +45,9 @@ func (s *session) readLoop(c *actor.Context) {
 			log.Errorw("conn read error", log.M{"err": err})
 			break
 		}
-		msg := buf[:n]
+		// copy shared buffer, to prevent race conditions.
+		msg := make([]byte, n)
+		copy(msg, buf[:n])
 		c.Send(c.PID(), msg)
 	}
 	// Loop is done due to error or we need to close due to server shutdown.
