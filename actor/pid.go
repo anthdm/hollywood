@@ -29,6 +29,14 @@ func (pid *PID) Equals(other *PID) bool {
 	return pid.Address == other.Address && pid.ID == other.ID
 }
 
+func (pid *PID) Child(id string, tags ...string) *PID {
+	childID := pid.ID + PIDSeparator + id
+	if len(tags) == 0 {
+		return NewPID(pid.Address, childID)
+	}
+	return NewPID(pid.Address, childID+PIDSeparator+strings.Join(tags, PIDSeparator))
+}
+
 func (pid *PID) HasTag(tag string) bool {
 	panic("TODO")
 }

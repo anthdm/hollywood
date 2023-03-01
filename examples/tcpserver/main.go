@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"net"
 	"os"
 	"os/signal"
@@ -11,6 +12,19 @@ import (
 	"github.com/anthdm/hollywood/actor"
 	"github.com/anthdm/hollywood/log"
 )
+
+type handler struct{}
+
+func newHandler() actor.Receiver {
+	return &handler{}
+}
+
+func (handler) Receive(c *actor.Context) {
+	switch msg := c.Message().(type) {
+	case []byte:
+		fmt.Println("got message to handle:", string(msg))
+	}
+}
 
 type session struct {
 	conn net.Conn
@@ -25,15 +39,13 @@ func newSession(conn net.Conn) actor.Producer {
 }
 
 func (s *session) Receive(c *actor.Context) {
-	switch msg := c.Message().(type) {
+	switch c.Message().(type) {
 	case actor.Initialized:
 	case actor.Started:
 		log.Infow("new connection", log.M{"addr": s.conn.RemoteAddr()})
 		go s.readLoop(c)
 	case actor.Stopped:
 		s.conn.Close()
-	case []byte:
-		s.conn.Write(msg)
 	}
 }
 
@@ -48,7 +60,9 @@ func (s *session) readLoop(c *actor.Context) {
 		// copy shared buffer, to prevent race conditions.
 		msg := make([]byte, n)
 		copy(msg, buf[:n])
-		c.Send(c.PID(), msg)
+
+		// Send to the handler to process to message
+		c.Send(c.Parent().Child("handler"), msg)
 	}
 	// Loop is done due to error or we need to close due to server shutdown.
 	c.Send(c.Parent(), &connRem{pid: c.PID()})
@@ -86,6 +100,8 @@ func (s *server) Receive(c *actor.Context) {
 			panic(err)
 		}
 		s.ln = ln
+		// start the handler that will handle the incomming messages from clients/sessions.
+		c.SpawnChild(newHandler, "handler")
 	case actor.Started:
 		log.Infow("server started", log.M{"addr": s.listenAddr})
 		go s.acceptLoop(c)
