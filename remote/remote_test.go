@@ -74,6 +74,7 @@ func TestRequestResponse(t *testing.T) {
 			c.Respond(&TestMessage{Data: []byte("foo")})
 		}
 	}, "test")
+	// time.Sleep(time.Millisecond * 10)
 
 	resp, err := b.Request(pid, &TestMessage{}, time.Second).Result()
 	require.Nil(t, err)

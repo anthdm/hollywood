@@ -1,7 +1,7 @@
 package actor
 
 import (
-	fmt "fmt"
+	"fmt"
 	"strconv"
 	"sync"
 	"testing"
