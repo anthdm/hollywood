@@ -2,7 +2,8 @@
 ![example workflow](https://github.com/anthdm/hollywood/actions/workflows/build.yml/badge.svg?branch=master)
 
 # Blazingly fast, low latency actors for Golang
-Hollywood is an actor engine build for speed and low-latency applications. Benchmarks coming soon...
+
+Hollywood is an ULTRA fast actor engine build for speed and low-latency applications. It can handle **10 million messages in under 1 second**.
 
 ## Features
 
@@ -13,10 +14,22 @@ Hollywood is an actor engine build for speed and low-latency applications. Bench
 - built and optimized for speed
 - cluster support with Consul [coming soon...]
 
+# Benchmarks
+
+```
+make bench
+```
+
+```
+[BENCH HOLLYWOOD LOCAL] processed 1_000_000 messages in 83.4437ms
+[BENCH HOLLYWOOD LOCAL] processed 10_000_000 messages in 786.2787ms
+[BENCH HOLLYWOOD LOCAL] processed 100_000_000 messages in 7.8718426s
+```
+
 # Installation
 
 ```
-go get github.com/anthdm/hollywood
+go get github.com/anthdm/hollywood/...
 ```
 
 # Quickstart

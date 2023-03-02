@@ -1,6 +1,8 @@
 package actor
 
 import (
+	"runtime"
+
 	"github.com/anthdm/hollywood/ggq"
 	"github.com/anthdm/hollywood/log"
 )
@@ -23,13 +25,15 @@ func NewInbox(size int) *Inbox {
 }
 
 func (in *Inbox) Consume(msgs []Envelope) {
-	// fmt.Println("consuming", len(msgs))
 	in.proc.Invoke(msgs)
 }
 
 func (in *Inbox) Start(proc Processer) {
 	in.proc = proc
-	go in.ggq.ReadN()
+	go func() {
+		runtime.LockOSThread()
+		in.ggq.ReadN()
+	}()
 	log.Tracew("[INBOX] started", log.M{"pid": proc.PID()})
 }
 

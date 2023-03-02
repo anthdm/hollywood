@@ -111,6 +111,8 @@ func (q *GGQ[T]) Consume(lower, upper uint32) {
 	q.consumer.Consume(q.itemBuffer[:consumed])
 }
 
+// ReadN gives way better performance, due to batching messages with
+// lock os thread.
 func (q *GGQ[T]) Read() (T, bool) {
 	slot := &q.buffer[q.read.Add(1)&q.mask]
 	for !slot.CompareAndSwap(slotCommitted, slotBusy) {
