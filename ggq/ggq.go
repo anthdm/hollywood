@@ -72,11 +72,9 @@ func (q *GGQ[T]) Write(val T) {
 func (q *GGQ[T]) ReadN() (T, bool) {
 	var lower, upper uint32
 	current := q.read.Load()
-
 	for {
 		lower = current + 1
 		upper = q.written.Load()
-
 		if lower <= upper {
 			q.Consume(lower, upper)
 			q.read.Store(upper)

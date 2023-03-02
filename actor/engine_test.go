@@ -196,10 +196,9 @@ func BenchmarkSendMessageLocal(b *testing.B) {
 	e := NewEngine()
 	p := NewTestProducer(nil, func(_ *testing.T, _ *Context) {})
 	pid := e.Spawn(p, "bench", WithInboxSize(1024*8))
-	time.Sleep(time.Second)
 
 	b.ResetTimer()
-	b.Run("x", func(b *testing.B) {
+	b.Run("send_message_local", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			e.Send(pid, pid)
 		}

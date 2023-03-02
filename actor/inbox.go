@@ -23,6 +23,7 @@ func NewInbox(size int) *Inbox {
 }
 
 func (in *Inbox) Consume(msgs []Envelope) {
+	// fmt.Println("consuming", len(msgs))
 	in.proc.Invoke(msgs)
 }
 
