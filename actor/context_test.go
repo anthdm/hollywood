@@ -1,7 +1,6 @@
 package actor
 
 import (
-	fmt "fmt"
 	"sync"
 	"testing"
 
@@ -97,19 +96,14 @@ func TestGetPID(t *testing.T) {
 
 func TestSpawnChild(t *testing.T) {
 	var (
-		e      = NewEngine()
-		wg     = sync.WaitGroup{}
-		stopwg = sync.WaitGroup{}
+		e  = NewEngine()
+		wg = sync.WaitGroup{}
 	)
 
 	wg.Add(1)
-	stopwg.Add(1)
-
 	childFunc := func(c *Context) {
 		switch c.Message().(type) {
 		case Stopped:
-			fmt.Println("----child stopping...")
-			stopwg.Done()
 		}
 	}
 
@@ -122,9 +116,10 @@ func TestSpawnChild(t *testing.T) {
 	}, "parent", WithMaxRestarts(0))
 
 	wg.Wait()
-	e.Poison(pid)
-
+	stopwg := &sync.WaitGroup{}
+	e.Poison(pid, stopwg)
 	stopwg.Wait()
+
 	assert.Equal(t, e.deadLetter, e.Registry.get(NewPID("local", "child")))
 	assert.Equal(t, e.deadLetter, e.Registry.get(pid))
 }

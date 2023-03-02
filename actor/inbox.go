@@ -1,8 +1,6 @@
 package actor
 
 import (
-	fmt "fmt"
-
 	"github.com/anthdm/hollywood/ggq"
 	"github.com/anthdm/hollywood/log"
 )
@@ -25,7 +23,6 @@ func NewInbox(size int) *Inbox {
 }
 
 func (in *Inbox) Consume(msgs []Envelope) {
-	fmt.Println("consuming", in.proc.PID())
 	in.proc.Invoke(msgs)
 }
 
@@ -36,10 +33,8 @@ func (in *Inbox) Start(proc Processer) {
 }
 
 func (in *Inbox) Stop() error {
-	defer func() {
-		log.Tracew("[INBOX] closed", log.M{"pid": in.proc.PID()})
-	}()
 	in.ggq.Close()
+	log.Tracew("[INBOX] closed", log.M{"pid": in.proc.PID()})
 	return nil
 }
 

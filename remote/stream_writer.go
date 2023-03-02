@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"net"
+	"sync"
 	"time"
 
 	"github.com/anthdm/hollywood/actor"
@@ -117,7 +118,7 @@ func (s *streamWriter) init() {
 		break
 	}
 	if rawconn == nil {
-		s.Shutdown()
+		s.Shutdown(nil)
 		return
 	}
 
@@ -147,17 +148,20 @@ func (s *streamWriter) init() {
 		log.Tracew("[STREAM WRITER] lost connection", log.M{
 			"remote": s.writeToAddr,
 		})
-		s.Shutdown()
+		s.Shutdown(nil)
 	}()
 }
 
-func (s *streamWriter) Shutdown() {
+func (s *streamWriter) Shutdown(wg *sync.WaitGroup) {
 	s.engine.Send(s.routerPID, terminateStream{address: s.writeToAddr})
 	if s.stream != nil {
 		s.stream.Close()
 	}
 	s.inbox.Stop()
 	s.engine.Registry.Remove(s.PID())
+	if wg != nil {
+		wg.Done()
+	}
 }
 
 func (s *streamWriter) Start() {

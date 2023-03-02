@@ -24,7 +24,7 @@ type Processer interface {
 	PID() *PID
 	Send(*PID, any, *PID)
 	Invoke([]Envelope)
-	Shutdown()
+	Shutdown(*sync.WaitGroup)
 }
 
 type process struct {
@@ -60,8 +60,6 @@ func applyMiddleware(rcv ReceiveFunc, middleware ...MiddlewareFunc) ReceiveFunc 
 }
 
 func (p *process) Invoke(msgs []Envelope) {
-	fmt.Println("----invoking", msgs)
-	fmt.Println("----invoking", p.pid)
 	var (
 		// numbers of msgs that need to be processed.
 		nmsg = len(msgs)
@@ -167,16 +165,22 @@ func (p *process) cleanup(wg *sync.WaitGroup) {
 	applyMiddleware(p.context.receiver.Receive, p.Opts.Middleware...)(p.context)
 
 	// We are a child if the parent context is not nil
+	// No need for a mutex here, cause this is getting called inside the
+	// the parents children foreach loop, which already locks.
 	if p.context.parentCtx != nil {
 		p.context.parentCtx.children.Delete(p.Name)
 	}
+
 	// We are a parent if we have children running, shutdown all the children.
 	if p.context.children.Len() > 0 {
-		p.context.children.ForEach(func(name string, pid *PID) {
-			// childwg := &sync.WaitGroup{}
-			p.context.engine.Poison(pid)
-			// childwg.Wait()
-		})
+		children := p.context.Children()
+		for _, pid := range children {
+			if wg != nil {
+				wg.Add(1)
+			}
+			proc := p.context.engine.Registry.get(pid)
+			proc.Shutdown(wg)
+		}
 	}
 	log.Tracew("[PROCESS] shutdown", log.M{
 		"pid": p.pid,
@@ -192,4 +196,4 @@ func (p *process) PID() *PID { return p.pid }
 func (p *process) Send(_ *PID, msg any, sender *PID) {
 	p.inbox.Send(Envelope{Msg: msg, Sender: sender})
 }
-func (p *process) Shutdown() { p.cleanup(nil) }
+func (p *process) Shutdown(wg *sync.WaitGroup) { p.cleanup(wg) }

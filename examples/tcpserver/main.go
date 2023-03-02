@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/anthdm/hollywood/actor"
 	"github.com/anthdm/hollywood/log"
@@ -23,6 +24,12 @@ func (handler) Receive(c *actor.Context) {
 	switch msg := c.Message().(type) {
 	case []byte:
 		fmt.Println("got message to handle:", string(msg))
+	case actor.Stopped:
+		for i := 0; i < 3; i++ {
+			fmt.Printf("\r handler stopping in %d", 3-i)
+			time.Sleep(time.Second)
+		}
+		fmt.Println("handler stopped")
 	}
 }
 
@@ -142,7 +149,7 @@ func main() {
 	signal.Notify(sigch, syscall.SIGINT, syscall.SIGTERM)
 	<-sigch
 
-	// wait till the server is completely shutdown.
+	// wait till the server is gracefully shutdown by using a WaitGroup in the Poison call.
 	wg := &sync.WaitGroup{}
 	e.Poison(serverPID, wg)
 	wg.Wait()

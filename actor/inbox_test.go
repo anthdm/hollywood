@@ -2,6 +2,7 @@ package actor
 
 import (
 	fmt "fmt"
+	"sync"
 	"testing"
 	"time"
 )
@@ -20,7 +21,7 @@ func (t *testProc) Invoke(msgs []Envelope) {
 	fmt.Println("got", msgs)
 }
 
-func (testProc) Shutdown() {}
+func (testProc) Shutdown(_ *sync.WaitGroup) {}
 
 func TestInbox(t *testing.T) {
 	inbox := NewInbox(1024)
