@@ -192,6 +192,7 @@ func TestRequestResponse(t *testing.T) {
 	assert.Equal(t, e.deadLetter, e.Registry.get(resp.pid))
 }
 
+// 56 ns/op
 func BenchmarkSendMessageLocal(b *testing.B) {
 	e := NewEngine()
 	p := NewTestProducer(nil, func(_ *testing.T, _ *Context) {})

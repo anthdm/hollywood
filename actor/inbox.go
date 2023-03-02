@@ -7,6 +7,8 @@ import (
 	"github.com/anthdm/hollywood/log"
 )
 
+var LOCK_OS_THREAD = true
+
 type Inboxer interface {
 	Send(Envelope)
 	Start(Processer)
@@ -31,7 +33,9 @@ func (in *Inbox) Consume(msgs []Envelope) {
 func (in *Inbox) Start(proc Processer) {
 	in.proc = proc
 	go func() {
-		runtime.LockOSThread()
+		if LOCK_OS_THREAD {
+			runtime.LockOSThread()
+		}
 		in.ggq.ReadN()
 	}()
 	log.Tracew("[INBOX] started", log.M{"pid": proc.PID()})

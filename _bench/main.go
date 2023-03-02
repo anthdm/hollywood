@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"runtime"
 	"time"
 
 	"github.com/anthdm/hollywood/actor"
@@ -22,7 +23,6 @@ func benchmarkRemote() {
 		b    = makeRemoteEngine("127.0.0.1:3001")
 		pidB = b.SpawnFunc(func(c *actor.Context) {}, "bench", actor.WithInboxSize(1024*8))
 	)
-	time.Sleep(time.Second)
 	its := []int{
 		1_000_000,
 		10_000_000,
@@ -40,9 +40,8 @@ func benchmarkLocal() {
 	e := actor.NewEngine()
 	pid := e.SpawnFunc(func(c *actor.Context) {}, "bench", actor.WithInboxSize(1024*8))
 	its := []int{
-		1000_000,
-		1000_000_0,
-		1000_000_00,
+		1_000_000,
+		10_000_000,
 	}
 	payload := make([]byte, 128)
 	for i := 0; i < len(its); i++ {
@@ -55,6 +54,9 @@ func benchmarkLocal() {
 }
 
 func main() {
+	if runtime.GOMAXPROCS(runtime.NumCPU()) == 1 {
+		log.Fatalw("Please use a system with more than 1 CPU. Its 2023...", nil)
+	}
 	log.SetLevel(log.LevelPanic)
 	benchmarkLocal()
 	benchmarkRemote()

@@ -80,6 +80,7 @@ func (q *GGQ[T]) ReadN() (T, bool) {
 			q.read.Store(upper)
 			current = upper
 			runtime.Gosched()
+			// time.Sleep(time.Nanosecond)
 		} else if upper := q.written.Load(); lower <= upper {
 			runtime.Gosched()
 		} else if !state.CompareAndSwap(stateClosed, stateRunning) {
