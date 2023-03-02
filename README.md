@@ -3,16 +3,17 @@
 
 # Blazingly fast, low latency actors for Golang
 
-Hollywood is an ULTRA fast actor engine build for speed and low-latency applications. It can handle **10 million messages in under 1 second**.
+Hollywood is an ULTRA fast actor engine build for speed and low-latency applications. Think about game servers, adversting brokers, trading engines, etc... It can handle **10 million messages in under 1 second**.
 
 ## Features
 
-- lock free LMAX based message queue for low latency messaging
+- lock free LMAX based message queue for ultra low latency messaging
+- guaranteed message delivery on receiver failure (buffer mechanism)
+- fire/forget or request/response messaging, or both.
 - dRPC as the transport layer
-- Optimized protoBuffers without reflection
+- Optimized proto buffers without reflection
 - lightweight and highly customizable
-- built and optimized for speed
-- cluster support with Consul [coming soon...]
+- cluster support [coming soon...]
 
 # Benchmarks
 
@@ -69,7 +70,7 @@ func main() {
 ```Go
 e.Spawn(newFoo, "foo",
 	actor.WithMaxRestarts(4),
-	actor.WithInboxSize(999),
+	actor.WithInboxSize(1024 * 2),
 	actor.WithTags("bar", "1"),
 )
 ```
