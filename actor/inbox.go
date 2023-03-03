@@ -32,8 +32,13 @@ func (in *Inbox) Consume(msgs []Envelope) {
 
 func (in *Inbox) Start(proc Processer) {
 	in.proc = proc
+	var lockOSThread bool
+	// prevent race condition here be reassigning before go routine.
+	if LOCK_OS_THREAD {
+		lockOSThread = true
+	}
 	go func() {
-		if LOCK_OS_THREAD {
+		if lockOSThread {
 			runtime.LockOSThread()
 		}
 		in.ggq.ReadN()

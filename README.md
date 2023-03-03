@@ -116,7 +116,7 @@ time.Sleep(time.Second)
 ### Customize the PID separator.
 
 ```Go
-actor.PIDSeparator = ">"
+actor.pidSeparator = ">"
 ```
 
 Will result in the following PID

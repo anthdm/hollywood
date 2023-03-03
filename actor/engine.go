@@ -21,6 +21,15 @@ type Receiver interface {
 	Receive(*Context)
 }
 
+// Config holds configuration for the actor Engine.
+type Config struct {
+	// PIDSeparator separates a process ID when printed out
+	// in a string representation. The default separator is "/".
+	// pid := NewPID("127.0.0.1:4000", "foo", "bar")
+	// 127.0.0.1:4000/foo/bar
+	PIDSeparator string
+}
+
 // Engine represents the actor engine.
 type Engine struct {
 	EventStream *EventStream
@@ -32,15 +41,24 @@ type Engine struct {
 }
 
 // NewEngine returns a new actor Engine.
-func NewEngine() *Engine {
+func NewEngine(cfg ...Config) *Engine {
 	e := &Engine{
 		EventStream: NewEventStream(),
 		address:     LocalLookupAddr,
+	}
+	if len(cfg) == 1 {
+		e.configure(cfg[0])
 	}
 	e.Registry = newRegistry(e)
 	e.deadLetter = newDeadLetter(e.EventStream)
 	e.Registry.add(e.deadLetter)
 	return e
+}
+
+func (e *Engine) configure(cfg Config) {
+	if cfg.PIDSeparator != "" {
+		pidSeparator = cfg.PIDSeparator
+	}
 }
 
 // WithRemote returns a new actor Engine with the given Remoter,

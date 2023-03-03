@@ -56,7 +56,7 @@ func (c *Context) Respond(msg any) {
 // Hence, all children will receive the Stopped message.
 func (c *Context) SpawnChild(p Producer, name string, opts ...OptFunc) *PID {
 	options := DefaultOpts(p)
-	options.Name = c.PID().ID + PIDSeparator + name
+	options.Name = c.PID().ID + pidSeparator + name
 	for _, opt := range opts {
 		opt(&options)
 	}
@@ -92,7 +92,7 @@ func (c *Context) Forward(pid *PID) {
 // GetPID returns the PID of the process found by the given name and tags.
 // Returns nil when it could not find any process..
 func (c *Context) GetPID(name string, tags ...string) *PID {
-	name = name + PIDSeparator + strings.Join(tags, PIDSeparator)
+	name = name + pidSeparator + strings.Join(tags, pidSeparator)
 	proc := c.engine.Registry.getByID(name)
 	if proc != nil {
 		return proc.PID()

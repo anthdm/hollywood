@@ -9,7 +9,7 @@ import (
 )
 
 func TestSpawnChildPID(t *testing.T) {
-	PIDSeparator = ">"
+	pidSeparator = ">"
 	var (
 		e           = NewEngine()
 		wg          = sync.WaitGroup{}
@@ -29,7 +29,7 @@ func TestSpawnChildPID(t *testing.T) {
 	}, "parent")
 
 	wg.Wait()
-	PIDSeparator = "/"
+	pidSeparator = "/"
 }
 
 func TestChild(t *testing.T) {

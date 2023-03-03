@@ -13,7 +13,7 @@ func BenchmarkXxddd(b *testing.B) {
 
 	b.Run("+", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			key = pid.Address + PIDSeparator + pid.ID
+			key = pid.Address + pidSeparator + pid.ID
 		}
 	})
 	b.Run("key", func(b *testing.B) {
@@ -44,11 +44,11 @@ func TestPID(t *testing.T) {
 	id := "foo"
 
 	pid := NewPID(address, id)
-	assert.Equal(t, address+PIDSeparator+id, pid.String())
+	assert.Equal(t, address+pidSeparator+id, pid.String())
 
 	pid = NewPID(address, id, "100")
-	assert.Equal(t, address+PIDSeparator+id+PIDSeparator+"100", pid.String())
+	assert.Equal(t, address+pidSeparator+id+pidSeparator+"100", pid.String())
 
 	pid = NewPID(address, id, "100", "bar")
-	assert.Equal(t, address+PIDSeparator+id+PIDSeparator+"100"+PIDSeparator+"bar", pid.String())
+	assert.Equal(t, address+pidSeparator+id+pidSeparator+"100"+pidSeparator+"bar", pid.String())
 }
