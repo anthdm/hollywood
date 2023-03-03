@@ -6,33 +6,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func BenchmarkXxddd(b *testing.B) {
-	var key string
-	var keyint uint64
-	pid := NewPID("127.0.0.1:4000", "foobar")
-
-	b.Run("+", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			key = pid.Address + pidSeparator + pid.ID
-		}
-	})
-	b.Run("key", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			keyint = pid.LookupKey()
-		}
-	})
-
-	_ = key
-	_ = keyint
-}
-
-func BenchmarkLookupKey(b *testing.B) {
-	pid := NewPID("127.0.0.1:3000", "foo")
-	for i := 0; i < b.N; i++ {
-		pid.LookupKey()
-	}
-}
-
 func BenchmarkNewPID(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		NewPID("127.0.0.1:3000", "foo")

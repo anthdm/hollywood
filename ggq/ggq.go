@@ -26,10 +26,6 @@ const (
 	stateClosed
 )
 
-var (
-	state atomic.Int32
-)
-
 type slot[T any] struct {
 	item T
 	atomic.Uint32
@@ -40,6 +36,8 @@ type GGQ[T any] struct {
 	written    atomic.Uint32
 	_          [cacheLinePadding - unsafe.Sizeof(atomic.Uint32{})]byte
 	read       atomic.Uint32
+	_          [cacheLinePadding - unsafe.Sizeof(atomic.Uint32{})]byte
+	state      atomic.Uint32
 	_          [cacheLinePadding - unsafe.Sizeof(atomic.Uint32{})]byte
 	buffer     []slot[T]
 	_          [cacheLinePadding]byte
@@ -85,10 +83,9 @@ func (q *GGQ[T]) ReadN() (T, bool) {
 			q.read.Store(upper)
 			current = upper
 			runtime.Gosched()
-			// time.Sleep(time.Nanosecond)
 		} else if upper := q.written.Load(); lower <= upper {
 			runtime.Gosched()
-		} else if !state.CompareAndSwap(stateClosed, stateRunning) {
+		} else if !q.state.CompareAndSwap(stateClosed, stateRunning) {
 			time.Sleep(time.Microsecond)
 		} else {
 			break
@@ -126,7 +123,7 @@ func (q *GGQ[T]) Read() (T, bool) {
 		case slotBusy:
 			runtime.Gosched()
 		case slotEmpty:
-			if state.CompareAndSwap(stateClosed, stateRunning) {
+			if q.state.CompareAndSwap(stateClosed, stateRunning) {
 				var t T
 				return t, true
 			}
@@ -141,7 +138,7 @@ func (q *GGQ[T]) Read() (T, bool) {
 }
 
 func (q *GGQ[T]) Close() {
-	state.Store(stateClosed)
+	q.state.Store(stateClosed)
 }
 
 func isPOW2(n uint32) bool {
