@@ -6,6 +6,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
@@ -23,6 +24,12 @@ func (handler) Receive(c *actor.Context) {
 	switch msg := c.Message().(type) {
 	case []byte:
 		fmt.Println("got message to handle:", string(msg))
+	case actor.Stopped:
+		for i := 0; i < 3; i++ {
+			fmt.Printf("\r handler stopping in %d", 3-i)
+			time.Sleep(time.Second)
+		}
+		fmt.Println("handler stopped")
 	}
 }
 
@@ -138,13 +145,12 @@ func main() {
 	e := actor.NewEngine()
 	serverPID := e.Spawn(newServer(*listenAddr), "server")
 
-	// Gracefully shutdown the server and its current connections.
-	defer func() {
-		e.Poison(serverPID)
-		time.Sleep(time.Second)
-	}()
-
 	sigch := make(chan os.Signal, 1)
 	signal.Notify(sigch, syscall.SIGINT, syscall.SIGTERM)
 	<-sigch
+
+	// wait till the server is gracefully shutdown by using a WaitGroup in the Poison call.
+	wg := &sync.WaitGroup{}
+	e.Poison(serverPID, wg)
+	wg.Wait()
 }

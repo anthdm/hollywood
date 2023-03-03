@@ -6,7 +6,7 @@ import (
 	"github.com/zeebo/xxh3"
 )
 
-var PIDSeparator = "/"
+var pidSeparator = "/"
 
 // NewPID returns a new Process ID given an address, name, and optional tags.
 // TODO(@anthdm) Can we even optimize this more?
@@ -16,13 +16,13 @@ func NewPID(address, id string, tags ...string) *PID {
 		ID:      id,
 	}
 	if len(tags) > 0 {
-		p.ID = p.ID + PIDSeparator + strings.Join(tags, PIDSeparator)
+		p.ID = p.ID + pidSeparator + strings.Join(tags, pidSeparator)
 	}
 	return p
 }
 
 func (pid *PID) String() string {
-	return pid.Address + PIDSeparator + pid.ID
+	return pid.Address + pidSeparator + pid.ID
 }
 
 func (pid *PID) Equals(other *PID) bool {
@@ -30,11 +30,11 @@ func (pid *PID) Equals(other *PID) bool {
 }
 
 func (pid *PID) Child(id string, tags ...string) *PID {
-	childID := pid.ID + PIDSeparator + id
+	childID := pid.ID + pidSeparator + id
 	if len(tags) == 0 {
 		return NewPID(pid.Address, childID)
 	}
-	return NewPID(pid.Address, childID+PIDSeparator+strings.Join(tags, PIDSeparator))
+	return NewPID(pid.Address, childID+pidSeparator+strings.Join(tags, pidSeparator))
 }
 
 func (pid *PID) HasTag(tag string) bool {

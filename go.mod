@@ -3,7 +3,6 @@ module github.com/anthdm/hollywood
 go 1.19
 
 require (
-	github.com/anthdm/disruptor v0.0.0-20230217211901-12edb05f1028
 	github.com/planetscale/vtprotobuf v0.4.0
 	github.com/sirupsen/logrus v1.9.0
 	github.com/stretchr/testify v1.8.1

@@ -8,8 +8,8 @@ import (
 )
 
 func TestGetByName(t *testing.T) {
-	restorePIDSeparator := PIDSeparator
-	PIDSeparator = "."
+	restorepidSeparator := pidSeparator
+	pidSeparator = "."
 
 	e := NewEngine()
 	e.SpawnFunc(func(c *Context) {}, "foo") // local/foo
@@ -25,5 +25,5 @@ func TestGetByName(t *testing.T) {
 	expectedPID = NewPID(LocalLookupAddr, "foo", "bar", "q", "1")
 	require.Equal(t, expectedPID.String(), proc.PID().String())
 
-	PIDSeparator = restorePIDSeparator
+	pidSeparator = restorepidSeparator
 }

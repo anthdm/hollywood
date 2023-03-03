@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/anthdm/hollywood/actor"
@@ -42,11 +43,20 @@ func WithHooks() func(actor.ReceiveFunc) actor.ReceiveFunc {
 }
 
 func main() {
-	actor.PIDSeparator = "→"
-	e := actor.NewEngine()
+	// Set the process ID separator to something custom.
+	cfg := actor.Config{
+		PIDSeparator: "→",
+	}
+	// Create a new engine
+	e := actor.NewEngine(cfg)
+	// Spawn the a new "foo" receiver with middleware.
 	pid := e.Spawn(newFoo, "foo", actor.WithMiddleware(WithHooks()))
+	// Send a message to foo
 	e.Send(pid, "Hello sailor!")
+	// We sleep here so we are sure foo received our message
 	time.Sleep(time.Second)
-	e.Poison(pid)
-	time.Sleep(time.Second)
+	// Create a waitgroup so we can wait until foo has been stopped gracefully
+	wg := &sync.WaitGroup{}
+	e.Poison(pid, wg)
+	wg.Wait()
 }

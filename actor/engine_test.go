@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -123,27 +124,49 @@ func TestSpawn(t *testing.T) {
 	wg.Wait()
 }
 
+func TestPoisonWaitGroup(t *testing.T) {
+	var (
+		e  = NewEngine()
+		wg = sync.WaitGroup{}
+		x  = int32(0)
+	)
+	wg.Add(1)
+
+	pid := e.SpawnFunc(func(c *Context) {
+		switch c.Message().(type) {
+		case Started:
+			wg.Done()
+		case Stopped:
+			atomic.AddInt32(&x, 1)
+		}
+	}, "foo")
+	wg.Wait()
+
+	pwg := &sync.WaitGroup{}
+	e.Poison(pid, pwg)
+	pwg.Wait()
+	assert.Equal(t, int32(1), atomic.LoadInt32(&x))
+}
+
 func TestPoison(t *testing.T) {
 	var (
-		e      = NewEngine()
-		wg     = sync.WaitGroup{}
-		stopwg = sync.WaitGroup{}
+		e  = NewEngine()
+		wg = sync.WaitGroup{}
 	)
 	for i := 0; i < 4; i++ {
 		wg.Add(1)
-		stopwg.Add(1)
 		tag := strconv.Itoa(i)
 		pid := e.SpawnFunc(func(c *Context) {
 			switch c.Message().(type) {
 			case Started:
 				wg.Done()
 			case Stopped:
-				stopwg.Done()
 			}
 		}, "foo", WithTags(tag))
 
 		wg.Wait()
-		e.Poison(pid)
+		stopwg := &sync.WaitGroup{}
+		e.Poison(pid, stopwg)
 		stopwg.Wait()
 		// When a process is poisoned it should be removed from the registry.
 		// Hence, we should get the dead letter process here.
@@ -169,14 +192,14 @@ func TestRequestResponse(t *testing.T) {
 	assert.Equal(t, e.deadLetter, e.Registry.get(resp.pid))
 }
 
+// 56 ns/op
 func BenchmarkSendMessageLocal(b *testing.B) {
 	e := NewEngine()
 	p := NewTestProducer(nil, func(_ *testing.T, _ *Context) {})
-	pid := e.Spawn(p, "bench", WithInboxSize(1024*32))
-	time.Sleep(time.Second)
+	pid := e.Spawn(p, "bench", WithInboxSize(1024*8))
 
 	b.ResetTimer()
-	b.Run("x", func(b *testing.B) {
+	b.Run("send_message_local", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			e.Send(pid, pid)
 		}

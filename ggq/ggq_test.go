@@ -23,6 +23,7 @@ func TestSingleMessageNotConsuming(t *testing.T) {
 	q.ReadN()
 }
 
+// 35 ns/op		0 B/op		0 allocs/op
 func BenchmarkReadN(b *testing.B) {
 	q := New[int](1024*12, &consumer[int]{})
 	go func() {
