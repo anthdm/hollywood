@@ -133,6 +133,24 @@ You can add custom middleware to your Receivers. This can be usefull for storing
 
 For examples on how to implement custom middleware, check out the middleware folder in the **[examples](https://github.com/anthdm/hollywood/tree/master/examples/middleware)**
 
+## Logging
+
+You can set the log level of Hollywoods log module:
+
+```
+import "github.com/anthdm/hollywood/log
+
+log.SetLevel(log.LevelInfo)
+```
+
+To disable all logging
+
+```
+import "github.com/anthdm/hollywood/log
+
+log.SetLevel(log.LevelPanic)
+```
+
 # Test
 
 ```
