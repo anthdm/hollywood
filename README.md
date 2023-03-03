@@ -3,7 +3,7 @@
 
 # Blazingly fast, low latency actors for Golang
 
-Hollywood is an ULTRA fast actor engine build for speed and low-latency applications. Think about game servers, adversting brokers, trading engines, etc... It can handle **10 million messages in under 1 second**.
+Hollywood is an ULTRA fast actor engine build for speed and low-latency applications. Think about game servers, advertising brokers, trading engines, etc... It can handle **10 million messages in under 1 second**.
 
 ## Features
 
