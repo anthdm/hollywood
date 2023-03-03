@@ -9,7 +9,7 @@ Hollywood is an ULTRA fast actor engine build for speed and low-latency applicat
 
 - lock free LMAX based message queue for ultra low latency messaging
 - guaranteed message delivery on receiver failure (buffer mechanism)
-- fire/forget or request/response messaging, or both.
+- fire&forget or request&response messaging, or both.
 - dRPC as the transport layer
 - Optimized proto buffers without reflection
 - lightweight and highly customizable
@@ -111,22 +111,34 @@ e.SpawnFunc(func(c *actor.Context) {
 time.Sleep(time.Second)
 ```
 
-# PIDS
-
-### Customize the PID separator.
+## Customizing the PID separator
 
 ```Go
-actor.pidSeparator = ">"
+cfg := actor.Config{
+	PIDSeparator: "->",
+}
+e := actor.NewEngine(cfg)
 ```
 
-Will result in the following PID
+After configuring the Engine with a custom PID Separator the string representation of PIDS will look like this:
 
 ```
-// 127.0.0.1:3000>foo>bar>baz>1
+pid := actor.NewPID("127.0.0.1:3000", "foo", "bar", "baz", "1")
+// 127.0.0.1:3000->foo->bar->baz->1
 ```
+
+## Custom middleware
+
+You can add custom middleware to your Receivers. This can be usefull for storing metrics, saving and loading data for your Receivers on `actor.Started` and `actor.Stopped`.
+
+For examples on how to implement custom middleware, check out the middleware folder in the **[examples](https://github.com/anthdm/hollywood/tree/master/examples/middleware)**
 
 # Test
 
 ```
 make test
 ```
+
+# License
+
+Hollywood is licensed under the MIT licence.

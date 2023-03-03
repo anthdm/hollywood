@@ -5,6 +5,8 @@ import (
 	"sync/atomic"
 	"time"
 	"unsafe"
+
+	"github.com/anthdm/hollywood/log"
 )
 
 type Consumer[T any] interface {
@@ -47,6 +49,9 @@ type GGQ[T any] struct {
 }
 
 func New[T any](size uint32, consumer Consumer[T]) *GGQ[T] {
+	if !isPOW2(size) {
+		log.Fatalw("the size of the queue need to be a number that is the power of 2", log.M{})
+	}
 	return &GGQ[T]{
 		buffer:     make([]slot[T], size),
 		mask:       size - 1,
@@ -137,4 +142,11 @@ func (q *GGQ[T]) Read() (T, bool) {
 
 func (q *GGQ[T]) Close() {
 	state.Store(stateClosed)
+}
+
+func isPOW2(n uint32) bool {
+	if n <= 0 {
+		return false
+	}
+	return (n & (n - 1)) == 0
 }
