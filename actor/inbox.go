@@ -1,6 +1,8 @@
 package actor
 
 import (
+	"runtime"
+
 	"github.com/anthdm/hollywood/ggq"
 	"github.com/anthdm/hollywood/log"
 )
@@ -30,15 +32,15 @@ func (in *Inbox) Consume(msgs []Envelope) {
 
 func (in *Inbox) Start(proc Processer) {
 	in.proc = proc
-	// var lockOSThread bool
+	var lockOSThread bool
 	// prevent race condition here be reassigning before go routine.
-	// if LOCK_OS_THREAD {
-	// lockOSThread = true
-	// }
+	if LOCK_OS_THREAD {
+		lockOSThread = true
+	}
 	go func() {
-		// if lockOSThread {
-		// runtime.LockOSThread()
-		// }
+		if lockOSThread {
+			runtime.LockOSThread()
+		}
 		in.ggq.ReadN()
 	}()
 	log.Tracew("[INBOX] started", log.M{"pid": proc.PID()})
