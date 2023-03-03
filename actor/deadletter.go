@@ -2,6 +2,7 @@ package actor
 
 import (
 	"reflect"
+	"sync"
 
 	"github.com/anthdm/hollywood/log"
 )
@@ -34,7 +35,7 @@ func (d *deadLetter) Send(dest *PID, msg any, sender *PID) {
 	})
 }
 
-func (d *deadLetter) PID() *PID         { return d.pid }
-func (d *deadLetter) Shutdown()         {}
-func (d *deadLetter) Start()            {}
-func (d *deadLetter) Invoke([]Envelope) {}
+func (d *deadLetter) PID() *PID                  { return d.pid }
+func (d *deadLetter) Shutdown(_ *sync.WaitGroup) {}
+func (d *deadLetter) Start()                     {}
+func (d *deadLetter) Invoke([]Envelope)          {}

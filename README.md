@@ -2,21 +2,35 @@
 ![example workflow](https://github.com/anthdm/hollywood/actions/workflows/build.yml/badge.svg?branch=master)
 
 # Blazingly fast, low latency actors for Golang
-Hollywood is an actor engine build for speed and low-latency applications. Benchmarks coming soon...
+
+Hollywood is an ULTRA fast actor engine build for speed and low-latency applications. Think about game servers, advertising brokers, trading engines, etc... It can handle **10 million messages in under 1 second**.
 
 ## Features
 
-- lock free LMAX based message queue for low latency messaging
+- lock free LMAX based message queue for ultra low latency messaging
+- guaranteed message delivery on receiver failure (buffer mechanism)
+- fire&forget or request&response messaging, or both.
 - dRPC as the transport layer
-- Optimized protoBuffers without reflection
+- Optimized proto buffers without reflection
 - lightweight and highly customizable
-- built and optimized for speed
-- cluster support with Consul [coming soon...]
+- cluster support [coming soon...]
+
+# Benchmarks
+
+```
+make bench
+```
+
+```
+[BENCH HOLLYWOOD LOCAL] processed 1_000_000 messages in 83.4437ms
+[BENCH HOLLYWOOD LOCAL] processed 10_000_000 messages in 786.2787ms
+[BENCH HOLLYWOOD LOCAL] processed 100_000_000 messages in 7.8718426s
+```
 
 # Installation
 
 ```
-go get github.com/anthdm/hollywood
+go get github.com/anthdm/hollywood/...
 ```
 
 # Quickstart
@@ -56,7 +70,7 @@ func main() {
 ```Go
 e.Spawn(newFoo, "foo",
 	actor.WithMaxRestarts(4),
-	actor.WithInboxSize(999),
+	actor.WithInboxSize(1024 * 2),
 	actor.WithTags("bar", "1"),
 )
 ```
@@ -97,18 +111,44 @@ e.SpawnFunc(func(c *actor.Context) {
 time.Sleep(time.Second)
 ```
 
-# PIDS
-
-### Customize the PID separator.
+## Customizing the PID separator
 
 ```Go
-actor.PIDSeparator = ">"
+cfg := actor.Config{
+	PIDSeparator: "->",
+}
+e := actor.NewEngine(cfg)
 ```
 
-Will result in the following PID
+After configuring the Engine with a custom PID Separator the string representation of PIDS will look like this:
 
 ```
-// 127.0.0.1:3000>foo>bar>baz>1
+pid := actor.NewPID("127.0.0.1:3000", "foo", "bar", "baz", "1")
+// 127.0.0.1:3000->foo->bar->baz->1
+```
+
+## Custom middleware
+
+You can add custom middleware to your Receivers. This can be usefull for storing metrics, saving and loading data for your Receivers on `actor.Started` and `actor.Stopped`.
+
+For examples on how to implement custom middleware, check out the middleware folder in the **[examples](https://github.com/anthdm/hollywood/tree/master/examples/middleware)**
+
+## Logging
+
+You can set the log level of Hollywoods log module:
+
+```
+import "github.com/anthdm/hollywood/log
+
+log.SetLevel(log.LevelInfo)
+```
+
+To disable all logging
+
+```
+import "github.com/anthdm/hollywood/log
+
+log.SetLevel(log.LevelPanic)
 ```
 
 # Test
@@ -116,3 +156,7 @@ Will result in the following PID
 ```
 make test
 ```
+
+# License
+
+Hollywood is licensed under the MIT licence.

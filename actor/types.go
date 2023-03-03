@@ -1,5 +1,7 @@
 package actor
 
+import "sync"
+
 // DeadLetterEvent is broadcasted over the EventStream each time
 // a message cannot be delivered to the target PID.
 type DeadLetterEvent struct {
@@ -26,7 +28,9 @@ type InternalError struct {
 	Err  error
 }
 
-type poisonPill struct{}
+type poisonPill struct {
+	wg *sync.WaitGroup
+}
 type Initialized struct{}
 type Started struct{}
 type Stopped struct{}

@@ -1,9 +1,13 @@
 package actor
 
 import (
+	"runtime"
+
 	"github.com/anthdm/hollywood/ggq"
 	"github.com/anthdm/hollywood/log"
 )
+
+var LOCK_OS_THREAD = true
 
 type Inboxer interface {
 	Send(Envelope)
@@ -28,15 +32,23 @@ func (in *Inbox) Consume(msgs []Envelope) {
 
 func (in *Inbox) Start(proc Processer) {
 	in.proc = proc
-	go in.ggq.ReadN()
+	var lockOSThread bool
+	// prevent race condition here be reassigning before go routine.
+	if LOCK_OS_THREAD {
+		lockOSThread = true
+	}
+	go func() {
+		if lockOSThread {
+			runtime.LockOSThread()
+		}
+		in.ggq.ReadN()
+	}()
 	log.Tracew("[INBOX] started", log.M{"pid": proc.PID()})
 }
 
 func (in *Inbox) Stop() error {
-	defer func() {
-		log.Tracew("[INBOX] closed", log.M{"pid": in.proc.PID()})
-	}()
 	in.ggq.Close()
+	log.Tracew("[INBOX] closed", log.M{"pid": in.proc.PID()})
 	return nil
 }
 

@@ -3,6 +3,7 @@ package actor
 import (
 	"fmt"
 	"runtime/debug"
+	"sync"
 	"time"
 
 	"github.com/anthdm/hollywood/log"
@@ -23,7 +24,7 @@ type Processer interface {
 	PID() *PID
 	Send(*PID, any, *PID)
 	Invoke([]Envelope)
-	Shutdown()
+	Shutdown(*sync.WaitGroup)
 }
 
 type process struct {
@@ -84,8 +85,8 @@ func (p *process) Invoke(msgs []Envelope) {
 	for i := 0; i < len(msgs); i++ {
 		nproc++
 		msg := msgs[i]
-		if _, ok := msg.Msg.(poisonPill); ok {
-			p.cleanup()
+		if pill, ok := msg.Msg.(poisonPill); ok {
+			p.cleanup(pill.wg)
 			return
 		}
 		p.context.message = msg.Msg
@@ -157,35 +158,42 @@ func (p *process) tryRestart(v any) {
 	p.Start()
 }
 
-func (p *process) cleanup() {
+func (p *process) cleanup(wg *sync.WaitGroup) {
 	p.inbox.Stop()
 	p.context.engine.Registry.Remove(p.pid)
 	p.context.message = Stopped{}
 	applyMiddleware(p.context.receiver.Receive, p.Opts.Middleware...)(p.context)
 
 	// We are a child if the parent context is not nil
+	// No need for a mutex here, cause this is getting called inside the
+	// the parents children foreach loop, which already locks.
 	if p.context.parentCtx != nil {
 		p.context.parentCtx.children.Delete(p.Name)
 	}
-	// We are a parent if we have children running
+
+	// We are a parent if we have children running, shutdown all the children.
 	if p.context.children.Len() > 0 {
-		p.context.children.ForEach(func(name string, pid *PID) {
-			p.context.engine.Poison(pid)
-			log.Tracew("[PROCESS] shutting down child", log.M{
-				"pid":   p.pid,
-				"child": pid,
-			})
-		})
+		children := p.context.Children()
+		for _, pid := range children {
+			if wg != nil {
+				wg.Add(1)
+			}
+			proc := p.context.engine.Registry.get(pid)
+			proc.Shutdown(wg)
+		}
 	}
 	log.Tracew("[PROCESS] shutdown", log.M{
 		"pid": p.pid,
 	})
 	// Send TerminationEvent to the eventstream
 	p.context.engine.EventStream.Publish(&TerminationEvent{PID: p.pid})
+	if wg != nil {
+		wg.Done()
+	}
 }
 
 func (p *process) PID() *PID { return p.pid }
 func (p *process) Send(_ *PID, msg any, sender *PID) {
 	p.inbox.Send(Envelope{Msg: msg, Sender: sender})
 }
-func (p *process) Shutdown() { p.cleanup() }
+func (p *process) Shutdown(wg *sync.WaitGroup) { p.cleanup(wg) }
