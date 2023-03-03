@@ -5,6 +5,16 @@
 
 Hollywood is an ULTRA fast actor engine build for speed and low-latency applications. Think about game servers, advertising brokers, trading engines, etc... It can handle **10 million messages in under 1 second**.
 
+## What is the actor model?
+
+The Actor Model is a computational model used to build highly concurrent and distributed systems. It was introduced by Carl Hewitt in 1973 as a way to handle complex systems in a more scalable and fault-tolerant manner.
+
+In the Actor Model, the basic building block is an actor, called receiver in Hollywood, which is an independent unit of computation that communicates with other actors by exchanging messages. Each actor has its own state and behavior, and can only communicate with other actors by sending messages. This message-passing paradigm allows for a highly decentralized and fault-tolerant system, as actors can continue to operate independently even if other actors fail or become unavailable.
+
+Actors can be organized into hierarchies, with higher-level actors supervising and coordinating lower-level actors. This allows for the creation of complex systems that can handle failures and errors in a graceful and predictable way.
+
+By using the Actor Model in your application, you can build highly scalable and fault-tolerant systems that can handle a large number of concurrent users and complex interactions.
+
 ## Features
 
 - lock free LMAX based message queue for ultra low latency messaging
