@@ -27,3 +27,22 @@ func TestGetByName(t *testing.T) {
 
 	pidSeparator = restorepidSeparator
 }
+
+func TestGetByNameFromContext(t *testing.T) {
+	const PidName = "ReceiverFunc"
+
+	e := NewEngine()
+
+	// Receiver staless actor with given name:
+	e.SpawnFunc(func(c *Context) {}, PidName)
+	time.Sleep(10 * time.Millisecond)
+
+	// Transmitter stateless actor which want to lookup receiver by his name:
+	e.SpawnFunc(func(c *Context) {
+		pid := c.GetPID(PidName)
+		require.NotNil(t, pid)
+
+		expectedPID := NewPID(LocalLookupAddr, PidName)
+		require.Equal(t, expectedPID.String(), pid.String())
+	}, "TransmitterFunc")
+}
