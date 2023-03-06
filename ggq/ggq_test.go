@@ -1,24 +1,24 @@
 package ggq
 
 import (
+	"fmt"
 	"testing"
 )
 
 type consumer[T any] struct{}
 
 func (c *consumer[T]) Consume(t []T) {
-	// fmt.Println(len(t))
+	fmt.Println(t)
 }
 
 func TestSingleMessageNotConsuming(t *testing.T) {
 	q := New[int](1024, &consumer[int]{})
 
-	go func() {
-		for i := 0; i < 1; i++ {
-			q.Write(i)
-		}
-		q.Close()
-	}()
+	q.cond.Signal()
+	for i := 0; i < 10; i++ {
+		q.Write(i)
+	}
+	q.Close()
 
 	q.ReadN()
 }

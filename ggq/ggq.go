@@ -2,8 +2,8 @@ package ggq
 
 import (
 	"runtime"
+	"sync"
 	"sync/atomic"
-	"time"
 	"unsafe"
 
 	"github.com/anthdm/hollywood/log"
@@ -39,11 +39,13 @@ type GGQ[T any] struct {
 	_          [cacheLinePadding - unsafe.Sizeof(atomic.Uint32{})]byte
 	state      atomic.Uint32
 	_          [cacheLinePadding - unsafe.Sizeof(atomic.Uint32{})]byte
+	isIdling   atomic.Bool
 	buffer     []slot[T]
 	_          [cacheLinePadding]byte
 	mask       uint32
 	consumer   Consumer[T]
 	itemBuffer []T
+	cond       *sync.Cond
 }
 
 func New[T any](size uint32, consumer Consumer[T]) *GGQ[T] {
@@ -55,6 +57,7 @@ func New[T any](size uint32, consumer Consumer[T]) *GGQ[T] {
 		mask:       size - 1,
 		consumer:   consumer,
 		itemBuffer: make([]T, size+1),
+		cond:       sync.NewCond(nil),
 	}
 }
 
@@ -86,13 +89,30 @@ func (q *GGQ[T]) ReadN() (T, bool) {
 		} else if upper := q.written.Load(); lower <= upper {
 			runtime.Gosched()
 		} else if !q.state.CompareAndSwap(stateClosed, stateRunning) {
-			time.Sleep(time.Microsecond)
+			var mu sync.Mutex
+			q.cond.L = &mu
+			q.isIdling.Store(true)
+			mu.Lock()
+			q.cond.Wait()
+			mu.Unlock()
+			q.isIdling.Store(false)
 		} else {
 			break
 		}
 	}
 	var t T
 	return t, true
+}
+
+// Awake the queue if its in the idle state.
+func (q *GGQ[T]) Awake() {
+	if q.isIdling.Load() {
+		q.cond.Signal()
+	}
+}
+
+func (q *GGQ[T]) IsIdle() bool {
+	return q.isIdling.Load()
 }
 
 func (q *GGQ[T]) Consume(lower, upper uint32) {
@@ -139,6 +159,7 @@ func (q *GGQ[T]) Read() (T, bool) {
 
 func (q *GGQ[T]) Close() {
 	q.state.Store(stateClosed)
+	q.cond.Signal()
 }
 
 func isPOW2(n uint32) bool {
