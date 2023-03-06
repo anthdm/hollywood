@@ -40,6 +40,7 @@ type GGQ[T any] struct {
 	state      atomic.Uint32
 	_          [cacheLinePadding - unsafe.Sizeof(atomic.Uint32{})]byte
 	isIdling   atomic.Bool
+	_          [cacheLinePadding - unsafe.Sizeof(atomic.Bool{})]byte
 	buffer     []slot[T]
 	_          [cacheLinePadding]byte
 	mask       uint32
