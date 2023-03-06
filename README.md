@@ -132,7 +132,7 @@ e := actor.NewEngine(cfg)
 
 After configuring the Engine with a custom PID Separator the string representation of PIDS will look like this:
 
-```
+```Go
 pid := actor.NewPID("127.0.0.1:3000", "foo", "bar", "baz", "1")
 // 127.0.0.1:3000->foo->bar->baz->1
 ```
@@ -147,7 +147,7 @@ For examples on how to implement custom middleware, check out the middleware fol
 
 You can set the log level of Hollywoods log module:
 
-```
+```Go
 import "github.com/anthdm/hollywood/log
 
 log.SetLevel(log.LevelInfo)
@@ -155,7 +155,7 @@ log.SetLevel(log.LevelInfo)
 
 To disable all logging
 
-```
+```Go
 import "github.com/anthdm/hollywood/log
 
 log.SetLevel(log.LevelPanic)
