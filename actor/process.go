@@ -132,7 +132,7 @@ func (p *process) tryRestart(v any) {
 		log.Errorw(msg.From, log.M{
 			"error": msg.Err,
 		})
-		time.Sleep(restartDelay)
+		time.Sleep(restartDelay) // TODO: make this configurable
 		p.Start()
 		return
 	}
@@ -145,6 +145,7 @@ func (p *process) tryRestart(v any) {
 			"pid":      p.pid,
 			"restarts": p.restarts,
 		})
+		p.cleanup(nil)
 		return
 	}
 	// Restart the process after its restartDelay
