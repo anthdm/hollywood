@@ -53,5 +53,6 @@ func (in *Inbox) Stop() error {
 }
 
 func (in *Inbox) Send(msg Envelope) {
+	in.ggq.Awake()
 	in.ggq.Write(msg)
 }
