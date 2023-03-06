@@ -85,13 +85,14 @@ e.Spawn(newFoo, "foo",
 )
 ```
 
-## Listening to the Eventstream
+## Subscribing and publishing to the Eventstream
 
 ```go
 e := actor.NewEngine()
 
-// Subscribe to a various list of event that are being broadcasted by
-// the engine. But also published by you.
+// Subscribe to a various list of events that are being broadcast by
+// the engine.
+// The eventstream can also be used to publish custom events and notify all of the subscribers..
 eventSub := e.EventStream.Subscribe(func(event any) {
 	switch evt := event.(type) {
 	case *actor.DeadLetterEvent:
@@ -121,7 +122,7 @@ e.SpawnFunc(func(c *actor.Context) {
 time.Sleep(time.Second)
 ```
 
-## Customizing the PID separator
+## Customizing the Engine
 
 ```Go
 cfg := actor.Config{
