@@ -85,13 +85,14 @@ e.Spawn(newFoo, "foo",
 )
 ```
 
-## Listening to the Eventstream
+## Subscribing and publishing to the Eventstream
 
 ```go
 e := actor.NewEngine()
 
-// Subscribe to a various list of event that are being broadcasted by
-// the engine. But also published by you.
+// Subscribe to a various list of events that are being broadcast by
+// the engine.
+// The eventstream can also be used to publish custom events and notify all of the subscribers..
 eventSub := e.EventStream.Subscribe(func(event any) {
 	switch evt := event.(type) {
 	case *actor.DeadLetterEvent:
@@ -121,7 +122,7 @@ e.SpawnFunc(func(c *actor.Context) {
 time.Sleep(time.Second)
 ```
 
-## Customizing the PID separator
+## Customizing the Engine
 
 ```Go
 cfg := actor.Config{
@@ -132,7 +133,7 @@ e := actor.NewEngine(cfg)
 
 After configuring the Engine with a custom PID Separator the string representation of PIDS will look like this:
 
-```
+```Go
 pid := actor.NewPID("127.0.0.1:3000", "foo", "bar", "baz", "1")
 // 127.0.0.1:3000->foo->bar->baz->1
 ```
@@ -147,7 +148,7 @@ For examples on how to implement custom middleware, check out the middleware fol
 
 You can set the log level of Hollywoods log module:
 
-```
+```Go
 import "github.com/anthdm/hollywood/log
 
 log.SetLevel(log.LevelInfo)
@@ -155,7 +156,7 @@ log.SetLevel(log.LevelInfo)
 
 To disable all logging
 
-```
+```Go
 import "github.com/anthdm/hollywood/log
 
 log.SetLevel(log.LevelPanic)

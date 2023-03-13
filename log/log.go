@@ -1,6 +1,10 @@
 package log
 
-import "github.com/sirupsen/logrus"
+import (
+	"io"
+
+	"github.com/sirupsen/logrus"
+)
 
 type M map[string]any
 
@@ -15,6 +19,10 @@ const (
 	LevelFatal
 	LevelPanic
 )
+
+func SetOutput(w io.Writer) {
+	logrus.SetOutput(w)
+}
 
 func SetLevel(level Level) {
 	var l logrus.Level

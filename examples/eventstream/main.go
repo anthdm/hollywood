@@ -12,8 +12,8 @@ func main() {
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 
-	// Subscribe to a various list of event that are being broadcasted by
-	// the engine. But also published by you.
+	// Subscribe to a various list of events that are being broadcast by
+	// the engine, but also published by you.
 	eventSub := e.EventStream.Subscribe(func(event any) {
 		switch evt := event.(type) {
 		case *actor.DeadLetterEvent:
