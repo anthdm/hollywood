@@ -1,0 +1,16 @@
+project_name: hollywood
+
+env:
+  - GO111MODULE=on
+  - CGO_ENABLED=0
+
+before:
+  hooks:
+    - go mod tidy
+    - go mod download
+    - go generate ./...
+
+# libraries have skipped builds
+builds:
+  - 
+    skip: true
