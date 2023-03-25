@@ -15,32 +15,29 @@ var (
 	storageProcessId *actor.PID
 )
 
-func webSocketStorage() actor.Receiver {
-	return &wsPidStore{
-		storage: make(map[*websocket.Conn]*actor.PID),
-	}
-}
-
-func webSocketFoo() actor.Receiver {
-	return &wsFoo{
-		ws:    &websocket.Conn{},
-		exist: false,
-	}
-}
-
-// It is just one process. So only store socket data.
+// It is storing ProcessId and WebSocket identities.
+// Also it broadcasts messages to all processes.
 func (f *wsPidStore) Receive(ctx *actor.Context) {
 	switch msg := ctx.Message().(type) {
 	case actor.Started:
 		fmt.Println("[wsPidStore] storage has started")
+
 	case *sendStorageMsg:
 		fmt.Println("[wsPidStore] message has received", msg.ws)
 		// Delete incoming socket value.
-		if !msg.drop {
-			f.storage[msg.ws] = msg.pid
-		} else {
+		if msg.drop {
 			delete(f.storage, msg.ws)
+		} else {
+			f.storage[msg.ws] = msg.pid
 		}
+
+	case *broadcastMsg:
+		go func(msg *broadcastMsg) {
+			for _, pid := range f.storage {
+				engine.Send(pid, msg)
+			}
+		}(msg)
+
 	}
 }
 
@@ -51,16 +48,18 @@ func (f *wsFoo) Receive(ctx *actor.Context) {
 		fmt.Println("[WEBSOCKET] foo has started")
 
 	case *setWsVal:
-		// If exist, no need to assign.
+		// If exist, make sure you have one socket.
 		if f.exist {
 			break
 		}
-		// Change state.
+		// Change states.
 		f.ws = msg.ws
 		f.exist = true
+		f.quitCh = msg.quitCh
 
-		// Send values to storage.
+		// Add socket and procesId pair to storage.
 		engine.Send(storageProcessId, &sendStorageMsg{
+			pid:  ctx.PID(),
 			ws:   f.ws,
 			drop: false,
 		})
@@ -75,25 +74,50 @@ func (f *wsFoo) Receive(ctx *actor.Context) {
 					if err == io.EOF {
 						break
 					}
+
 					fmt.Println("read error: ", err)
 					continue
 				}
 				msg := buf[:n]
-				fmt.Println("message:", string(msg)) // convert value to string because we are human.
-				// If not exist, break the loop. No more need read from client.
+				msgStr := string(msg)
+
+				message := fmt.Sprintf("%s:%s", ourWs.RemoteAddr().String(), msgStr)
+				// If u want show in console.
+				fmt.Println("message:", message)
+
+				// Send message to storage for broadcasting.
+				// Storage will broadcast messages to all pids.
+				engine.Send(storageProcessId, &broadcastMsg{
+					data: message,
+				})
+
+				// If not exist, break the loop. No need to read from the client anymore.
 				if !f.exist {
 					break
 				}
 			}
 
 		}(ourWs)
+
+	// Broadcast messages to all pids.
+	case *broadcastMsg:
+		_, err := f.ws.Write([]byte(msg.data))
+		if err != nil {
+			engine.Send(ctx.PID(), &closeWsMsg{
+				ws: f.ws,
+			})
+		}
+
+	// Close the specific socket and pid pair.
 	case *closeWsMsg:
-		// In handle func, we are checking the client which is alive or not.
-		// Then send a *closeWsMsg message  to relevant socket.
-		// Relevant socket is this scope.
-		//
-		// Change exist state to false.
+		// Changing the existing state to false causes the reader loop to break.
+		// We don't need read anymore.
 		f.exist = false
+
+		// Close the channel. Break the (web)socket whic is in handler func.
+		*f.quitCh <- true
+
+		// Delete the web socket in the repository.
 		engine.Send(storageProcessId, &sendStorageMsg{
 			ws:   f.ws,
 			drop: true,
@@ -102,6 +126,19 @@ func (f *wsFoo) Receive(ctx *actor.Context) {
 		fmt.Println("socket processor is deleted.")
 		// Break a process.
 		return
+	}
+}
+
+func webSocketStorage() actor.Receiver {
+	return &wsPidStore{
+		storage: make(map[*websocket.Conn]*actor.PID),
+	}
+}
+
+func webSocketFoo() actor.Receiver {
+	return &wsFoo{
+		ws:    &websocket.Conn{},
+		exist: false,
 	}
 }
 

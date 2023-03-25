@@ -2,43 +2,47 @@ package main
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/anthdm/hollywood/actor"
 	"golang.org/x/net/websocket"
 )
 
-type handleWithPid func(ws *websocket.Conn) *actor.PID
+type handleWithPid func(ws *websocket.Conn) (*actor.PID, *chan bool)
 
 func HandleFunc(f handleWithPid) websocket.Handler {
 	return func(c *websocket.Conn) {
 		defer fmt.Println("web socket is deleted")
 
-		pid := f(c)
+		// We get QuitChannel. If we can't write later and we get a write error, we break this scope (websocket).
+		pid, quitCh := f(c)
 		fmt.Println("new websocket is spawned: ", pid.ID)
 
 		for {
-			time.Sleep(time.Second * 3)
-			// Is client alive?
-			_, err := c.Write([]byte("[IFEXIST] are u alive?"))
-			if err != nil {
-				engine.Send(pid, &closeWsMsg{
-					ws: c,
-				})
-				// Kill the websocket.
-				break
-			}
+			// Waiting for break call.
+			<-*quitCh
+			engine.Send(pid, &closeWsMsg{
+				ws: c,
+			})
 
+			// Kill the websocket.
+			break
 		}
-
 	}
 }
 
-func GenerateProcessForWs(ws *websocket.Conn) *actor.PID {
+func GenerateProcessForWs(ws *websocket.Conn) (*actor.PID, *chan bool) {
+
+	// Spawn new pid for new socket.
 	pid := engine.Spawn(webSocketFoo, ws.RemoteAddr().String())
-	defer engine.Send(pid, &setWsVal{
-		pid: pid,
-		ws:  ws,
+
+	// Create a channel to break the socket.
+	quitCh := make(chan bool)
+
+	// Send datas which is init values.
+	engine.Send(pid, &setWsVal{
+		ws:     ws,
+		quitCh: &quitCh,
 	})
-	return pid
+
+	return pid, &quitCh
 }

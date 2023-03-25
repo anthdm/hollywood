@@ -6,8 +6,9 @@ import (
 )
 
 type wsFoo struct {
-	ws    *websocket.Conn
-	exist bool
+	ws     *websocket.Conn
+	exist  bool
+	quitCh *chan bool
 }
 
 type sendStorageMsg struct {
@@ -16,13 +17,18 @@ type sendStorageMsg struct {
 	drop bool
 }
 
+type broadcastMsg struct {
+	data string
+}
+
 type wsPidStore struct {
 	storage map[*websocket.Conn]*actor.PID
 }
 
 type setWsVal struct {
-	pid *actor.PID
-	ws  *websocket.Conn
+	pid    *actor.PID
+	ws     *websocket.Conn
+	quitCh *chan bool
 }
 
 type closeWsMsg struct {
