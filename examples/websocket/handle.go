@@ -7,7 +7,7 @@ import (
 	"golang.org/x/net/websocket"
 )
 
-type handleWithPid func(ws *websocket.Conn) (*actor.PID, *chan bool)
+type handleWithPid func(ws *websocket.Conn) (*actor.PID, *chan struct{})
 
 func HandleFunc(f handleWithPid) websocket.Handler {
 	return func(c *websocket.Conn) {
@@ -30,13 +30,13 @@ func HandleFunc(f handleWithPid) websocket.Handler {
 	}
 }
 
-func GenerateProcessForWs(ws *websocket.Conn) (*actor.PID, *chan bool) {
+func GenerateProcessForWs(ws *websocket.Conn) (*actor.PID, *chan struct{}) {
 
 	// Spawn new pid for new socket.
 	pid := engine.Spawn(webSocketFoo, ws.RemoteAddr().String())
 
 	// Create a channel to break the socket.
-	quitCh := make(chan bool)
+	quitCh := make(chan struct{})
 
 	// Send datas which is init values.
 	engine.Send(pid, &setWsVal{

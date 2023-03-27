@@ -115,7 +115,7 @@ func (f *wsFoo) Receive(ctx *actor.Context) {
 		f.exist = false
 
 		// Close the channel. Break the (web)socket whic is in handler func.
-		*f.quitCh <- true
+		*f.quitCh <- struct{}{}
 
 		// Delete the web socket in the repository.
 		engine.Send(storageProcessId, &sendStorageMsg{

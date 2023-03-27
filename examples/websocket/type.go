@@ -8,7 +8,7 @@ import (
 type wsFoo struct {
 	ws     *websocket.Conn
 	exist  bool
-	quitCh *chan bool
+	quitCh *chan struct{}
 }
 
 type sendStorageMsg struct {
@@ -26,9 +26,8 @@ type wsPidStore struct {
 }
 
 type setWsVal struct {
-	pid    *actor.PID
 	ws     *websocket.Conn
-	quitCh *chan bool
+	quitCh *chan struct{}
 }
 
 type closeWsMsg struct {
