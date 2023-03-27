@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"sync"
 
 	"github.com/anthdm/hollywood/actor"
 	"golang.org/x/net/websocket"
@@ -20,10 +21,10 @@ var (
 func (f *wsPidStore) Receive(ctx *actor.Context) {
 	switch msg := ctx.Message().(type) {
 	case actor.Started:
-		fmt.Println("[wsPidStore] storage has started")
+		fmt.Println("[wsPidStore] storage has started:", ctx.PID().ID)
 
 	case *sendStorageMsg:
-		fmt.Println("[wsPidStore] message has received", msg.ws)
+		fmt.Println("[wsPidStore] message has received from", ctx.PID())
 		// Delete incoming socket value.
 		if msg.drop {
 			delete(f.storage, msg.ws)
@@ -35,6 +36,7 @@ func (f *wsPidStore) Receive(ctx *actor.Context) {
 		go func(msg *broadcastMsg) {
 			for _, pid := range f.storage {
 				engine.Send(pid, msg)
+				fmt.Println("\n pid:", pid.ID)
 			}
 		}(msg)
 
@@ -45,7 +47,7 @@ func (f *wsPidStore) Receive(ctx *actor.Context) {
 func (f *wsFoo) Receive(ctx *actor.Context) {
 	switch msg := ctx.Message().(type) {
 	case actor.Started:
-		fmt.Println("[WEBSOCKET] foo has started")
+		fmt.Println("[WEBSOCKET] foo has started:", ctx.PID().ID)
 
 	case *setWsVal:
 		// If exist, make sure you have one socket.
@@ -123,9 +125,13 @@ func (f *wsFoo) Receive(ctx *actor.Context) {
 			drop: true,
 		})
 
-		fmt.Println("socket processor is deleted.")
 		// Break a process.
-		return
+		wg := &sync.WaitGroup{}
+		ctx.Engine().Poison(ctx.PID(), wg)
+
+	case actor.Stopped:
+		fmt.Println("socket processor is stopped:", ctx.PID().ID)
+
 	}
 }
 
