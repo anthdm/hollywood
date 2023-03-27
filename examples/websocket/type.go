@@ -5,31 +5,39 @@ import (
 	"golang.org/x/net/websocket"
 )
 
-type wsFoo struct {
+// We need faithful reliable friend who is -
+// HODOR(holder-of-the-storage) to bridle goblins.
+type hodorStorage struct {
+	storage map[*websocket.Conn]*actor.PID
+}
+
+// We have goblin(holder-of-the-websocket)-process.
+type websocketGoblin struct {
 	ws     *websocket.Conn
 	exist  bool
 	quitCh *chan struct{}
 }
 
-type sendStorageMsg struct {
+// We can easily kill goblin-process with chan struct.
+type closeWebSocket struct {
+	ws *websocket.Conn
+}
+
+// We can create or delete goblin data in -
+// hodor-storage.
+type letterToHodor struct {
 	pid  *actor.PID
 	ws   *websocket.Conn
 	drop bool
 }
 
-type broadcastMsg struct {
+// We can pass the message of a goblin-pprocess.
+type broadcastMessage struct {
 	data string
 }
 
-type wsPidStore struct {
-	storage map[*websocket.Conn]*actor.PID
-}
-
-type setWsVal struct {
+// Goblins will need armor and spears.
+type initValues struct {
 	ws     *websocket.Conn
 	quitCh *chan struct{}
-}
-
-type closeWsMsg struct {
-	ws *websocket.Conn
 }

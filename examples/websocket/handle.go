@@ -20,13 +20,16 @@ type handleWithPid func(ws *websocket.Conn) (*actor.PID, *chan struct{})
 func HandleFunc(f handleWithPid) websocket.Handler {
 	return func(c *websocket.Conn) {
 		defer fmt.Println("web socket is deleted")
-
-		// We get QuitChannel. If we can't write later and we get a write error, we break this scope (websocket).
+		// If we can't write to the socket later and we get-
+		// a "write error", we break this (websocket) scope.
+		//
+		// Generating a new process  for websocket.
+		// Getting a quitChanel to break websocket scope.
 		pid, quitCh := f(c)
 		fmt.Println("new websocket process is spawned: ", pid.ID)
 
 		for {
-			// Waiting for break call.
+			// Waiting for  the "break call"  from processes.
 			<-*quitCh
 
 			// Kill the websocket.
@@ -36,20 +39,20 @@ func HandleFunc(f handleWithPid) websocket.Handler {
 }
 
 func GenerateProcessForWs(ws *websocket.Conn) (*actor.PID, *chan struct{}) {
-	// Generate unique process id for new process.
+	// Create unique pid with salting for new process.
 	now := time.Now()
 	rand.Seed(now.UnixNano())
 	randNum := rand.Intn(max-min+1) + min
-	salt := strconv.Itoa(randNum + now.Nanosecond())
+	uniquePid := strconv.Itoa(randNum + now.Nanosecond())
 
-	// Spawn new pid for new socket.
-	pid := engine.Spawn(webSocketFoo, salt)
+	// Spawn a new process for the new socket.
+	pid := engine.Spawn(newGoblin, uniquePid)
 
-	// Create a channel to break the socket.
+	// Create a channel to  break  the socket.
 	quitCh := make(chan struct{})
 
-	// Send datas which is init values.
-	engine.Send(pid, &setWsVal{
+	// Send  datas   which  is   init  values.
+	engine.Send(pid, &initValues{
 		ws:     ws,
 		quitCh: &quitCh,
 	})

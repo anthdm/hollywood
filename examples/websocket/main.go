@@ -12,45 +12,49 @@ import (
 )
 
 var (
-	engine           *actor.Engine
-	storageProcessId *actor.PID
+	engine         *actor.Engine
+	hodorProcessId *actor.PID
 )
 
-// It is storing ProcessId and WebSocket identities.
-// Also it broadcasts messages to all processes.
-func (f *wsPidStore) Receive(ctx *actor.Context) {
+// It is storing goblin-process and coressponding websocket identities.
+// Also it broadcasts messages to all goblin-processes.
+func (f *hodorStorage) Receive(ctx *actor.Context) {
 	switch msg := ctx.Message().(type) {
 	case actor.Started:
-		fmt.Println("[wsPidStore] storage has started:", ctx.PID().ID)
+		fmt.Println("[HODOR] storage has started, id:", ctx.PID().ID)
 
-	case *sendStorageMsg:
-		fmt.Println("[wsPidStore] message has received from", ctx.PID())
-		// Delete incoming socket value.
+	case *letterToHodor:
+		fmt.Println("[HODOR] message has received from:", ctx.PID())
+
+		// HODOR will do  these.
+		// Delete the incoming websocket value -
+		// or add a new websocket and goblin-process pair.
 		if msg.drop {
 			delete(f.storage, msg.ws)
 		} else {
 			f.storage[msg.ws] = msg.pid
 		}
 
-	case *broadcastMsg:
-		go func(msg *broadcastMsg) {
+	case *broadcastMessage:
+		go func(msg *broadcastMessage) {
 			for _, pid := range f.storage {
+				// Send data to its own goblin-processor for send message its own websocket.
+				// So goblin-process will write own message to own websocket.
 				engine.Send(pid, msg)
-				fmt.Println("\n pid:", pid.ID)
 			}
 		}(msg)
 
 	}
 }
 
-// Accepted (web)sockets.
-func (f *wsFoo) Receive(ctx *actor.Context) {
+// Goblin-processes corresponding to websockets live here..
+func (f *websocketGoblin) Receive(ctx *actor.Context) {
 	switch msg := ctx.Message().(type) {
 	case actor.Started:
 		fmt.Println("[WEBSOCKET] foo has started:", ctx.PID().ID)
 
-	case *setWsVal:
-		// If exist, make sure you have one socket.
+	case *initValues:
+		// If exist, make sure you have one websocket.
 		if f.exist {
 			break
 		}
@@ -59,8 +63,8 @@ func (f *wsFoo) Receive(ctx *actor.Context) {
 		f.exist = true
 		f.quitCh = msg.quitCh
 
-		// Add socket and procesId pair to storage.
-		engine.Send(storageProcessId, &sendStorageMsg{
+		// Add websocket and corresponding goblin-processId pair to hodor-storage.
+		engine.Send(hodorProcessId, &letterToHodor{
 			pid:  ctx.PID(),
 			ws:   f.ws,
 			drop: false,
@@ -84,16 +88,18 @@ func (f *wsFoo) Receive(ctx *actor.Context) {
 				msgStr := string(msg)
 
 				message := fmt.Sprintf("%s:%s", ourWs.RemoteAddr().String(), msgStr)
-				// If u want show in console.
+
+				// If you want, show that in console.
 				fmt.Println("message:", message)
 
-				// Send message to storage for broadcasting.
-				// Storage will broadcast messages to all pids.
-				engine.Send(storageProcessId, &broadcastMsg{
+				// Send message to the HODOR for broadcasting.
+				// HODOR will broadcast messages to all goblins.
+				engine.Send(hodorProcessId, &broadcastMessage{
 					data: message,
 				})
 
-				// If not exist, break the loop. No need to read from the client anymore.
+				// If not exist, break the loop.
+				// No need to read from the client anymore.
 				if !f.exist {
 					break
 				}
@@ -101,48 +107,48 @@ func (f *wsFoo) Receive(ctx *actor.Context) {
 
 		}(ourWs)
 
-	// Broadcast messages to all pids.
-	case *broadcastMsg:
+	// Broadcast messages to all goblin-processes.
+	case *broadcastMessage:
 		_, err := f.ws.Write([]byte(msg.data))
 		if err != nil {
-			engine.Send(ctx.PID(), &closeWsMsg{
+			engine.Send(ctx.PID(), &closeWebSocket{
 				ws: f.ws,
 			})
 		}
 
-	// Close the specific socket and pid pair.
-	case *closeWsMsg:
-		// Changing the existing state to false causes the reader loop to break.
-		// We don't need read anymore.
+	// Close the specific goblin-process and websocket pair.
+	case *closeWebSocket:
+		// Changing the f.exist value to false causing -
+		// the "reader loop" to break. So we don't need read anymore.
 		f.exist = false
 
-		// Close the channel. Break the (web)socket whic is in handler func.
+		// Close the channel. Break the websocket scope.
 		*f.quitCh <- struct{}{}
 
-		// Delete the web socket in the repository.
-		engine.Send(storageProcessId, &sendStorageMsg{
+		// Delete the websocket and goblin-process pair in the hodor-storage.
+		engine.Send(hodorProcessId, &letterToHodor{
 			ws:   f.ws,
 			drop: true,
 		})
 
-		// Break a process.
+		// Poison the goblin process.
 		wg := &sync.WaitGroup{}
 		ctx.Engine().Poison(ctx.PID(), wg)
 
 	case actor.Stopped:
-		fmt.Println("socket processor is stopped:", ctx.PID().ID)
+		fmt.Println("goblin-process is stopped:", ctx.PID().ID)
 
 	}
 }
 
-func webSocketStorage() actor.Receiver {
-	return &wsPidStore{
+func newHodor() actor.Receiver {
+	return &hodorStorage{
 		storage: make(map[*websocket.Conn]*actor.PID),
 	}
 }
 
-func webSocketFoo() actor.Receiver {
-	return &wsFoo{
+func newGoblin() actor.Receiver {
+	return &websocketGoblin{
 		ws:    &websocket.Conn{},
 		exist: false,
 	}
@@ -150,13 +156,16 @@ func webSocketFoo() actor.Receiver {
 
 func main() {
 
-	// Create new engine.
+	// Create a new engine.
+	// Ash nazg durbatulûk, ash nazg gimbatul,
+	// ash nazg thrakatulûk agh burzum-ishi krimpatul.
 	engine = actor.NewEngine()
 
-	// Spawn a storage process.
-	storageProcessId = engine.Spawn(webSocketStorage, "storer")
+	// Spawn a HODOR(holder-of-the-storage).
+	hodorProcessId = engine.Spawn(newHodor, "HODOR_STORAGE")
 
-	// Handle WebSockets.
+	// Handle websocket connections. Then we will create  a  new process -
+	//  corresponding websocket. Goblin-process is carrying websockets.
 	http.Handle("/ws", websocket.Handler(HandleFunc(GenerateProcessForWs)))
 	if err := http.ListenAndServe(":3000", nil); err != nil {
 		log.Fatal(err)
