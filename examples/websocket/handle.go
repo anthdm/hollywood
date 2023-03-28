@@ -11,8 +11,8 @@ import (
 )
 
 const (
-	min = 1
-	max = 300
+	MIN = 1
+	MAX = 300
 )
 
 type handleWithPid func(ws *websocket.Conn) (*actor.PID, *chan struct{})
@@ -23,35 +23,37 @@ func HandleFunc(f handleWithPid) websocket.Handler {
 		// If we can't write to the socket later and we get-
 		// a "write error", we break this (websocket) scope.
 		//
-		// Generating a new process  for websocket.
-		// Getting a quitChanel to break websocket scope.
+		// Generating   a new goblin-process    for   websocket.
+		// Getting a quitChanel to break websocket handle scope.
 		pid, quitCh := f(c)
-		fmt.Println("new websocket process is spawned: ", pid.ID)
+		fmt.Println("new goblin-process which is holding incoming websocket is spawned: ", pid.ID)
 
 		for {
-			// Waiting for  the "break call"  from processes.
+			// Waiting for  the "break call"  from goblins-processes.
 			<-*quitCh
 
-			// Kill the websocket.
+			// Kill the websocket handling scope.
 			break
 		}
 	}
 }
 
 func GenerateProcessForWs(ws *websocket.Conn) (*actor.PID, *chan struct{}) {
-	// Create unique pid with salting for new process.
+	// Create unique pid with salting for new goblins-processes.
 	now := time.Now()
 	rand.Seed(now.UnixNano())
-	randNum := rand.Intn(max-min+1) + min
+
+	randNum := rand.Intn(MAX-MIN+1) + MIN
 	uniquePid := strconv.Itoa(randNum + now.Nanosecond())
 
-	// Spawn a new process for the new socket.
+	// Spawn a new goblin-process for incoming websocket.
 	pid := engine.Spawn(newGoblin, uniquePid)
 
-	// Create a channel to  break  the socket.
+	// Create a channel to  break  the websocket handling scope.
 	quitCh := make(chan struct{})
 
-	// Send  datas   which  is   init  values.
+	// Send datas the created goblin-process.
+	// Than goblin-process will hold (the websocket connection) and (the quitCh pointer).
 	engine.Send(pid, &initValues{
 		ws:     ws,
 		quitCh: &quitCh,

@@ -122,7 +122,7 @@ func (f *websocketGoblin) Receive(ctx *actor.Context) {
 		// the "reader loop" to break. So we don't need read anymore.
 		f.exist = false
 
-		// Close the channel. Break the websocket scope.
+		// Close the channel. So that will break the websocket scope.
 		*f.quitCh <- struct{}{}
 
 		// Delete the websocket and goblin-process pair in the hodor-storage.
@@ -131,7 +131,7 @@ func (f *websocketGoblin) Receive(ctx *actor.Context) {
 			drop: true,
 		})
 
-		// Poison the goblin process.
+		// Poison the goblin-process.
 		wg := &sync.WaitGroup{}
 		ctx.Engine().Poison(ctx.PID(), wg)
 
