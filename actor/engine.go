@@ -112,6 +112,15 @@ func (e *Engine) Request(pid *PID, msg any, timeout time.Duration) *Response {
 	return resp
 }
 
+func (e *Engine) RequestWithSender(pid *PID, msg any, timeout time.Duration, sender *PID) *Response {
+	resp := NewResponse(e, timeout)
+	e.Registry.add(resp)
+
+	e.SendWithSender(pid, msg, sender)
+
+	return resp
+}
+
 // SendWithSender will send the given message to the given PID with the
 // given sender. Receivers receiving this message can check the sender
 // by calling Context.Sender().
