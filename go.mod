@@ -1,4 +1,4 @@
-module github.com/anthdm/hollywood
+module github.com/hassan-algo/hollywood
 
 go 1.19
 
