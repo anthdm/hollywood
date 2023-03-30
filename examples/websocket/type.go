@@ -25,10 +25,13 @@ type closeWebSocket struct {
 
 // We can create or delete goblin data in -
 // hodor-storage.
-type letterToHodor struct {
-	pid  *actor.PID
-	ws   *websocket.Conn
-	drop bool
+type deleteFromHodor struct {
+	ws *websocket.Conn
+}
+
+type addToHodor struct {
+	pid *actor.PID
+	ws  *websocket.Conn
 }
 
 // We can pass the message of a goblin-pprocess.
