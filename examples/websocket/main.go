@@ -23,13 +23,47 @@ func (f *hodorStorage) Receive(ctx *actor.Context) {
 	case actor.Started:
 		fmt.Println("[HODOR] storage has started, id:", ctx.PID().ID)
 
+	//----------------------------
+	//-----CAUSES RACE COND.------
+	//----------------------------
+	// case *letterToHodor:
+	// 	fmt.Println("[HODOR] message has received from:", ctx.PID())
+	//----------------------------
+	//-----CAUSES RACE COND.------
+	//----------------------------
+
 	// Delete the incoming websocket value.
 	case *deleteFromHodor:
-		delete(f.storage, msg.ws)
 
-	// Add a new websocket and goblin-process pair.
-	case addToHodor:
-		f.storage[msg.ws] = msg.pid
+		msg.deleteWsCh <- msg.ws
+
+		go func(f *hodorStorage, msg *deleteFromHodor) {
+			for wsocket := range msg.deleteWsCh {
+				delete(f.storage, wsocket)
+				close(msg.deleteWsCh)
+				break
+			}
+		}(f, msg)
+
+	// Add  a new websocket and  goblin-process  pair.
+	case *addToHodor:
+
+		// Prepare  a new map  to  send over  channel.
+		newMap := make(map[*websocket.Conn]*actor.PID)
+		newMap[msg.ws] = msg.pid
+
+		msg.addWsCh <- addToHodor{
+			ws:  msg.ws,
+			pid: msg.pid,
+		}
+
+		go func(f *hodorStorage, msg *addToHodor) {
+			for wsMap := range msg.addWsCh {
+				f.storage[wsMap.ws] = wsMap.pid
+				close(msg.addWsCh)
+				break
+			}
+		}(f, msg)
 
 	case *broadcastMessage:
 		go func(msg *broadcastMessage) {
@@ -54,6 +88,7 @@ func (f *websocketGoblin) Receive(ctx *actor.Context) {
 		if f.exist {
 			break
 		}
+
 		// Change states.
 		f.ws = msg.ws
 		f.exist = true
@@ -61,11 +96,13 @@ func (f *websocketGoblin) Receive(ctx *actor.Context) {
 
 		// Add websocket and corresponding goblin-processId pair to hodor-storage.
 		engine.Send(hodorProcessId, &addToHodor{
-			pid: ctx.PID(),
-			ws:  f.ws,
+			ws:      msg.ws,
+			pid:     ctx.PID(),
+			addWsCh: make(chan addToHodor),
 		})
 
 		ourWs := msg.ws
+
 		// Generate a reading loop. Read incoming messages.
 		go func(ourWs *websocket.Conn) {
 			buf := make([]byte, 1024)
@@ -79,15 +116,15 @@ func (f *websocketGoblin) Receive(ctx *actor.Context) {
 					fmt.Println("read error: ", err)
 					continue
 				}
+
 				msg := buf[:n]
 				msgStr := string(msg)
-
 				message := fmt.Sprintf("%s:%s", ourWs.RemoteAddr().String(), msgStr)
 
 				// If you want, show that in console.
-				fmt.Println("message:", message)
+				fmt.Println("message.....:", message)
 
-				// Send message to the HODOR for broadcasting.
+				// Send message to  the HODOR  for broadcasting.
 				// HODOR will broadcast messages to all goblins.
 				engine.Send(hodorProcessId, &broadcastMessage{
 					data: message,
@@ -102,7 +139,7 @@ func (f *websocketGoblin) Receive(ctx *actor.Context) {
 
 		}(ourWs)
 
-	// Broadcast messages to all goblin-processes.
+	// Broadcast messages  to all goblin-processes.
 	case *broadcastMessage:
 		_, err := f.ws.Write([]byte(msg.data))
 		if err != nil {
@@ -113,7 +150,7 @@ func (f *websocketGoblin) Receive(ctx *actor.Context) {
 
 	// Close the specific goblin-process and websocket pair.
 	case *closeWebSocket:
-		// Changing the f.exist value to false causing -
+		// Changing  the  f.exist  value   to false causing-
 		// the "reader loop" to break. So we don't need read anymore.
 		f.exist = false
 
@@ -122,7 +159,8 @@ func (f *websocketGoblin) Receive(ctx *actor.Context) {
 
 		// Delete the websocket and goblin-process pair in the hodor-storage.
 		engine.Send(hodorProcessId, &deleteFromHodor{
-			ws: f.ws,
+			ws:         msg.ws,
+			deleteWsCh: make(chan *websocket.Conn),
 		})
 
 		// Poison the goblin-process.
@@ -150,16 +188,16 @@ func newGoblin() actor.Receiver {
 
 func main() {
 
-	// Create a new engine.
-	// Ash nazg durbatulûk, ash nazg gimbatul,
+	// Create a new  engine.
+	// Ash   nazg   durbatulûk ,  ash  nazg  gimbatul,
 	// ash nazg thrakatulûk agh burzum-ishi krimpatul.
 	engine = actor.NewEngine()
 
 	// Spawn a HODOR(holder-of-the-storage).
 	hodorProcessId = engine.Spawn(newHodor, "HODOR_STORAGE")
 
-	// Handle websocket connections. Then we will create  a  new process -
-	//  corresponding websocket. Goblin-process is carrying websockets.
+	// Handle websocket connections. Then we will create  a  new process-
+	// corresponding  websocket. Goblin-process  is  carrying websockets.
 	http.Handle("/ws", websocket.Handler(HandleFunc(GenerateProcessForWs)))
 	if err := http.ListenAndServe(":3000", nil); err != nil {
 		log.Fatal(err)
