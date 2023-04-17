@@ -140,6 +140,49 @@ func (e *Engine) send(pid *PID, msg any, sender *PID) {
 	e.remote.Send(pid, msg, sender)
 }
 
+type SendRepeater struct {
+	engine   *Engine
+	self     *PID
+	target   *PID
+	msg      any
+	interval time.Duration
+	cancelch chan struct{}
+}
+
+func (sr SendRepeater) start() {
+	ticker := time.NewTicker(sr.interval)
+	go func() {
+		for {
+			select {
+			case <-ticker.C:
+				sr.engine.SendWithSender(sr.target, sr.msg, sr.self)
+			case <-sr.cancelch:
+				return
+			}
+		}
+	}()
+}
+
+func (sr SendRepeater) Stop() {
+	close(sr.cancelch)
+}
+
+// SendRepeat will send the given message to the given PID each given interval.
+// It will return a SendRepeater struct that can stop the repeating message by calling Stop().
+func (e *Engine) SendRepeat(pid *PID, msg any, interval time.Duration) SendRepeater {
+	clonedPID := *pid.CloneVT()
+	sr := SendRepeater{
+		engine:   e,
+		self:     nil,
+		target:   &clonedPID,
+		interval: interval,
+		msg:      msg,
+		cancelch: make(chan struct{}, 1),
+	}
+	sr.start()
+	return sr
+}
+
 // Poison will send a poisonPill to the process that is associated with the given PID.
 // The process will shut down once it processed all its messages before the poisonPill
 // was received. If given a WaitGroup, you can wait till the process is completely shutdown.
