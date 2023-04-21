@@ -69,7 +69,7 @@ func TestRestarts(t *testing.T) {
 				wg.Done()
 			}
 		}
-	}, "foo")
+	}, "foo", WithRestartDelay(time.Millisecond*10))
 
 	e.Send(pid, payload{1})
 	e.Send(pid, payload{2})
