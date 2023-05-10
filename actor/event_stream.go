@@ -3,9 +3,9 @@ package actor
 import (
 	"math"
 	"math/rand"
-	"sync"
 
 	"github.com/anthdm/hollywood/log"
+	"github.com/anthdm/hollywood/safemap"
 )
 
 type EventSub struct {
@@ -15,39 +15,32 @@ type EventSub struct {
 type EventStreamFunc func(event any)
 
 type EventStream struct {
-	mu   sync.RWMutex
-	subs map[*EventSub]EventStreamFunc
+	subs *safemap.SafeMap[*EventSub, EventStreamFunc]
 }
 
 func NewEventStream() *EventStream {
 	return &EventStream{
-		subs: make(map[*EventSub]EventStreamFunc),
+		subs: safemap.New[*EventSub, EventStreamFunc](),
 	}
 }
 
 func (e *EventStream) Unsubscribe(sub *EventSub) {
-	e.mu.Lock()
-	defer e.mu.Unlock()
-
-	delete(e.subs, sub)
+	e.subs.Delete(sub)
 
 	log.Tracew("[EVENTSTREAM] unsubscribe", log.M{
-		"subs": len(e.subs),
+		"subs": e.subs.Len(),
 		"id":   sub.id,
 	})
 }
 
 func (e *EventStream) Subscribe(f EventStreamFunc) *EventSub {
-	e.mu.Lock()
-	defer e.mu.Unlock()
-
 	sub := &EventSub{
 		id: uint32(rand.Intn(math.MaxUint32)),
 	}
-	e.subs[sub] = f
+	e.subs.Set(sub, f)
 
 	log.Tracew("[EVENTSTREAM] subscribe", log.M{
-		"subs": len(e.subs),
+		"subs": e.subs.Len(),
 		"id":   sub.id,
 	})
 
@@ -55,15 +48,11 @@ func (e *EventStream) Subscribe(f EventStreamFunc) *EventSub {
 }
 
 func (e *EventStream) Publish(msg any) {
-	e.mu.RLock()
-	defer e.mu.RUnlock()
-	for _, f := range e.subs {
-		go f(msg)
-	}
+	e.subs.ForEach(func(_ *EventSub, v EventStreamFunc) {
+		go v(msg)
+	})
 }
 
 func (e *EventStream) Len() int {
-	e.mu.RLock()
-	defer e.mu.RUnlock()
-	return len(e.subs)
+	return e.subs.Len()
 }

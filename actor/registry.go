@@ -1,59 +1,50 @@
 package actor
 
 import (
-	"sync"
-
 	"github.com/anthdm/hollywood/log"
+	"github.com/anthdm/hollywood/safemap"
 )
 
 const LocalLookupAddr = "local"
 
 type Registry struct {
-	mu     sync.RWMutex
-	lookup map[string]Processer
+	lookup *safemap.SafeMap[string, Processer]
 	engine *Engine
 }
 
 func newRegistry(e *Engine) *Registry {
 	return &Registry{
-		lookup: make(map[string]Processer, 1024),
+		lookup: safemap.New[string, Processer](),
 		engine: e,
 	}
 }
 
 func (r *Registry) Remove(pid *PID) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	delete(r.lookup, pid.ID)
+	r.lookup.Delete(pid.ID)
 }
 
 func (r *Registry) get(pid *PID) Processer {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	if proc, ok := r.lookup[pid.ID]; ok {
+	if proc, ok := r.lookup.Get(pid.ID); ok {
 		return proc
 	}
 	return r.engine.deadLetter
 }
 
 func (r *Registry) getByID(id string) Processer {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	return r.lookup[id]
+	processer, _ := r.lookup.Get(id)
+	return processer
 }
 
 // TODO: When a process is already registered, we "should" create
 // a random tag for it? Or are we going to prevent that, and let the user
 // decide?
 func (r *Registry) add(proc Processer) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
 	id := proc.PID().ID
-	if _, ok := r.lookup[id]; ok {
+	if proc, ok := r.lookup.Get(id); ok {
 		log.Warnw("[REGISTRY] process already registered", log.M{
 			"pid": proc.PID(),
 		})
 		return
 	}
-	r.lookup[id] = proc
+	r.lookup.Set(id, proc)
 }
