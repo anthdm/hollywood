@@ -49,9 +49,8 @@ func NewEngine(cfg ...Config) *Engine {
 	if len(cfg) == 1 {
 		e.configure(cfg[0])
 	}
-	e.Registry = newRegistry(e)
+	e.Registry = newRegistry(e.deadLetter)
 	e.deadLetter = newDeadLetter(e.EventStream)
-	e.Registry.add(e.deadLetter)
 	return e
 }
 

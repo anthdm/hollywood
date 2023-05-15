@@ -8,14 +8,14 @@ import (
 const LocalLookupAddr = "local"
 
 type Registry struct {
-	lookup *safemap.SafeMap[string, Processer]
-	engine *Engine
+	lookup     *safemap.SafeMap[string, Processer]
+	deadletter Processer
 }
 
-func newRegistry(e *Engine) *Registry {
+func newRegistry(dl Processer) *Registry {
 	return &Registry{
-		lookup: safemap.New[string, Processer](),
-		engine: e,
+		lookup:     safemap.New[string, Processer](),
+		deadletter: dl,
 	}
 }
 
@@ -27,7 +27,7 @@ func (r *Registry) get(pid *PID) Processer {
 	if proc, ok := r.lookup.Get(pid.ID); ok {
 		return proc
 	}
-	return r.engine.deadLetter
+	return r.deadletter
 }
 
 func (r *Registry) getByID(id string) Processer {
