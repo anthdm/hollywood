@@ -12,6 +12,42 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type tick struct{}
+type tickReceiver struct {
+	ticks int
+	wg    *sync.WaitGroup
+}
+
+func (r *tickReceiver) Receive(c *Context) {
+	switch c.Message().(type) {
+	case tick:
+		r.ticks++
+		if r.ticks == 10 {
+			r.wg.Done()
+		}
+	}
+}
+
+func newTickReceiver(wg *sync.WaitGroup) Producer {
+	return func() Receiver {
+		return &tickReceiver{
+			wg: wg,
+		}
+	}
+}
+
+func TestSendRepeat(t *testing.T) {
+	var (
+		e  = NewEngine()
+		wg = &sync.WaitGroup{}
+	)
+	wg.Add(1)
+	pid := e.Spawn(newTickReceiver(wg), "test")
+	repeater := e.SendRepeat(pid, tick{}, time.Millisecond*2)
+	wg.Wait()
+	repeater.Stop()
+}
+
 func TestRestarts(t *testing.T) {
 	e := NewEngine()
 	wg := sync.WaitGroup{}
@@ -33,7 +69,7 @@ func TestRestarts(t *testing.T) {
 				wg.Done()
 			}
 		}
-	}, "foo")
+	}, "foo", WithRestartDelay(time.Millisecond*10))
 
 	e.Send(pid, payload{1})
 	e.Send(pid, payload{2})

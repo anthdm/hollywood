@@ -9,10 +9,6 @@ import (
 	"github.com/anthdm/hollywood/log"
 )
 
-const (
-	restartDelay = time.Millisecond * 500 * 2
-)
-
 type Envelope struct {
 	Msg    any
 	Sender *PID
@@ -132,7 +128,7 @@ func (p *process) tryRestart(v any) {
 		log.Errorw(msg.From, log.M{
 			"error": msg.Err,
 		})
-		time.Sleep(restartDelay) // TODO: make this configurable
+		time.Sleep(p.Opts.RestartDelay)
 		p.Start()
 		return
 	}
@@ -155,7 +151,7 @@ func (p *process) tryRestart(v any) {
 		"pid":         p.pid,
 		"reason":      v,
 	})
-	time.Sleep(restartDelay)
+	time.Sleep(p.Opts.RestartDelay)
 	p.Start()
 }
 
