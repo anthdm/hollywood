@@ -157,6 +157,7 @@ func (sr SendRepeater) start() {
 			case <-ticker.C:
 				sr.engine.SendWithSender(sr.target, sr.msg, sr.self)
 			case <-sr.cancelch:
+				ticker.Stop()
 				return
 			}
 		}
