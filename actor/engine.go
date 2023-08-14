@@ -187,16 +187,19 @@ func (e *Engine) SendRepeat(pid *PID, msg any, interval time.Duration) SendRepea
 // Poison will send a poisonPill to the process that is associated with the given PID.
 // The process will shut down once it processed all its messages before the poisonPill
 // was received. If given a WaitGroup, you can wait till the process is completely shutdown.
-func (e *Engine) Poison(pid *PID, wg ...*sync.WaitGroup) {
+func (e *Engine) Poison(pid *PID, wg ...*sync.WaitGroup) *sync.WaitGroup {
 	var _wg *sync.WaitGroup
 	if len(wg) > 0 {
 		_wg = wg[0]
-		_wg.Add(1)
+	} else {
+		_wg = &sync.WaitGroup{}
 	}
+	_wg.Add(1)
 	proc := e.Registry.get(pid)
 	if proc != nil {
 		e.SendLocal(pid, poisonPill{_wg}, nil)
 	}
+	return _wg
 }
 
 func (e *Engine) SendLocal(pid *PID, msg any, sender *PID) {
