@@ -33,6 +33,5 @@ func main() {
 	for i := 0; i < 100; i++ {
 		engine.Send(pid, &message{data: "hello world!"})
 	}
-	wg := engine.Poison(pid)
-	wg.Wait()
+	engine.Poison(pid).Wait()
 }
