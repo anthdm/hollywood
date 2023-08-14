@@ -2,12 +2,36 @@ package actor
 
 import (
 	"runtime"
+	"sync/atomic"
 
-	"github.com/anthdm/hollywood/ggq"
-	"github.com/anthdm/hollywood/log"
+	"github.com/anthdm/hollywood/ringbuffer"
 )
 
-var LOCK_OS_THREAD = true
+const defaultThroughput = 300
+
+const (
+	idle int32 = iota
+	running
+)
+
+type Scheduler interface {
+	Schedule(fn func())
+	Throughput() int
+}
+
+type goscheduler int
+
+func (goscheduler) Schedule(fn func()) {
+	go fn()
+}
+
+func (sched goscheduler) Throughput() int {
+	return int(sched)
+}
+
+func NewScheduler(throughput int) Scheduler {
+	return goscheduler(throughput)
+}
 
 type Inboxer interface {
 	Send(Envelope)
@@ -16,43 +40,56 @@ type Inboxer interface {
 }
 
 type Inbox struct {
-	ggq  *ggq.GGQ[Envelope]
-	proc Processer
+	rb         *ringbuffer.RingBuffer[Envelope]
+	proc       Processer
+	scheduler  Scheduler
+	procStatus int32
 }
 
 func NewInbox(size int) *Inbox {
-	in := &Inbox{}
-	in.ggq = ggq.New[Envelope](uint32(size), in)
-	return in
+	return &Inbox{
+		rb:        ringbuffer.New[Envelope](int64(size)),
+		scheduler: NewScheduler(defaultThroughput),
+	}
 }
 
-func (in *Inbox) Consume(msgs []Envelope) {
-	in.proc.Invoke(msgs)
+func (in *Inbox) Send(msg Envelope) {
+	in.rb.Push(msg)
+	in.schedule()
+}
+
+func (in *Inbox) schedule() {
+	if atomic.CompareAndSwapInt32(&in.procStatus, idle, running) {
+		in.scheduler.Schedule(in.process)
+	}
+}
+
+func (in *Inbox) process() {
+	in.run()
+	atomic.StoreInt32(&in.procStatus, idle)
+}
+
+func (in *Inbox) run() {
+	i, t := 0, in.scheduler.Throughput()
+	for {
+		if i > t {
+			i = 0
+			runtime.Gosched()
+		}
+		i++
+
+		if msg, ok := in.rb.Pop(); ok {
+			in.proc.Invoke([]Envelope{msg})
+		} else {
+			return
+		}
+	}
 }
 
 func (in *Inbox) Start(proc Processer) {
 	in.proc = proc
-	var lockOSThread bool
-	// prevent race condition here be reassigning before go routine.
-	if LOCK_OS_THREAD {
-		lockOSThread = true
-	}
-	go func() {
-		if lockOSThread {
-			runtime.LockOSThread()
-		}
-		in.ggq.ReadN()
-	}()
-	log.Tracew("[INBOX] started", log.M{"pid": proc.PID()})
 }
 
 func (in *Inbox) Stop() error {
-	in.ggq.Close()
-	log.Tracew("[INBOX] closed", log.M{"pid": in.proc.PID()})
 	return nil
-}
-
-func (in *Inbox) Send(msg Envelope) {
-	in.ggq.Awake()
-	in.ggq.Write(msg)
 }

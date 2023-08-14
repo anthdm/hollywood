@@ -64,14 +64,6 @@ func TestWithSender(t *testing.T) {
 }
 
 func TestRequestResponse(t *testing.T) {
-	// NOTE: Its important when running to remote on the same binary
-	// which in the real world will never happen, we need to unlock the OS thread
-	// or we will have context deadlines exceeds on request responses.
-	// Hence, for testing this we need to set it to 0
-	actor.LOCK_OS_THREAD = false
-	defer func() {
-		actor.LOCK_OS_THREAD = true
-	}()
 	var (
 		a  = makeRemoteEngine("127.0.0.1:4001")
 		b  = makeRemoteEngine("127.0.0.1:5001")

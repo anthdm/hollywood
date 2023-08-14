@@ -135,10 +135,8 @@ func TestSendMsgRaceCon(t *testing.T) {
 
 	for i := 0; i < 100; i++ {
 		wg.Add(1)
-		go func() {
-			e.Send(pid, []byte("f"))
-			wg.Done()
-		}()
+		e.Send(pid, []byte("f"))
+		wg.Done()
 	}
 	wg.Wait()
 }
@@ -231,8 +229,7 @@ func TestRequestResponse(t *testing.T) {
 // 56 ns/op
 func BenchmarkSendMessageLocal(b *testing.B) {
 	e := NewEngine()
-	p := NewTestProducer(nil, func(_ *testing.T, _ *Context) {})
-	pid := e.Spawn(p, "bench", WithInboxSize(1024*8))
+	pid := e.SpawnFunc(func(_ *Context) {}, "bench", WithInboxSize(128))
 
 	b.ResetTimer()
 	b.Run("send_message_local", func(b *testing.B) {

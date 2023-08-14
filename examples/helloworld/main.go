@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"time"
+	"sync"
 
 	"github.com/anthdm/hollywood/actor"
 )
@@ -20,17 +20,21 @@ func newFoo() actor.Receiver {
 func (f *foo) Receive(ctx *actor.Context) {
 	switch msg := ctx.Message().(type) {
 	case actor.Started:
-		fmt.Println("foo started")
+		fmt.Println("actor started")
+	case actor.Stopped:
+		fmt.Println("actor stopped")
 	case *message:
-		fmt.Println("foo has received", msg.data)
+		fmt.Println("actor has received", msg.data)
 	}
 }
 
 func main() {
 	engine := actor.NewEngine()
-	pid := engine.Spawn(newFoo, "foo")
-	for i := 0; i < 99; i++ {
+	pid := engine.Spawn(newFoo, "my_actor")
+	for i := 0; i < 100; i++ {
 		engine.Send(pid, &message{data: "hello world!"})
 	}
-	time.Sleep(time.Second * 1)
+	wg := sync.WaitGroup{}
+	engine.Poison(pid, &wg)
+	wg.Wait()
 }
