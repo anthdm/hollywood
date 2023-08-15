@@ -57,3 +57,13 @@ func (r *Registry) add(proc Processer) {
 	}
 	r.lookup[id] = proc
 }
+
+func (r *Registry) GetIDs() []string {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	keys := make([]string, 0, len(r.lookup))
+	for k := range r.lookup {
+		keys = append(keys, k)
+	}
+	return keys
+}
