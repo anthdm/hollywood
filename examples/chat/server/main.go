@@ -65,5 +65,5 @@ func main() {
 	e.WithRemote(rem)
 	e.Spawn(newServer, "server")
 
-	<-(make(chan struct{}))
+	select {}
 }
