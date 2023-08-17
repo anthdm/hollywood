@@ -57,6 +57,7 @@ func main() {
 	var (
 		listenAt = flag.String("listen", "127.0.0.1:4000", "")
 	)
+	flag.Parse()
 	log.SetLevel(log.LevelInfo)
 	e := actor.NewEngine()
 	rem := remote.New(e, remote.Config{
