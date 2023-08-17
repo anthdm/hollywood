@@ -40,20 +40,21 @@ func (c *client) Receive(ctx *actor.Context) {
 
 func main() {
 	var (
-		port     = flag.String("port", ":3000", "")
-		username = flag.String("username", "", "")
+		listenAt  = flag.String("listen", "127.0.0.1:3000", "")
+		connectTo = flag.String("connect", "127.0.0.1:4000", "")
+		username  = flag.String("username", "", "")
 	)
 	flag.Parse()
 
 	e := actor.NewEngine()
 	rem := remote.New(e, remote.Config{
-		ListenAddr: "127.0.0.1" + *port,
+		ListenAddr: *listenAt,
 	})
 	e.WithRemote(rem)
 
 	var (
 		// the process ID of the server
-		serverPID = actor.NewPID("127.0.0.1:4000", "server")
+		serverPID = actor.NewPID(*connectTo, "server")
 		// Spawn our client receiver
 		clientPID = e.Spawn(newClient(*username, serverPID), "client")
 		scanner   = bufio.NewScanner(os.Stdin)
