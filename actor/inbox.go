@@ -12,6 +12,7 @@ const defaultThroughput = 300
 const (
 	idle int32 = iota
 	running
+	stopped
 )
 
 type Scheduler interface {
@@ -72,6 +73,9 @@ func (in *Inbox) process() {
 func (in *Inbox) run() {
 	i, t := 0, in.scheduler.Throughput()
 	for {
+		if in.procStatus == stopped {
+			return
+		}
 		if i > t {
 			i = 0
 			runtime.Gosched()
@@ -91,5 +95,6 @@ func (in *Inbox) Start(proc Processer) {
 }
 
 func (in *Inbox) Stop() error {
+	in.procStatus = stopped
 	return nil
 }

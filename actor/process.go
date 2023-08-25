@@ -118,7 +118,6 @@ func (p *process) Start() {
 }
 
 func (p *process) tryRestart(v any) {
-	p.restarts++
 	// InternalError does not take the maximum restarts into account.
 	// For now, InternalError is getting triggered when we are dialing
 	// a remote node. By doing this, we can keep dialing until it comes
@@ -144,6 +143,8 @@ func (p *process) tryRestart(v any) {
 		p.cleanup(nil)
 		return
 	}
+
+	p.restarts++
 	// Restart the process after its restartDelay
 	log.Errorw("[PROCESS] actor restarting", log.M{
 		"n":           p.restarts,
