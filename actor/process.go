@@ -73,9 +73,7 @@ func (p *process) Invoke(msgs []Envelope) {
 			for i := 0; i < nmsg-nproc; i++ {
 				p.mbuffer[i] = msgs[i+nproc]
 			}
-			if p.Opts.MaxRestarts > 0 {
-				p.tryRestart(v)
-			}
+			p.tryRestart(v)
 		}
 	}()
 	for i := 0; i < len(msgs); i++ {
@@ -99,6 +97,13 @@ func (p *process) Invoke(msgs []Envelope) {
 func (p *process) Start() {
 	recv := p.Producer()
 	p.context.receiver = recv
+	defer func() {
+		if v := recover(); v != nil {
+			p.context.message = Stopped{}
+			p.context.receiver.Receive(p.context)
+			p.tryRestart(v)
+		}
+	}()
 	p.context.message = Initialized{}
 	applyMiddleware(recv.Receive, p.Opts.Middleware...)(p.context)
 
