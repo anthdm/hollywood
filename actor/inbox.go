@@ -72,10 +72,7 @@ func (in *Inbox) process() {
 
 func (in *Inbox) run() {
 	i, t := 0, in.scheduler.Throughput()
-	for {
-		if in.procStatus == stopped {
-			return
-		}
+	for in.procStatus != stopped {
 		if i > t {
 			i = 0
 			runtime.Gosched()
