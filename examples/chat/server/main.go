@@ -1,6 +1,8 @@
 package main
 
 import (
+	"flag"
+
 	"github.com/anthdm/hollywood/actor"
 	"github.com/anthdm/hollywood/examples/chat/types"
 	"github.com/anthdm/hollywood/log"
@@ -52,13 +54,17 @@ func (s *server) handleMessage(ctx *actor.Context, msg *types.Message) {
 }
 
 func main() {
+	var (
+		listenAt = flag.String("listen", "127.0.0.1:4000", "")
+	)
+	flag.Parse()
 	log.SetLevel(log.LevelInfo)
 	e := actor.NewEngine()
 	rem := remote.New(e, remote.Config{
-		ListenAddr: "127.0.0.1:4000",
+		ListenAddr: *listenAt,
 	})
 	e.WithRemote(rem)
 	e.Spawn(newServer, "server")
 
-	<-(make(chan struct{}))
+	select {}
 }

@@ -40,37 +40,36 @@ func (c *client) Receive(ctx *actor.Context) {
 
 func main() {
 	var (
-		port     = flag.String("port", ":3000", "")
-		username = flag.String("username", "", "")
+		listenAt  = flag.String("listen", "127.0.0.1:3000", "")
+		connectTo = flag.String("connect", "127.0.0.1:4000", "")
+		username  = flag.String("username", "", "")
 	)
 	flag.Parse()
 
 	e := actor.NewEngine()
 	rem := remote.New(e, remote.Config{
-		ListenAddr: "127.0.0.1" + *port,
+		ListenAddr: *listenAt,
 	})
 	e.WithRemote(rem)
 
 	var (
 		// the process ID of the server
-		serverPID = actor.NewPID("127.0.0.1:4000", "server")
+		serverPID = actor.NewPID(*connectTo, "server")
 		// Spawn our client receiver
 		clientPID = e.Spawn(newClient(*username, serverPID), "client")
-		r         = bufio.NewReader(os.Stdin)
+		scanner   = bufio.NewScanner(os.Stdin)
 	)
-	for {
-		str, err := r.ReadString('\n')
-		if err != nil {
-			log.Errorw("failed to read message from stdin", log.M{"err": err})
-			break
-		}
+	for scanner.Scan() {
 		msg := &types.Message{
-			Msg:      str,
+			Msg:      scanner.Text(),
 			Username: *username,
 		}
 		// We use SendWithSender here so the server knows who
 		// is sending the message.
 		e.SendWithSender(serverPID, msg, clientPID)
+	}
+	if err := scanner.Err(); err != nil {
+		log.Errorw("failed to read message from stdin", log.M{"err": err})
 	}
 
 	// When breaked out of the loop on error let the server know
