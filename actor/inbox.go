@@ -72,7 +72,7 @@ func (in *Inbox) process() {
 
 func (in *Inbox) run() {
 	i, t := 0, in.scheduler.Throughput()
-	for in.procStatus != stopped {
+	for atomic.LoadInt32(&in.procStatus) != stopped {
 		if i > t {
 			i = 0
 			runtime.Gosched()
@@ -92,6 +92,6 @@ func (in *Inbox) Start(proc Processer) {
 }
 
 func (in *Inbox) Stop() error {
-	in.procStatus = stopped
+	atomic.StoreInt32(&in.procStatus, stopped)
 	return nil
 }

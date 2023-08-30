@@ -48,6 +48,56 @@ func TestSendRepeat(t *testing.T) {
 	repeater.Stop()
 }
 
+func TestRestartsMaxRestarts(t *testing.T) {
+	e := NewEngine()
+	restarts := 2
+	type payload struct {
+		data int
+	}
+	pid := e.SpawnFunc(func(c *Context) {
+		switch msg := c.Message().(type) {
+		case Started:
+		case Stopped:
+		case payload:
+			if msg.data != 10 {
+				panic("I failed to process this message")
+			} else {
+				fmt.Println("finally processed all my messsages after borking.", msg.data)
+			}
+		}
+	}, "foo", WithMaxRestarts(restarts))
+
+	for i := 0; i < 11; i++ {
+		e.Send(pid, payload{i})
+	}
+}
+
+func TestProcessInitStartOrder(t *testing.T) {
+	var (
+		e             = NewEngine()
+		wg            = sync.WaitGroup{}
+		started, init bool
+	)
+	pid := e.SpawnFunc(func(c *Context) {
+		switch c.Message().(type) {
+		case Initialized:
+			fmt.Println("init")
+			wg.Add(1)
+			init = true
+		case Started:
+			fmt.Println("start")
+			require.True(t, init)
+			started = true
+		case int:
+			fmt.Println("msg")
+			require.True(t, started)
+			wg.Done()
+		}
+	}, "tst")
+	e.Send(pid, 1)
+	wg.Wait()
+}
+
 func TestRestarts(t *testing.T) {
 	e := NewEngine()
 	wg := sync.WaitGroup{}
@@ -74,32 +124,6 @@ func TestRestarts(t *testing.T) {
 	e.Send(pid, payload{1})
 	e.Send(pid, payload{2})
 	e.Send(pid, payload{10})
-	wg.Wait()
-}
-
-func TestProcessInitStartOrder(t *testing.T) {
-	var (
-		e             = NewEngine()
-		wg            = sync.WaitGroup{}
-		started, init bool
-	)
-	pid := e.SpawnFunc(func(c *Context) {
-		switch c.Message().(type) {
-		case Initialized:
-			fmt.Println("init")
-			wg.Add(1)
-			init = true
-		case Started:
-			fmt.Println("start")
-			require.True(t, init)
-			started = true
-		case int:
-			fmt.Println("msg")
-			require.True(t, started)
-			wg.Done()
-		}
-	}, "tst")
-	e.Send(pid, 1)
 	wg.Wait()
 }
 
