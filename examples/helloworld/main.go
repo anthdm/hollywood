@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"sync"
 
 	"github.com/anthdm/hollywood/actor"
 )
@@ -34,7 +33,5 @@ func main() {
 	for i := 0; i < 100; i++ {
 		engine.Send(pid, &message{data: "hello world!"})
 	}
-	wg := sync.WaitGroup{}
-	engine.Poison(pid, &wg)
-	wg.Wait()
+	engine.Poison(pid).Wait()
 }

@@ -17,7 +17,6 @@ By using the Actor Model in your application, you can build highly scalable and 
 
 ## Features
 
-- lock free LMAX based message queue for ultra low latency messaging
 - guaranteed message delivery on receiver failure (buffer mechanism)
 - fire&forget or request&response messaging, or both.
 - dRPC as the transport layer
@@ -71,7 +70,9 @@ func main() {
 	engine := actor.NewEngine()
 	pid := engine.Spawn(newFoo, "foo")
 	engine.Send(pid, &message{data: "hello world!"})
-	time.Sleep(time.Second * 1)
+
+	// Stop the actor, but let it process its messages first.
+	engine.Poison(pid).Wait()
 }
 ```
 
