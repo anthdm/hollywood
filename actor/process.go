@@ -73,9 +73,7 @@ func (p *process) Invoke(msgs []Envelope) {
 			for i := 0; i < nmsg-nproc; i++ {
 				p.mbuffer[i] = msgs[i+nproc]
 			}
-			if p.Opts.MaxRestarts > 0 {
-				p.tryRestart(v)
-			}
+			p.tryRestart(v)
 		}
 	}()
 	for i := 0; i < len(msgs); i++ {
@@ -99,6 +97,13 @@ func (p *process) Invoke(msgs []Envelope) {
 func (p *process) Start() {
 	recv := p.Producer()
 	p.context.receiver = recv
+	defer func() {
+		if v := recover(); v != nil {
+			p.context.message = Stopped{}
+			p.context.receiver.Receive(p.context)
+			p.tryRestart(v)
+		}
+	}()
 	p.context.message = Initialized{}
 	applyMiddleware(recv.Receive, p.Opts.Middleware...)(p.context)
 
@@ -118,7 +123,6 @@ func (p *process) Start() {
 }
 
 func (p *process) tryRestart(v any) {
-	p.restarts++
 	// InternalError does not take the maximum restarts into account.
 	// For now, InternalError is getting triggered when we are dialing
 	// a remote node. By doing this, we can keep dialing until it comes
@@ -144,6 +148,8 @@ func (p *process) tryRestart(v any) {
 		p.cleanup(nil)
 		return
 	}
+
+	p.restarts++
 	// Restart the process after its restartDelay
 	log.Errorw("[PROCESS] actor restarting", log.M{
 		"n":           p.restarts,
