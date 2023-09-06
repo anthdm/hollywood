@@ -1,6 +1,7 @@
 package actor
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/anthdm/hollywood/log"
@@ -66,4 +67,15 @@ func (r *Registry) GetIDs() []string {
 		keys = append(keys, k)
 	}
 	return keys
+}
+
+func (r *Registry) Search(id string) (*PID, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	for k, v := range r.lookup {
+		if k == id {
+			return v.PID(), nil
+		}
+	}
+	return nil, fmt.Errorf("failed to find id in registry")
 }
