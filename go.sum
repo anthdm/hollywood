@@ -1,5 +1,3 @@
-github.com/anthdm/hollywood v0.0.0-20230830092425-72c772290525 h1:iuL7h5uYDhcLI3ZSjI40oCo9ZoD29H86P4O5Hpp7Zok=
-github.com/anthdm/hollywood v0.0.0-20230830092425-72c772290525/go.mod h1:OOQl6/HISo57/knniNj8wfd2wNr5kJ2NcsNdPEisT8k=
 github.com/beorn7/perks v1.0.1 h1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=
 github.com/beorn7/perks v1.0.1/go.mod h1:G2ZrVWU2WbWT9wwq4/hrbKbnv/1ERSJQ0ibhJ6rlkpw=
 github.com/cespare/xxhash/v2 v2.2.0 h1:DC2CZ1Ep5Y4k3ZQ899DldepgrayRUGE6BBZ/cd9Cj44=
