@@ -1,8 +1,9 @@
-module github.com/anthdm/hollywood
+module github.com/stevohuncho/hollywood
 
 go 1.19
 
 require (
+	github.com/anthdm/hollywood v0.0.0-20230830092425-72c772290525
 	github.com/planetscale/vtprotobuf v0.4.0
 	github.com/prometheus/client_golang v1.15.0
 	github.com/sirupsen/logrus v1.9.0
