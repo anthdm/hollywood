@@ -69,6 +69,16 @@ func (r *Registry) GetIDs() []string {
 	return keys
 }
 
+func (r *Registry) GetPIDs() []*PID {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	keys := make([]*PID, 0, len(r.lookup))
+	for _, v := range r.lookup {
+		keys = append(keys, v.PID())
+	}
+	return keys
+}
+
 func (r *Registry) Search(id string) (*PID, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
