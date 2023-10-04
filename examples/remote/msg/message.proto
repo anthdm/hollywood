@@ -1,6 +1,6 @@
 syntax = "proto3";
 package msg;
-option go_package = "github.com/anthdm/hollywood/examples/remote/msg";
+option go_package = "github.com/stevohuncho/hollywood/examples/remote/msg";
 
 message Message {
 	string data = 1;

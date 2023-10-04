@@ -25,7 +25,7 @@ func newNameResponder() actor.Receiver {
 func (r *nameResponder) Receive(ctx *actor.Context) {
 	switch ctx.Message().(type) {
 	case *nameRequest:
-		ctx.Respond(&nameResponse{name: "anthdm"})
+		ctx.Respond(&nameResponse{name: "stevohuncho"})
 	}
 }
 
