@@ -1,9 +1,9 @@
-module github.com/anthdm/hollywood/examples/mdns
+module github.com/stevohuncho/hollywood/examples/mdns
 
 go 1.19
 
 require (
-	github.com/anthdm/hollywood v0.0.0-20230421092042-3cc6d833dc05
+	github.com/stevohuncho/hollywood v0.0.0-20230421092042-3cc6d833dc05
 	github.com/grandcat/zeroconf v1.0.0
 	google.golang.org/protobuf v1.30.0
 )

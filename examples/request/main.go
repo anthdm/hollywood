@@ -5,7 +5,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/anthdm/hollywood/actor"
+	"github.com/stevohuncho/hollywood/actor"
 )
 
 type (

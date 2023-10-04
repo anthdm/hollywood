@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/anthdm/hollywood/log"
+	"github.com/stevohuncho/hollywood/log"
 )
 
 const LocalLookupAddr = "local"

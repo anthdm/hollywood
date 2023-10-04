@@ -7,7 +7,7 @@ package remote
 import (
 	context "context"
 	fmt "fmt"
-	actor "github.com/anthdm/hollywood/actor"
+	actor "github.com/stevohuncho/hollywood/actor"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"

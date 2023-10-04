@@ -4,8 +4,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/anthdm/hollywood/log"
-	"github.com/anthdm/hollywood/safemap"
+	"github.com/stevohuncho/hollywood/log"
+	"github.com/stevohuncho/hollywood/safemap"
 )
 
 type Context struct {

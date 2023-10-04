@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 
-	"github.com/anthdm/hollywood/actor"
-	"github.com/anthdm/hollywood/log"
+	"github.com/stevohuncho/hollywood/actor"
+	"github.com/stevohuncho/hollywood/log"
 )
 
 type streamReader struct {

@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/anthdm/hollywood/actor"
+	"github.com/stevohuncho/hollywood/actor"
 )
 
 func main() {

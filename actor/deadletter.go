@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"sync"
 
-	"github.com/anthdm/hollywood/log"
+	"github.com/stevohuncho/hollywood/log"
 )
 
 // TODO: The deadLetter is implemented as a plain Processer, but

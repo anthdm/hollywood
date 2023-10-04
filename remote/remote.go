@@ -4,8 +4,8 @@ import (
 	"context"
 	"net"
 
-	"github.com/anthdm/hollywood/actor"
-	"github.com/anthdm/hollywood/log"
+	"github.com/stevohuncho/hollywood/actor"
+	"github.com/stevohuncho/hollywood/log"
 	"storj.io/drpc/drpcmux"
 	"storj.io/drpc/drpcserver"
 )

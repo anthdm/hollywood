@@ -1,10 +1,10 @@
 package chat
 
 import (
-	"github.com/anthdm/hollywood/actor"
-	"github.com/anthdm/hollywood/examples/mdns/chat/types"
-	"github.com/anthdm/hollywood/examples/mdns/discovery"
-	"github.com/anthdm/hollywood/log"
+	"github.com/stevohuncho/hollywood/actor"
+	"github.com/stevohuncho/hollywood/examples/mdns/chat/types"
+	"github.com/stevohuncho/hollywood/examples/mdns/discovery"
+	"github.com/stevohuncho/hollywood/log"
 )
 
 type server struct {

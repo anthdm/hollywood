@@ -4,7 +4,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/anthdm/hollywood/log"
+	"github.com/stevohuncho/hollywood/log"
 )
 
 type Remoter interface {

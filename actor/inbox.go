@@ -4,7 +4,7 @@ import (
 	"runtime"
 	"sync/atomic"
 
-	"github.com/anthdm/hollywood/ringbuffer"
+	"github.com/stevohuncho/hollywood/ringbuffer"
 )
 
 const defaultThroughput = 300

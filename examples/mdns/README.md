@@ -9,7 +9,7 @@ However it works well in most office, home, or private infrastructure environmen
 
 # Quickstart
 
-> The **[examples](https://github.com/anthdm/hollywood/tree/master/examples/mdns)** folder is the best place to explore Hollywood's Service Discovery
+> The **[examples](https://github.com/stevohuncho/hollywood/tree/master/examples/mdns)** folder is the best place to explore Hollywood's Service Discovery
 
 ```
 make build
