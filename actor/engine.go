@@ -61,6 +61,7 @@ func (e *Engine) configure(cfg Config) {
 	if cfg.PIDSeparator != "" {
 		pidSeparator = cfg.PIDSeparator
 	}
+	e.logger = cfg.Logger
 }
 
 // WithRemote returns a new actor Engine with the given Remoter,
@@ -69,13 +70,6 @@ func (e *Engine) WithRemote(r Remoter) {
 	e.remote = r
 	e.address = r.Address()
 	r.Start()
-}
-
-// WithLogger returns a new actor Engine with the given Logger
-func (e *Engine) WithLogger(l log.Logger) *Engine {
-	e.logger = l
-	e.EventStream.attachLogger(l.SubLogger("[eventStream]"))
-	return e
 }
 
 // Spawn spawns a process that will producer by the given Producer and
