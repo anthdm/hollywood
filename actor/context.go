@@ -19,6 +19,7 @@ type Context struct {
 	// when the child dies.
 	parentCtx *Context
 	children  *safemap.SafeMap[string, *PID]
+	logger    log.Logger
 }
 
 func newContext(e *Engine, pid *PID) *Context {
@@ -43,9 +44,7 @@ func (c *Context) Request(pid *PID, msg any, timeout time.Duration) *Response {
 // Respond will sent the given message to the sender of the current received message.
 func (c *Context) Respond(msg any) {
 	if c.sender == nil {
-		log.Warnw("[RESPOND] context got no sender", log.M{
-			"pid": c.PID(),
-		})
+		c.logger.Warnw("context got no sender", "func", "Respond", "pid", c.PID())
 		return
 	}
 	c.engine.Send(c.sender, msg)

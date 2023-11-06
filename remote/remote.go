@@ -19,6 +19,7 @@ type Remote struct {
 	config          Config
 	streamReader    *streamReader
 	streamRouterPID *actor.PID
+	logger          log.Logger
 }
 
 // New creates a new "Remote" object given and engine and a Config.
@@ -34,7 +35,7 @@ func New(e *actor.Engine, cfg Config) *Remote {
 func (r *Remote) Start() {
 	ln, err := net.Listen("tcp", r.config.ListenAddr)
 	if err != nil {
-		log.Fatalw("[REMOTE] listen", log.M{"err": err})
+		panic("failed to listen: " + err.Error())
 	}
 
 	mux := drpcmux.New()
@@ -42,11 +43,7 @@ func (r *Remote) Start() {
 	s := drpcserver.New(mux)
 
 	r.streamRouterPID = r.engine.Spawn(newStreamRouter(r.engine), "router", actor.WithInboxSize(1024*1024))
-
-	log.Infow("[REMOTE] server started", log.M{
-		"listenAddr": r.config.ListenAddr,
-	})
-
+	r.logger.Infow("server started", "listenAddr", r.config.ListenAddr)
 	ctx := context.Background()
 	go s.Serve(ctx, ln)
 }

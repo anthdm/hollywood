@@ -28,6 +28,7 @@ type Config struct {
 	// pid := NewPID("127.0.0.1:4000", "foo", "bar")
 	// 127.0.0.1:4000/foo/bar
 	PIDSeparator string
+	Logger       log.Logger
 }
 
 // Engine represents the actor engine.
@@ -38,6 +39,7 @@ type Engine struct {
 	address    string
 	remote     Remoter
 	deadLetter Processer
+	logger     log.Logger
 }
 
 // NewEngine returns a new actor Engine.
@@ -67,6 +69,12 @@ func (e *Engine) WithRemote(r Remoter) {
 	e.remote = r
 	e.address = r.Address()
 	r.Start()
+}
+
+// WithLogger returns a new actor Engine with the given Logger
+func (e *Engine) WithLogger(l log.Logger) *Engine {
+	e.logger = l
+	return e
 }
 
 // Spawn spawns a process that will producer by the given Producer and
@@ -132,9 +140,8 @@ func (e *Engine) send(pid *PID, msg any, sender *PID) {
 		return
 	}
 	if e.remote == nil {
-		log.Errorw("[ENGINE] failed sending messsage", log.M{
-			"err": "engine has no remote configured",
-		})
+		e.logger.Errorw("failed sending messsage",
+			"err", "engine has no remote configured")
 		return
 	}
 	e.remote.Send(pid, msg, sender)
