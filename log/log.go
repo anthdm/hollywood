@@ -3,6 +3,7 @@ package log
 import (
 	"io"
 	"log/slog"
+	"os"
 )
 
 type Logger struct {
@@ -31,13 +32,20 @@ func NewHandler(w io.Writer, format LoggerFormat, loglevel slog.Level) slog.Hand
 	}
 }
 
-// New creates a new logger. You can specify an optional handler. If
-// no handler is given, the logger will be a no-op logger, which is the default.
+// DefaultEngineLogger returns a logger that logs to stdout with the
+// TextFormat and log level Info. This is the recommended logger to use
+// You can supply your own logger if you want to, using NewLogger and NewHandler
+func DefaultEngineLogger() Logger {
+	return NewLogger("[engine]", NewHandler(os.Stdout, TextFormat, slog.LevelInfo))
+}
+
+// NewLogger creates a new logger with the given name and handler
 func NewLogger(name string, handler slog.Handler) Logger {
 	logger := slog.New(handler)
 	return Logger{logger.With("log", name)}
 }
 
+// SubLogger returns a new logger with the given name as a sublogger
 func (l Logger) SubLogger(name string) Logger {
 	if l.slogger == nil { // no-op logger
 		return Logger{}

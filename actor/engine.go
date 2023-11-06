@@ -74,6 +74,7 @@ func (e *Engine) WithRemote(r Remoter) {
 // WithLogger returns a new actor Engine with the given Logger
 func (e *Engine) WithLogger(l log.Logger) *Engine {
 	e.logger = l
+	e.EventStream.attachLogger(l.SubLogger("[eventStream]"))
 	return e
 }
 

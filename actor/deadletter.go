@@ -20,6 +20,7 @@ func newDeadLetter(eventStream *EventStream) *deadLetter {
 	return &deadLetter{
 		eventStream: eventStream,
 		pid:         NewPID(LocalLookupAddr, "deadLetter"),
+		logger:      eventStream.logger.SubLogger("[deadLetter]"),
 	}
 }
 

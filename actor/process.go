@@ -44,6 +44,7 @@ func newProcess(e *Engine, opts Opts) *process {
 		Opts:    opts,
 		context: ctx,
 		mbuffer: nil,
+		logger:  e.logger.SubLogger(opts.Name),
 	}
 	p.inbox.Start(p)
 	return p

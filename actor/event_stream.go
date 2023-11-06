@@ -68,3 +68,7 @@ func (e *EventStream) Len() int {
 	defer e.mu.RUnlock()
 	return len(e.subs)
 }
+
+func (e *EventStream) attachLogger(l log.Logger) {
+	e.logger = l
+}

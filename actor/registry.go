@@ -19,6 +19,7 @@ func newRegistry(e *Engine) *Registry {
 	return &Registry{
 		lookup: make(map[string]Processer, 1024),
 		engine: e,
+		logger: e.logger.SubLogger("[registry]"),
 	}
 }
 
