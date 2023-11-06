@@ -27,6 +27,7 @@ func newContext(e *Engine, pid *PID) *Context {
 		engine:   e,
 		pid:      pid,
 		children: safemap.New[string, *PID](),
+		logger:   e.logger.SubLogger("[context]"),
 	}
 }
 

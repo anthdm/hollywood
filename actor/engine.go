@@ -44,13 +44,12 @@ type Engine struct {
 
 // NewEngine returns a new actor Engine.
 func NewEngine(cfg ...Config) *Engine {
-	e := &Engine{
-		EventStream: NewEventStream(),
-		address:     LocalLookupAddr,
-	}
+	e := &Engine{}
 	if len(cfg) == 1 {
 		e.configure(cfg[0])
 	}
+	e.EventStream = NewEventStream(e.logger)
+	e.address = LocalLookupAddr
 	e.Registry = newRegistry(e)
 	e.deadLetter = newDeadLetter(e.EventStream)
 	e.Registry.add(e.deadLetter)
