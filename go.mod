@@ -1,6 +1,6 @@
 module github.com/anthdm/hollywood
 
-go 1.21
+go 1.20
 
 require (
 	github.com/planetscale/vtprotobuf v0.4.0
