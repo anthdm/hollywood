@@ -13,18 +13,20 @@ type streamReader struct {
 
 	remote       *Remote
 	deserializer Deserializer
+	logger       log.Logger
 }
 
 func newStreamReader(r *Remote) *streamReader {
 	return &streamReader{
 		remote:       r,
 		deserializer: ProtoSerializer{},
+		logger:       r.logger.SubLogger("[stream_reader]"),
 	}
 }
 
 func (r *streamReader) Receive(stream DRPCRemote_ReceiveStream) error {
 	defer func() {
-		log.Tracew("[STREAM READER] terminated", log.M{})
+		r.logger.Debugw("terminated")
 	}()
 
 	for {
@@ -33,7 +35,7 @@ func (r *streamReader) Receive(stream DRPCRemote_ReceiveStream) error {
 			if errors.Is(err, context.Canceled) {
 				break
 			}
-			log.Errorw("[STREAM READER] receive", log.M{"err": err})
+			r.logger.Errorw("receive", "err", err)
 			return err
 		}
 
@@ -41,7 +43,7 @@ func (r *streamReader) Receive(stream DRPCRemote_ReceiveStream) error {
 			tname := envelope.TypeNames[msg.TypeNameIndex]
 			payload, err := r.deserializer.Deserialize(msg.Data, tname)
 			if err != nil {
-				log.Errorw("[STREAM READER] deserialize error", log.M{"err": err})
+				r.logger.Errorw("deserialize", "err", err)
 				return err
 			}
 			target := envelope.Targets[msg.TargetIndex]

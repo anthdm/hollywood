@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	"github.com/anthdm/hollywood/log"
 	"log/slog"
 	"os"
 
@@ -46,10 +47,10 @@ func main() {
 	)
 	flag.Parse()
 
-	e := actor.NewEngine()
+	e := actor.NewEngine().WithLogger(log.Default())
 	rem := remote.New(e, remote.Config{
 		ListenAddr: *listenAt,
-	})
+	}).WithLogger(log.NewLogger("[remote]", log.NewHandler(os.Stdout, log.TextFormat, slog.LevelDebug)))
 	e.WithRemote(rem)
 
 	var (

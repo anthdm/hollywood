@@ -20,13 +20,15 @@ type streamRouter struct {
 	// streams is a map of remote address to stream writer pid.
 	streams map[string]*actor.PID
 	pid     *actor.PID
+	logger  log.Logger
 }
 
-func newStreamRouter(e *actor.Engine) actor.Producer {
+func newStreamRouter(e *actor.Engine, l log.Logger) actor.Producer {
 	return func() actor.Receiver {
 		return &streamRouter{
 			streams: make(map[string]*actor.PID),
 			engine:  e,
+			logger:  l.SubLogger("[stream_router]"),
 		}
 	}
 }
@@ -45,10 +47,10 @@ func (s *streamRouter) Receive(ctx *actor.Context) {
 func (s *streamRouter) handleTerminateStream(msg terminateStream) {
 	streamWriterPID := s.streams[msg.address]
 	delete(s.streams, msg.address)
-	log.Tracew("[STREAM ROUTER] terminating stream", log.M{
-		"remote": msg.address,
-		"pid":    streamWriterPID,
-	})
+	s.logger.Debugw("terminating stream",
+		"remote", msg.address,
+		"pid", streamWriterPID,
+	)
 }
 
 func (s *streamRouter) deliverStream(msg *streamDeliver) {
@@ -60,11 +62,12 @@ func (s *streamRouter) deliverStream(msg *streamDeliver) {
 
 	swpid, ok = s.streams[address]
 	if !ok {
-		swpid = s.engine.SpawnProc(newStreamWriter(s.engine, s.pid, address))
+		swlogger := s.logger.SubLogger("[stream_writer]")
+		swpid = s.engine.SpawnProc(newStreamWriter(s.engine, s.pid, address, swlogger))
 		s.streams[address] = swpid
-		log.Tracew("[STREAM ROUTER] new stream route", log.M{
-			"pid": swpid,
-		})
+		s.logger.Debugw("new stream route",
+			"pid", swpid,
+		)
 	}
 	s.engine.Send(swpid, msg)
 }

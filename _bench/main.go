@@ -2,11 +2,12 @@ package main
 
 import (
 	"fmt"
+	"log/slog"
+	"os"
 	"runtime"
 	"time"
 
 	"github.com/anthdm/hollywood/actor"
-	"github.com/anthdm/hollywood/log"
 	"github.com/anthdm/hollywood/remote"
 )
 
@@ -55,9 +56,9 @@ func benchmarkLocal() {
 
 func main() {
 	if runtime.GOMAXPROCS(runtime.NumCPU()) == 1 {
-		log.Fatalw("Please use a system with more than 1 CPU. Its 2023...", nil)
+		slog.Error("GOMAXPROCS must be greater than 1")
+		os.Exit(1)
 	}
-	log.SetLevel(log.LevelPanic)
 	benchmarkLocal()
 	benchmarkRemote()
 }

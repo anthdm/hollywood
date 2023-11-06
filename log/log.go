@@ -6,8 +6,11 @@ import (
 	"os"
 )
 
+// Logger keeps track of the logger. The baselogger points to the original logger
+// and slogger is a reference to the current logger
 type Logger struct {
-	slogger *slog.Logger
+	slogger    *slog.Logger
+	baselogger *slog.Logger
 }
 
 type LoggerFormat uint32
@@ -20,7 +23,10 @@ const (
 // NewLogger creates a new logger with the given name and handler
 func NewLogger(name string, handler slog.Handler) Logger {
 	logger := slog.New(handler)
-	return Logger{logger.With("log", name)}
+	return Logger{
+		slogger:    logger.With("log", name),
+		baselogger: logger,
+	}
 }
 
 // SubLogger returns a new logger with the given name as a sublogger
@@ -29,7 +35,8 @@ func (l Logger) SubLogger(name string) Logger {
 		return Logger{}
 	}
 	return Logger{
-		slogger: l.slogger.With("log", name),
+		slogger:    l.baselogger.With("log", name),
+		baselogger: l.baselogger,
 	}
 }
 
@@ -43,11 +50,11 @@ func Default() Logger {
 func NewHandler(w io.Writer, format LoggerFormat, loglevel slog.Level) slog.Handler {
 	switch format {
 	case JsonFormat:
-		return slog.NewTextHandler(w, &slog.HandlerOptions{
+		return slog.NewJSONHandler(w, &slog.HandlerOptions{
 			Level: loglevel,
 		})
 	case TextFormat:
-		return slog.NewJSONHandler(w, &slog.HandlerOptions{
+		return slog.NewTextHandler(w, &slog.HandlerOptions{
 			Level: loglevel,
 		})
 	default:
@@ -59,26 +66,26 @@ func (l Logger) Infow(msg string, args ...any) {
 	if l.slogger == nil {
 		return
 	}
-	l.slogger.Info(msg, args)
+	l.slogger.Info(msg, args...)
 }
 
 func (l Logger) Debugw(msg string, args ...any) {
 	if l.slogger == nil {
 		return
 	}
-	l.slogger.Debug(msg, args)
+	l.slogger.Debug(msg, args...)
 }
 
 func (l Logger) Warnw(msg string, args ...any) {
 	if l.slogger == nil {
 		return
 	}
-	l.slogger.Warn(msg, args)
+	l.slogger.Warn(msg, args...)
 }
 
 func (l Logger) Errorw(msg string, args ...any) {
 	if l.slogger == nil {
 		return
 	}
-	l.slogger.Error(msg, args)
+	l.slogger.Error(msg, args...)
 }
