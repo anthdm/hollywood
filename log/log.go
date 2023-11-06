@@ -17,28 +17,6 @@ const (
 	TextFormat
 )
 
-func NewHandler(w io.Writer, format LoggerFormat, loglevel slog.Level) slog.Handler {
-	switch format {
-	case JsonFormat:
-		return slog.NewTextHandler(w, &slog.HandlerOptions{
-			Level: loglevel,
-		})
-	case TextFormat:
-		return slog.NewJSONHandler(w, &slog.HandlerOptions{
-			Level: loglevel,
-		})
-	default:
-		panic("unknown format") // can't happen
-	}
-}
-
-// DefaultEngineLogger returns a logger that logs to stdout with the
-// TextFormat and log level Info. This is the recommended logger to use
-// You can supply your own logger if you want to, using NewLogger and NewHandler
-func DefaultEngineLogger() Logger {
-	return NewLogger("[engine]", NewHandler(os.Stdout, TextFormat, slog.LevelInfo))
-}
-
 // NewLogger creates a new logger with the given name and handler
 func NewLogger(name string, handler slog.Handler) Logger {
 	logger := slog.New(handler)
@@ -52,6 +30,28 @@ func (l Logger) SubLogger(name string) Logger {
 	}
 	return Logger{
 		slogger: l.slogger.With("log", name),
+	}
+}
+
+// Default returns a logger that logs to stdout with the
+// TextFormat and log level Info. This is the recommended logger to use
+// You can supply your own logger if you want to, using NewLogger and NewHandler
+func Default() Logger {
+	return NewLogger("[engine]", NewHandler(os.Stdout, TextFormat, slog.LevelInfo))
+}
+
+func NewHandler(w io.Writer, format LoggerFormat, loglevel slog.Level) slog.Handler {
+	switch format {
+	case JsonFormat:
+		return slog.NewTextHandler(w, &slog.HandlerOptions{
+			Level: loglevel,
+		})
+	case TextFormat:
+		return slog.NewJSONHandler(w, &slog.HandlerOptions{
+			Level: loglevel,
+		})
+	default:
+		panic("unknown format") // can't happen
 	}
 }
 
