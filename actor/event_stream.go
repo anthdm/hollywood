@@ -15,13 +15,15 @@ type EventSub struct {
 type EventStreamFunc func(event any)
 
 type EventStream struct {
-	mu   sync.RWMutex
-	subs map[*EventSub]EventStreamFunc
+	mu     sync.RWMutex
+	subs   map[*EventSub]EventStreamFunc
+	logger log.Logger
 }
 
-func NewEventStream() *EventStream {
+func NewEventStream(l log.Logger) *EventStream {
 	return &EventStream{
-		subs: make(map[*EventSub]EventStreamFunc),
+		subs:   make(map[*EventSub]EventStreamFunc),
+		logger: l.SubLogger("[eventStream]"),
 	}
 }
 
@@ -31,10 +33,10 @@ func (e *EventStream) Unsubscribe(sub *EventSub) {
 
 	delete(e.subs, sub)
 
-	log.Tracew("[EVENTSTREAM] unsubscribe", log.M{
-		"subs": len(e.subs),
-		"id":   sub.id,
-	})
+	e.logger.Debugw("unsubscribe",
+		"subs", len(e.subs),
+		"id", sub.id,
+	)
 }
 
 func (e *EventStream) Subscribe(f EventStreamFunc) *EventSub {
@@ -46,10 +48,10 @@ func (e *EventStream) Subscribe(f EventStreamFunc) *EventSub {
 	}
 	e.subs[sub] = f
 
-	log.Tracew("[EVENTSTREAM] subscribe", log.M{
-		"subs": len(e.subs),
-		"id":   sub.id,
-	})
+	e.logger.Debugw("subscribe",
+		"subs", len(e.subs),
+		"id", sub.id,
+	)
 
 	return sub
 }

@@ -2,6 +2,9 @@ package main
 
 import (
 	"fmt"
+	"github.com/anthdm/hollywood/log"
+	"log/slog"
+	"os"
 
 	"github.com/anthdm/hollywood/actor"
 )
@@ -28,7 +31,8 @@ func (f *foo) Receive(ctx *actor.Context) {
 }
 
 func main() {
-	engine := actor.NewEngine()
+	lh := log.NewHandler(os.Stdout, log.JsonFormat, slog.LevelDebug)
+	engine := actor.NewEngine(actor.Config{Logger: log.NewLogger("[engine]", lh)})
 	pid := engine.Spawn(newFoo, "my_actor")
 	for i := 0; i < 100; i++ {
 		engine.Send(pid, &message{data: "hello world!"})

@@ -4,11 +4,12 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	"github.com/anthdm/hollywood/log"
+	"log/slog"
 	"os"
 
 	"github.com/anthdm/hollywood/actor"
 	"github.com/anthdm/hollywood/examples/chat/types"
-	"github.com/anthdm/hollywood/log"
 	"github.com/anthdm/hollywood/remote"
 )
 
@@ -46,9 +47,10 @@ func main() {
 	)
 	flag.Parse()
 
-	e := actor.NewEngine()
+	e := actor.NewEngine(actor.Config{Logger: log.Default()})
 	rem := remote.New(e, remote.Config{
 		ListenAddr: *listenAt,
+		Logger:     log.NewLogger("[remote]", log.NewHandler(os.Stdout, log.TextFormat, slog.LevelDebug)),
 	})
 	e.WithRemote(rem)
 
@@ -69,7 +71,7 @@ func main() {
 		e.SendWithSender(serverPID, msg, clientPID)
 	}
 	if err := scanner.Err(); err != nil {
-		log.Errorw("failed to read message from stdin", log.M{"err": err})
+		slog.Error("failed to read message from stdin", "err", err)
 	}
 
 	// When breaked out of the loop on error let the server know

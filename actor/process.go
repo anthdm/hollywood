@@ -32,6 +32,7 @@ type process struct {
 	restarts int32
 
 	mbuffer []Envelope
+	logger  log.Logger
 }
 
 func newProcess(e *Engine, opts Opts) *process {
@@ -43,6 +44,7 @@ func newProcess(e *Engine, opts Opts) *process {
 		Opts:    opts,
 		context: ctx,
 		mbuffer: nil,
+		logger:  e.logger.SubLogger(opts.Name),
 	}
 	p.inbox.Start(p)
 	return p
@@ -110,11 +112,7 @@ func (p *process) Start() {
 	p.context.message = Started{}
 	applyMiddleware(recv.Receive, p.Opts.Middleware...)(p.context)
 	p.context.engine.EventStream.Publish(&ActivationEvent{PID: p.pid})
-
-	log.Tracew("[PROCESS] started", log.M{
-		"pid": p.pid,
-	})
-
+	p.logger.Debugw("started", "pid", p.pid)
 	// If we have messages in our buffer, invoke them.
 	if len(p.mbuffer) > 0 {
 		p.Invoke(p.mbuffer)
@@ -129,9 +127,7 @@ func (p *process) tryRestart(v any) {
 	// back up. NOTE: not sure if that is the best option. What if that
 	// node never comes back up again?
 	if msg, ok := v.(*InternalError); ok {
-		log.Errorw(msg.From, log.M{
-			"error": msg.Err,
-		})
+		p.logger.Errorw(msg.From, "err", msg.Err)
 		time.Sleep(p.Opts.RestartDelay)
 		p.Start()
 		return
@@ -141,22 +137,20 @@ func (p *process) tryRestart(v any) {
 	// If we reach the max restarts, we shutdown the inbox and clean
 	// everything up.
 	if p.restarts == p.MaxRestarts {
-		log.Errorw("[PROCESS] max restarts exceeded, shutting down...", log.M{
-			"pid":      p.pid,
-			"restarts": p.restarts,
-		})
+		p.logger.Errorw("max restarts exceeded, shutting down...",
+			"pid", p.pid, "restarts", p.restarts)
 		p.cleanup(nil)
 		return
 	}
 
 	p.restarts++
 	// Restart the process after its restartDelay
-	log.Errorw("[PROCESS] actor restarting", log.M{
-		"n":           p.restarts,
-		"maxRestarts": p.MaxRestarts,
-		"pid":         p.pid,
-		"reason":      v,
-	})
+	p.logger.Errorw("actor restarting",
+		"n", p.restarts,
+		"maxRestarts", p.MaxRestarts,
+		"pid", p.pid,
+		"reason", v,
+	)
 	time.Sleep(p.Opts.RestartDelay)
 	p.Start()
 }
@@ -185,9 +179,7 @@ func (p *process) cleanup(wg *sync.WaitGroup) {
 			proc.Shutdown(wg)
 		}
 	}
-	log.Tracew("[PROCESS] shutdown", log.M{
-		"pid": p.pid,
-	})
+	p.logger.Debugw("shutdown", "pid", p.pid)
 	// Send TerminationEvent to the eventstream
 	p.context.engine.EventStream.Publish(&TerminationEvent{PID: p.pid})
 	if wg != nil {

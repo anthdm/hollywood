@@ -92,7 +92,7 @@ func TestRequestResponse(t *testing.T) {
 
 func makeRemoteEngine(listenAddr string) *actor.Engine {
 	e := actor.NewEngine()
-	r := New(e, Config{listenAddr})
+	r := New(e, Config{ListenAddr: listenAddr})
 	e.WithRemote(r)
 	return e
 }

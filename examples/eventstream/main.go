@@ -2,13 +2,17 @@ package main
 
 import (
 	"fmt"
+	"github.com/anthdm/hollywood/log"
+	"log/slog"
+	"os"
 	"sync"
 
 	"github.com/anthdm/hollywood/actor"
 )
 
 func main() {
-	e := actor.NewEngine()
+	lh := log.NewHandler(os.Stdout, log.TextFormat, slog.LevelDebug)
+	e := actor.NewEngine(actor.Config{Logger: log.NewLogger("[engine]", lh)})
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 

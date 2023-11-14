@@ -2,71 +2,90 @@ package log
 
 import (
 	"io"
-
-	"github.com/sirupsen/logrus"
+	"log/slog"
+	"os"
 )
 
-type M map[string]any
+// Logger keeps track of the logger. The baselogger points to the original logger
+// and slogger is a reference to the current logger
+type Logger struct {
+	slogger    *slog.Logger
+	baselogger *slog.Logger
+}
 
-type Level uint32
+type LoggerFormat uint32
 
 const (
-	LevelTrace = iota
-	LevelDebug
-	LevelInfo
-	LevelWarn
-	LevelError
-	LevelFatal
-	LevelPanic
+	JsonFormat LoggerFormat = iota
+	TextFormat
 )
 
-func SetOutput(w io.Writer) {
-	logrus.SetOutput(w)
-}
-
-func SetLevel(level Level) {
-	var l logrus.Level
-	switch level {
-	case LevelTrace:
-		l = logrus.TraceLevel
-	case LevelInfo:
-		l = logrus.InfoLevel
-	case LevelWarn:
-		l = logrus.WarnLevel
-	case LevelError:
-		l = logrus.ErrorLevel
-	case LevelFatal:
-		l = logrus.FatalLevel
-	case LevelPanic:
-		l = logrus.PanicLevel
+// NewLogger creates a new logger with the given name and handler
+func NewLogger(name string, handler slog.Handler) Logger {
+	logger := slog.New(handler)
+	return Logger{
+		slogger:    logger.With("log", name),
+		baselogger: logger,
 	}
-	logrus.SetLevel(l)
 }
 
-func Infow(msg string, args M) {
-	logrus.WithFields(logrus.Fields(args)).Info(msg)
+// SubLogger returns a new logger with the given name as a sublogger
+func (l Logger) SubLogger(name string) Logger {
+	if l.slogger == nil { // no-op logger
+		return Logger{}
+	}
+	return Logger{
+		slogger:    l.baselogger.With("log", name),
+		baselogger: l.baselogger,
+	}
 }
 
-func Debugw(msg string, args M) {
-	logrus.WithFields(logrus.Fields(args)).Debug(msg)
+// Default returns a logger that logs to stdout with the
+// TextFormat and log level Info. This is the recommended logger to use
+// You can supply your own logger if you want to, using NewLogger and NewHandler
+func Default() Logger {
+	return NewLogger("[engine]", NewHandler(os.Stdout, TextFormat, slog.LevelInfo))
 }
 
-func Warnw(msg string, args M) {
-	logrus.WithFields(logrus.Fields(args)).Warn(msg)
+func NewHandler(w io.Writer, format LoggerFormat, loglevel slog.Level) slog.Handler {
+	switch format {
+	case JsonFormat:
+		return slog.NewJSONHandler(w, &slog.HandlerOptions{
+			Level: loglevel,
+		})
+	case TextFormat:
+		return slog.NewTextHandler(w, &slog.HandlerOptions{
+			Level: loglevel,
+		})
+	default:
+		panic("unknown format") // can't happen
+	}
 }
 
-func Errorw(msg string, args M) {
-	logrus.WithFields(logrus.Fields(args)).Error(msg)
+func (l Logger) Infow(msg string, args ...any) {
+	if l.slogger == nil {
+		return
+	}
+	l.slogger.Info(msg, args...)
 }
 
-func Tracew(msg string, args M) {
-	logrus.WithFields(logrus.Fields(args)).Trace(msg)
+func (l Logger) Debugw(msg string, args ...any) {
+	if l.slogger == nil {
+		return
+	}
+	l.slogger.Debug(msg, args...)
 }
 
-func Fatalw(msg string, args M) {
-	logrus.WithFields(logrus.Fields(args)).Fatal(msg)
+func (l Logger) Warnw(msg string, args ...any) {
+	if l.slogger == nil {
+		return
+	}
+	l.slogger.Warn(msg, args...)
 }
 
-func init() {
-	logrus.SetLevel(logrus.TraceLevel)
+func (l Logger) Errorw(msg string, args ...any) {
+	if l.slogger == nil {
+		return
+	}
+	l.slogger.Error(msg, args...)
 }

@@ -28,6 +28,7 @@ type Config struct {
 	// pid := NewPID("127.0.0.1:4000", "foo", "bar")
 	// 127.0.0.1:4000/foo/bar
 	PIDSeparator string
+	Logger       log.Logger
 }
 
 // Engine represents the actor engine.
@@ -38,17 +39,17 @@ type Engine struct {
 	address    string
 	remote     Remoter
 	deadLetter Processer
+	logger     log.Logger
 }
 
 // NewEngine returns a new actor Engine.
 func NewEngine(cfg ...Config) *Engine {
-	e := &Engine{
-		EventStream: NewEventStream(),
-		address:     LocalLookupAddr,
-	}
+	e := &Engine{}
 	if len(cfg) == 1 {
 		e.configure(cfg[0])
 	}
+	e.EventStream = NewEventStream(e.logger)
+	e.address = LocalLookupAddr
 	e.Registry = newRegistry(e)
 	e.deadLetter = newDeadLetter(e.EventStream)
 	e.Registry.add(e.deadLetter)
@@ -59,6 +60,7 @@ func (e *Engine) configure(cfg Config) {
 	if cfg.PIDSeparator != "" {
 		pidSeparator = cfg.PIDSeparator
 	}
+	e.logger = cfg.Logger
 }
 
 // WithRemote returns a new actor Engine with the given Remoter,
@@ -85,7 +87,7 @@ func (e *Engine) SpawnFunc(f func(*Context), id string, opts ...OptFunc) *PID {
 	return e.Spawn(newFuncReceiver(f), id, opts...)
 }
 
-// SpawnProc spawns the give Processer. This function is usefull when working
+// SpawnProc spawns the give Processer. This function is useful when working
 // with custom created Processes. Take a look at the streamWriter as an example.
 func (e *Engine) SpawnProc(p Processer) *PID {
 	e.Registry.add(p)
@@ -132,9 +134,8 @@ func (e *Engine) send(pid *PID, msg any, sender *PID) {
 		return
 	}
 	if e.remote == nil {
-		log.Errorw("[ENGINE] failed sending messsage", log.M{
-			"err": "engine has no remote configured",
-		})
+		e.logger.Errorw("failed sending messsage",
+			"err", "engine has no remote configured")
 		return
 	}
 	e.remote.Send(pid, msg, sender)

@@ -1,10 +1,9 @@
 module github.com/anthdm/hollywood
 
-go 1.19
+go 1.20
 
 require (
 	github.com/planetscale/vtprotobuf v0.4.0
-	github.com/sirupsen/logrus v1.9.0
 	github.com/stretchr/testify v1.8.1
 	google.golang.org/grpc v1.53.0
 	google.golang.org/protobuf v1.30.0

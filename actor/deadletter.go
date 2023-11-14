@@ -13,21 +13,23 @@ import (
 type deadLetter struct {
 	eventStream *EventStream
 	pid         *PID
+	logger      log.Logger
 }
 
 func newDeadLetter(eventStream *EventStream) *deadLetter {
 	return &deadLetter{
 		eventStream: eventStream,
 		pid:         NewPID(LocalLookupAddr, "deadLetter"),
+		logger:      eventStream.logger.SubLogger("[deadLetter]"),
 	}
 }
 
 func (d *deadLetter) Send(dest *PID, msg any, sender *PID) {
-	log.Warnw("[DEADLETTER]", log.M{
-		"dest":   dest,
-		"msg":    reflect.TypeOf(msg),
-		"sender": sender,
-	})
+	d.logger.Warnw("Send",
+		"dest", dest,
+		"msg", reflect.TypeOf(msg),
+		"sender", sender,
+	)
 	d.eventStream.Publish(&DeadLetterEvent{
 		Target:  dest,
 		Message: msg,

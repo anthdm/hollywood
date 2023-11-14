@@ -2,10 +2,10 @@ package main
 
 import (
 	"flag"
+	"log/slog"
 
 	"github.com/anthdm/hollywood/actor"
 	"github.com/anthdm/hollywood/examples/chat/types"
-	"github.com/anthdm/hollywood/log"
 	"github.com/anthdm/hollywood/remote"
 )
 
@@ -30,16 +30,15 @@ func (s *server) Receive(ctx *actor.Context) {
 			return
 		}
 		delete(s.clients, ctx.Sender())
-		log.Infow("client disconnected", log.M{
-			"pid":      ctx.Sender(),
-			"username": username,
-		})
+		slog.Info("client disconnected",
+			"pid", ctx.Sender(),
+			"username", username)
 	case *types.Connect:
 		s.clients[ctx.Sender()] = msg.Username
-		log.Infow("new client connected", log.M{
-			"pid":      ctx.Sender(),
-			"username": msg.Username,
-		})
+		slog.Info("new client connected",
+			"pid", ctx.Sender(),
+			"username", msg.Username,
+		)
 	}
 }
 
@@ -58,7 +57,6 @@ func main() {
 		listenAt = flag.String("listen", "127.0.0.1:4000", "")
 	)
 	flag.Parse()
-	log.SetLevel(log.LevelInfo)
 	e := actor.NewEngine()
 	rem := remote.New(e, remote.Config{
 		ListenAddr: *listenAt,
