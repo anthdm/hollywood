@@ -1,6 +1,8 @@
 package remote
 
 import (
+	"fmt"
+	"math/rand"
 	"sync"
 	"testing"
 	"time"
@@ -16,13 +18,14 @@ func init() {
 }
 
 func TestSend(t *testing.T) {
+	const msgs = 10
 	var (
-		a  = makeRemoteEngine("127.0.0.2:4000")
-		b  = makeRemoteEngine("127.0.0.2:5000")
+		a  = makeRemoteEngine(getRandomLocalhostAddr())
+		b  = makeRemoteEngine(getRandomLocalhostAddr())
 		wg = sync.WaitGroup{}
 	)
 
-	wg.Add(10) // send 2 messages
+	wg.Add(msgs) // send msgs messages
 	pid := a.SpawnFunc(func(c *actor.Context) {
 		switch msg := c.Message().(type) {
 		case *TestMessage:
@@ -31,7 +34,7 @@ func TestSend(t *testing.T) {
 		}
 	}, "dfoo")
 
-	for i := 0; i < 10; i++ {
+	for i := 0; i < msgs; i++ {
 		b.Send(pid, &TestMessage{Data: []byte("foo")})
 	}
 	wg.Wait()
@@ -39,8 +42,8 @@ func TestSend(t *testing.T) {
 
 func TestWithSender(t *testing.T) {
 	var (
-		a         = makeRemoteEngine("127.0.0.4:4000")
-		b         = makeRemoteEngine("127.0.0.4:5000")
+		a         = makeRemoteEngine(getRandomLocalhostAddr())
+		b         = makeRemoteEngine(getRandomLocalhostAddr())
 		wg        = sync.WaitGroup{}
 		senderPID = actor.NewPID("a", "b")
 	)
@@ -65,8 +68,8 @@ func TestWithSender(t *testing.T) {
 
 func TestRequestResponse(t *testing.T) {
 	var (
-		a  = makeRemoteEngine("127.0.0.1:4001")
-		b  = makeRemoteEngine("127.0.0.1:5001")
+		a  = makeRemoteEngine(getRandomLocalhostAddr())
+		b  = makeRemoteEngine(getRandomLocalhostAddr())
 		wg = sync.WaitGroup{}
 	)
 
@@ -95,4 +98,8 @@ func makeRemoteEngine(listenAddr string) *actor.Engine {
 	r := New(e, Config{ListenAddr: listenAddr})
 	e.WithRemote(r)
 	return e
+}
+
+func getRandomLocalhostAddr() string {
+	return fmt.Sprintf("localhost:%d", rand.Intn(50000)+10000)
 }
