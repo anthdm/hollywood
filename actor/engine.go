@@ -21,16 +21,6 @@ type Receiver interface {
 	Receive(*Context)
 }
 
-// Config holds configuration for the actor Engine.
-type Config struct {
-	// PIDSeparator separates a process ID when printed out
-	// in a string representation. The default separator is "/".
-	// pid := NewPID("127.0.0.1:4000", "foo", "bar")
-	// 127.0.0.1:4000/foo/bar
-	PIDSeparator string
-	Logger       log.Logger
-}
-
 // Engine represents the actor engine.
 type Engine struct {
 	EventStream *EventStream
@@ -43,10 +33,11 @@ type Engine struct {
 }
 
 // NewEngine returns a new actor Engine.
-func NewEngine(cfg ...Config) *Engine {
+// You can pass an optional logger through
+func NewEngine(opts ...func(*Engine)) *Engine {
 	e := &Engine{}
-	if len(cfg) == 1 {
-		e.configure(cfg[0])
+	for _, o := range opts {
+		o(e)
 	}
 	e.EventStream = NewEventStream(e.logger)
 	e.address = LocalLookupAddr
@@ -56,11 +47,17 @@ func NewEngine(cfg ...Config) *Engine {
 	return e
 }
 
-func (e *Engine) configure(cfg Config) {
-	if cfg.PIDSeparator != "" {
-		pidSeparator = cfg.PIDSeparator
+func OptLogger(logger log.Logger) func(*Engine) {
+	return func(e *Engine) {
+		e.logger = logger
 	}
-	e.logger = cfg.Logger
+}
+
+func OptPidSeparator(sep string) func(*Engine) {
+	// This looks weird because the separator is a global variable.
+	return func(e *Engine) {
+		pidSeparator = sep
+	}
 }
 
 // WithRemote returns a new actor Engine with the given Remoter,

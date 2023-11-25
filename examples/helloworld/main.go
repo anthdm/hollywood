@@ -31,8 +31,9 @@ func (f *foo) Receive(ctx *actor.Context) {
 }
 
 func main() {
-	lh := log.NewHandler(os.Stdout, log.JsonFormat, slog.LevelDebug)
-	engine := actor.NewEngine(actor.Config{Logger: log.NewLogger("[engine]", lh)})
+	lh := log.NewHandler(os.Stdout, log.TextFormat, slog.LevelDebug)
+	engine := actor.NewEngine(actor.OptLogger(log.NewLogger("[engine]", lh)))
+
 	pid := engine.Spawn(newFoo, "my_actor")
 	for i := 0; i < 100; i++ {
 		engine.Send(pid, &message{data: "hello world!"})
