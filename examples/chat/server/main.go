@@ -11,11 +11,13 @@ import (
 
 type server struct {
 	clients map[*actor.PID]string
+	logger  *slog.Logger
 }
 
 func newServer() actor.Receiver {
 	return &server{
 		clients: make(map[*actor.PID]string),
+		logger:  slog.Default(),
 	}
 }
 
@@ -26,7 +28,7 @@ func (s *server) Receive(ctx *actor.Context) {
 	case *types.Disconnect:
 		username, ok := s.clients[ctx.Sender()]
 		if !ok {
-			// ignore a non existing client
+			s.logger.Warn("unknown client disconnected", "client", ctx.Sender().GetID())
 			return
 		}
 		delete(s.clients, ctx.Sender())
@@ -44,9 +46,11 @@ func (s *server) Receive(ctx *actor.Context) {
 
 // handle the incoming message by broadcasting it to all connected clients.
 func (s *server) handleMessage(ctx *actor.Context, msg *types.Message) {
+	s.logger.Info("incoming message", "from", msg.Username, "message", msg.Msg)
 	for pid := range s.clients {
-		// dont send message to ourselves
+		// dont send message to the place where it came from.
 		if !pid.Equals(ctx.Sender()) {
+			s.logger.Info("forwarding message", "pid", pid.ID, "addr", pid.Address)
 			ctx.Forward(pid)
 		}
 	}
