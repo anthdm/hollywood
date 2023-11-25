@@ -47,13 +47,13 @@ func NewEngine(opts ...func(*Engine)) *Engine {
 	return e
 }
 
-func OptLogger(logger log.Logger) func(*Engine) {
+func EngineOptLogger(logger log.Logger) func(*Engine) {
 	return func(e *Engine) {
 		e.logger = logger
 	}
 }
 
-func OptPidSeparator(sep string) func(*Engine) {
+func EngineOptPidSeparator(sep string) func(*Engine) {
 	// This looks weird because the separator is a global variable.
 	return func(e *Engine) {
 		pidSeparator = sep

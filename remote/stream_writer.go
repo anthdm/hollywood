@@ -93,7 +93,7 @@ func (s *streamWriter) Invoke(msgs []actor.Envelope) {
 
 	if err := s.stream.Send(env); err != nil {
 		if errors.Is(err, io.EOF) {
-			s.conn.Close()
+			_ = s.conn.Close()
 			return
 		}
 		s.logger.Errorw("failed sending message",

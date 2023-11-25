@@ -135,10 +135,10 @@ time.Sleep(time.Second)
 ## Customizing the Engine
 
 We're using the function option pattern. All function options are in the actor package and start their name with
-"Opt". So, setting a custom PID separator for the output looks like this:
+"EngineOpt". So, setting a custom PID separator for the output looks like this:
 
 ```go
-	e := actor.NewEngine(actor.OptPidSeparator("→"))
+	e := actor.NewEngine(actor.EngineOptPidSeparator("→"))
 ```
 
 After configuring the Engine with a custom PID Separator the string representation of PIDS will look like this:
@@ -171,14 +171,14 @@ If you want Hollywood to log with its defaults, it will provide structured loggi
 You'll then initialize the engine as such:
 
 ```go
-    engine := actor.NewEngine(actor.OptLogger(log.Default()))
+    engine := actor.NewEngine(actor.EngineOptLogger(log.Default()))
 ```
 
 If you want more control, say by having the loglevel be DEBUG and the output format be JSON, you can do so by
 
 ```go
 	lh := log.NewHandler(os.Stdout, log.JsonFormat, slog.LevelDebug)
-    engine := actor.NewEngine(actor.OptLogger(log.NewLogger("[engine]", lh)))
+    engine := actor.NewEngine(actor.EngineOptLogger(log.NewLogger("[engine]", lh)))
 ```
 
 This will have the engine itself log with the field "log", prepopulated with the value "[engine]" for the engine itself.
