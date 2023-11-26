@@ -134,11 +134,11 @@ time.Sleep(time.Second)
 
 ## Customizing the Engine
 
+We're using the function option pattern. All function options are in the actor package and start their name with
+"EngineOpt". So, setting a custom PID separator for the output looks like this:
+
 ```go
-    cfg := actor.Config{
-	PIDSeparator: "->",
-    }
-    e := actor.NewEngine(cfg)
+	e := actor.NewEngine(actor.EngineOptPidSeparator("→"))
 ```
 
 After configuring the Engine with a custom PID Separator the string representation of PIDS will look like this:
@@ -164,21 +164,21 @@ The default for Hollywood is, as any good library, not to log anything, but rath
 configure logging as it sees fit. However, as a convenience, Hollywood provides a simple logging package that
 you can use to gain some insight into what is going on inside the library.
 
-When you create a Hollywood engine, you can provide an optional actor configuration. This gives you the opportunity to
-have the log package create a suitable logger. The logger will be based on the standard library's `log/slog` package.
+When you create a Hollywood engine, you can pass some configuration options. This gives you the opportunity to
+have the log package create a suitable logger. The logger is based on the standard library's `log/slog` package.
 
 If you want Hollywood to log with its defaults, it will provide structured logging with the loglevel being `ÌNFO`.
 You'll then initialize the engine as such:
 
 ```go
-    engine := actor.NewEngine(actor.Config{Logger: log.Default()})
+    engine := actor.NewEngine(actor.EngineOptLogger(log.Default()))
 ```
 
-If you want more control, say by having having the loglevel be DEBUG and the output format be JSON, you can do so by
+If you want more control, say by having the loglevel be DEBUG and the output format be JSON, you can do so by
 
 ```go
-    lh := log.NewHandler(os.Stdout, log.JsonFormat, slog.LevelDebug)
-    engine := actor.NewEngine(actor.Config{Logger: log.NewLogger("[engine]", lh)})
+	lh := log.NewHandler(os.Stdout, log.JsonFormat, slog.LevelDebug)
+    engine := actor.NewEngine(actor.EngineOptLogger(log.NewLogger("[engine]", lh)))
 ```
 
 This will have the engine itself log with the field "log", prepopulated with the value "[engine]" for the engine itself.

@@ -47,7 +47,7 @@ func main() {
 	)
 	flag.Parse()
 
-	e := actor.NewEngine(actor.Config{Logger: log.Default()})
+	e := actor.NewEngine(actor.EngineOptLogger(log.Default()))
 	rem := remote.New(e, remote.Config{
 		ListenAddr: *listenAt,
 		Logger:     log.NewLogger("[remote]", log.NewHandler(os.Stdout, log.TextFormat, slog.LevelDebug)),
