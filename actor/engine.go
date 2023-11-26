@@ -36,12 +36,13 @@ type Engine struct {
 // You can pass an optional logger through
 func NewEngine(opts ...func(*Engine)) *Engine {
 	e := &Engine{}
+	e.address = LocalLookupAddr
+	e.Registry = newRegistry(e)      // need to init the registry in case we want a custom deadletter
+	e.EventStream = NewEventStream() //
 	for _, o := range opts {
 		o(e)
 	}
-	e.EventStream = NewEventStream(e.logger)
-	e.address = LocalLookupAddr
-	e.Registry = newRegistry(e)
+
 	// if no deadletter is registered, we will register the default deadletter from deadletter.go
 	if e.deadLetter == nil {
 		e.logger.Debugw("no deadletter receiver set, registering default")
@@ -53,6 +54,9 @@ func NewEngine(opts ...func(*Engine)) *Engine {
 func EngineOptLogger(logger log.Logger) func(*Engine) {
 	return func(e *Engine) {
 		e.logger = logger
+		// This is a bit hacky, but we need to set the logger for the eventstream
+		// which cannot be set in the constructor since the logger is not set yet.
+		e.EventStream.logger = logger.SubLogger("[eventStream]")
 	}
 }
 
@@ -63,9 +67,9 @@ func EngineOptPidSeparator(sep string) func(*Engine) {
 	}
 }
 
-func EngineOptDeadletter(deadletter *PID) func(*Engine) {
+func EngineOptDeadletter(d Producer) func(*Engine) {
 	return func(e *Engine) {
-		e.deadLetter = deadletter
+		e.deadLetter = e.Spawn(d, "deadletter")
 	}
 }
 
@@ -203,9 +207,16 @@ func (e *Engine) Poison(pid *PID, wg ...*sync.WaitGroup) *sync.WaitGroup {
 	}
 	_wg.Add(1)
 	proc := e.Registry.get(pid)
-	if proc != nil {
-		e.SendLocal(pid, poisonPill{_wg}, nil)
+	if proc == nil {
+		// send a deadletter message
+		e.Send(e.deadLetter, &DeadLetterEvent{
+			Target:  pid,
+			Message: poisonPill{_wg},
+			Sender:  nil,
+		})
+		return _wg
 	}
+	e.SendLocal(pid, poisonPill{_wg}, nil)
 	return _wg
 }
 
@@ -214,11 +225,16 @@ func (e *Engine) Poison(pid *PID, wg ...*sync.WaitGroup) *sync.WaitGroup {
 // process registered, the function will panic.
 func (e *Engine) SendLocal(pid *PID, msg any, sender *PID) {
 	proc := e.Registry.get(pid)
-	if proc != nil {
-		proc.Send(pid, msg, sender)
+	if proc == nil {
+		// send a deadletter message
+		e.Send(e.deadLetter, &DeadLetterEvent{
+			Target:  pid,
+			Message: msg,
+			Sender:  sender,
+		})
 		return
 	}
-	panic("no way to handle message (didn't find deadletter)")
+	proc.Send(pid, msg, sender)
 }
 
 func (e *Engine) isLocalMessage(pid *PID) bool {

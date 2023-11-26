@@ -35,10 +35,13 @@ func (r *Registry) get(pid *PID) Processer {
 	if proc, ok := r.lookup[pid.ID]; ok {
 		return proc
 	}
-	if proc, ok := r.lookup["deadletter"]; ok {
-		return proc
-	}
-	panic("no deadletter registered")
+	/*
+		if proc, ok := r.lookup["deadletter"]; ok {
+			return proc
+		}
+
+	*/
+	return nil // didn't find the processer
 }
 
 func (r *Registry) getByID(id string) Processer {

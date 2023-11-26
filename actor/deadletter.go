@@ -21,6 +21,8 @@ func newDeadLetter() Receiver {
 	}
 }
 
+// Receive implements the Receiver interface, handling the deadletter messages.
+// Todo: this will grow and grow. Maybe we want a limit on this?
 func (d *deadLetter) Receive(ctx *Context) {
 	switch msg := ctx.Message().(type) {
 	case Started:
@@ -40,13 +42,10 @@ func (d *deadLetter) Receive(ctx *Context) {
 		if msg.Flush {
 			d.msgs = d.msgs[:0]
 		}
-	default:
+	case *DeadLetterEvent:
 		d.logger.Warnw("deadletter arrived", "msg", msg, "sender", ctx.Sender())
-		dl := DeadLetterEvent{
-			Target:  nil, // todo: how to get the target?
-			Message: msg,
-			Sender:  ctx.Sender(),
-		}
-		d.msgs = append(d.msgs, &dl)
+		d.msgs = append(d.msgs, msg)
+	default:
+		d.logger.Errorw("unknown message arrived", "msg", msg)
 	}
 }
