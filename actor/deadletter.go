@@ -2,41 +2,51 @@ package actor
 
 import (
 	"github.com/anthdm/hollywood/log"
-	"sync"
 )
 
-// TODO: The deadLetter is implemented as a plain Processer, but
-// can actually be implemented as a Receiver. This is a good first issue.
+//
 
 type deadLetter struct {
 	logger log.Logger
 	pid    *PID
-	msgs   []any
+	msgs   []*DeadLetterEvent
 }
 
-func newDeadLetter(logger log.Logger) Receiver {
+func newDeadLetter() Receiver {
+	pid := NewPID(LocalLookupAddr, "deadLetter")
+	msgs := make([]*DeadLetterEvent, 0)
 	return &deadLetter{
-		msgs:   make([]any, 0),
-		logger: logger.SubLogger("[deadLetter]"),
-		pid:    NewPID(LocalLookupAddr, "deadLetter"),
+		msgs: msgs,
+		pid:  pid,
 	}
 }
 
 func (d *deadLetter) Receive(ctx *Context) {
 	switch msg := ctx.Message().(type) {
-	case *DeadLetterEvent:
-		d.msgs = append(d.msgs, msg)
+	case Started:
+		// intialize logger on deadletter startup. this should be sanity checked
+		d.logger = ctx.Engine().logger.SubLogger("[deadletter]")
+		d.logger.Debugw("default deadletter actor started")
+	case Stopped:
+		d.logger.Debugw("default deadletter actor stopped")
+	case Initialized:
+		d.logger.Debugw("default deadletter actor initialized")
 	case *DeadLetterFlush:
-		d.msgs = make([]any, 0)
+		d.logger.Debugw("deadletter queue flushed", "msgs", len(d.msgs), "sender", ctx.Sender())
+		d.msgs = make([]*DeadLetterEvent, 0)
 	case *DeadLetterFetch:
-		ctx.Respond(d.msgs)
+		d.logger.Debugw("deadletter fetch", "msgs", len(d.msgs), "sender", ctx.Sender(), "flush", msg.Flush)
+		ctx.Respond(d.msgs) // this is a sync request.
 		if msg.Flush {
-			d.msgs = make([]any, 0)
+			d.msgs = d.msgs[:0]
 		}
+	default:
+		d.logger.Warnw("deadletter arrived", "msg", msg, "sender", ctx.Sender())
+		dl := DeadLetterEvent{
+			Target:  nil, // todo: how to get the target?
+			Message: msg,
+			Sender:  ctx.Sender(),
+		}
+		d.msgs = append(d.msgs, &dl)
 	}
 }
-
-func (d *deadLetter) PID() *PID                  { return d.pid }
-func (d *deadLetter) Shutdown(_ *sync.WaitGroup) {}
-func (d *deadLetter) Start()                     {}
-func (d *deadLetter) Invoke([]Envelope)          {}

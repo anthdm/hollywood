@@ -28,7 +28,7 @@ type Engine struct {
 
 	address    string
 	remote     Remoter
-	deadLetter Receiver
+	deadLetter *PID
 	logger     log.Logger
 }
 
@@ -42,7 +42,11 @@ func NewEngine(opts ...func(*Engine)) *Engine {
 	e.EventStream = NewEventStream(e.logger)
 	e.address = LocalLookupAddr
 	e.Registry = newRegistry(e)
-	e.deadLetter = newDeadLetter(e.logger)
+	// if no deadletter is registered, we will register the default deadletter from deadletter.go
+	if e.deadLetter == nil {
+		e.logger.Debugw("no deadletter receiver set, registering default")
+		e.deadLetter = e.Spawn(newDeadLetter, "deadletter")
+	}
 	return e
 }
 
@@ -56,6 +60,12 @@ func EngineOptPidSeparator(sep string) func(*Engine) {
 	// This looks weird because the separator is a global variable.
 	return func(e *Engine) {
 		pidSeparator = sep
+	}
+}
+
+func EngineOptDeadletter(deadletter *PID) func(*Engine) {
+	return func(e *Engine) {
+		e.deadLetter = deadletter
 	}
 }
 
@@ -199,11 +209,16 @@ func (e *Engine) Poison(pid *PID, wg ...*sync.WaitGroup) *sync.WaitGroup {
 	return _wg
 }
 
+// SendLocal will send the given message to the given PID. If the recipient is not found in the
+// registry, the message will be sent to the DeadLetter process instead. If there is no deadletter
+// process registered, the function will panic.
 func (e *Engine) SendLocal(pid *PID, msg any, sender *PID) {
 	proc := e.Registry.get(pid)
 	if proc != nil {
 		proc.Send(pid, msg, sender)
+		return
 	}
+	panic("no way to handle message (didn't find deadletter)")
 }
 
 func (e *Engine) isLocalMessage(pid *PID) bool {

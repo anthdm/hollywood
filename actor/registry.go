@@ -35,8 +35,10 @@ func (r *Registry) get(pid *PID) Processer {
 	if proc, ok := r.lookup[pid.ID]; ok {
 		return proc
 	}
-
-	return r.engine.deadLetter
+	if proc, ok := r.lookup["deadletter"]; ok {
+		return proc
+	}
+	panic("no deadletter registered")
 }
 
 func (r *Registry) getByID(id string) Processer {
