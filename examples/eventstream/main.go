@@ -12,7 +12,7 @@ import (
 
 func main() {
 	lh := log.NewHandler(os.Stdout, log.TextFormat, slog.LevelDebug)
-	e := actor.NewEngine(actor.Config{Logger: log.NewLogger("[engine]", lh)})
+	e := actor.NewEngine(actor.EngineOptLogger(log.NewLogger("[engine]", lh)))
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 
