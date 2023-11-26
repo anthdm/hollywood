@@ -28,7 +28,7 @@ type Engine struct {
 
 	address    string
 	remote     Remoter
-	deadLetter Processer
+	deadLetter Receiver
 	logger     log.Logger
 }
 
@@ -42,8 +42,7 @@ func NewEngine(opts ...func(*Engine)) *Engine {
 	e.EventStream = NewEventStream(e.logger)
 	e.address = LocalLookupAddr
 	e.Registry = newRegistry(e)
-	e.deadLetter = newDeadLetter(e.EventStream)
-	e.Registry.add(e.deadLetter)
+	e.deadLetter = newDeadLetter(e.logger)
 	return e
 }
 

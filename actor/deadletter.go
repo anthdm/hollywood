@@ -1,40 +1,39 @@
 package actor
 
 import (
-	"reflect"
-	"sync"
-
 	"github.com/anthdm/hollywood/log"
+	"sync"
 )
 
 // TODO: The deadLetter is implemented as a plain Processer, but
 // can actually be implemented as a Receiver. This is a good first issue.
 
 type deadLetter struct {
-	eventStream *EventStream
-	pid         *PID
-	logger      log.Logger
+	logger log.Logger
+	pid    *PID
+	msgs   []any
 }
 
-func newDeadLetter(eventStream *EventStream) *deadLetter {
+func newDeadLetter(logger log.Logger) Receiver {
 	return &deadLetter{
-		eventStream: eventStream,
-		pid:         NewPID(LocalLookupAddr, "deadLetter"),
-		logger:      eventStream.logger.SubLogger("[deadLetter]"),
+		msgs:   make([]any, 0),
+		logger: logger.SubLogger("[deadLetter]"),
+		pid:    NewPID(LocalLookupAddr, "deadLetter"),
 	}
 }
 
-func (d *deadLetter) Send(dest *PID, msg any, sender *PID) {
-	d.logger.Warnw("Send",
-		"dest", dest,
-		"msg", reflect.TypeOf(msg),
-		"sender", sender,
-	)
-	d.eventStream.Publish(&DeadLetterEvent{
-		Target:  dest,
-		Message: msg,
-		Sender:  sender,
-	})
+func (d *deadLetter) Receive(ctx *Context) {
+	switch msg := ctx.Message().(type) {
+	case *DeadLetterEvent:
+		d.msgs = append(d.msgs, msg)
+	case *DeadLetterFlush:
+		d.msgs = make([]any, 0)
+	case *DeadLetterFetch:
+		ctx.Respond(d.msgs)
+		if msg.Flush {
+			d.msgs = make([]any, 0)
+		}
+	}
 }
 
 func (d *deadLetter) PID() *PID                  { return d.pid }

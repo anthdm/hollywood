@@ -35,6 +35,7 @@ func (r *Registry) get(pid *PID) Processer {
 	if proc, ok := r.lookup[pid.ID]; ok {
 		return proc
 	}
+
 	return r.engine.deadLetter
 }
 
