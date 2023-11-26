@@ -18,6 +18,9 @@ func (s *SafeMap[K, V]) Set(k K, v V) {
 
 func (s *SafeMap[K, V]) Get(k K) (V, bool) {
 	val, ok := s.data.Load(k)
+	if !ok {
+		return *new(V), false // Return zero value of type V and false
+	}
 	return val.(V), ok
 }
 
