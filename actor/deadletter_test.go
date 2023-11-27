@@ -1,6 +1,7 @@
 package actor
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/anthdm/hollywood/log"
 	"github.com/stretchr/testify/assert"
@@ -14,7 +15,8 @@ import (
 // It will spawn a new actor, kill it, send a message to it and then check if the deadletter
 // received the message.
 func TestDeadLetterDefault(t *testing.T) {
-	lh := log.NewHandler(os.Stdout, log.TextFormat, slog.LevelDebug)
+	logBuffer := bytes.Buffer{}
+	lh := log.NewHandler(&logBuffer, log.TextFormat, slog.LevelDebug)
 	e := NewEngine(EngineOptLogger(log.NewLogger("[engine]", lh)))
 	a1 := e.Spawn(newTestActor, "a1")
 	assert.NotNil(t, a1)
@@ -23,16 +25,9 @@ func TestDeadLetterDefault(t *testing.T) {
 	e.Poison(a1).Wait()            // poison the a1 actor
 	e.Send(a1, testMessage{"bar"}) // should end up the deadletter queue
 	time.Sleep(time.Millisecond)   // a flush would be nice here
-	// flushes the deadletter queue, and returns the messages:
-	resp, err := e.Request(dl.PID(), &DeadLetterFetch{Flush: true}, time.Millisecond*10).Result()
-	assert.Nil(t, err)
-	assert.NotNil(t, resp)
-	respDeadLetters, ok := resp.([]*DeadLetterEvent)
-	assert.True(t, ok)                       // should be a slice of deadletter events
-	assert.Equal(t, 1, len(respDeadLetters)) // should be one deadletter event
-	ev, ok := respDeadLetters[0].Message.(testMessage)
-	assert.True(t, ok) // should be a test message
-	assert.Equal(t, "bar", ev.data)
+
+	// check the log buffer for the deadletter
+	assert.Contains(t, logBuffer.String(), "deadletter arrived")
 
 }
 
@@ -55,7 +50,7 @@ func TestDeadLetterCustom(t *testing.T) {
 	fmt.Println("==== sending message via a1 to deadletter ====")
 	e.Send(a1, testMessage{"bar"})
 	time.Sleep(time.Millisecond) // a flush would be nice here :-)
-	resp, err := e.Request(dl.PID(), &DeadLetterFetch{Flush: true}, time.Millisecond*10).Result()
+	resp, err := e.Request(dl.PID(), &customDeadLetterFetch{flush: true}, time.Millisecond*10).Result()
 	assert.Nil(t, err)     // no error from the request
 	assert.NotNil(t, resp) // we should get a response to our request
 	respDeadLetters, ok := resp.([]*DeadLetterEvent)
@@ -74,9 +69,11 @@ type testMessage struct {
 func newTestActor() Receiver {
 	return testActor{}
 }
-func (t testActor) Receive(ctx *Context) {
+func (t testActor) Receive(_ *Context) {
 	// do nothing
 }
+
+type customDeadLetterFetch struct{ flush bool }
 
 // customDeadLetter is a custom deadletter actor / receiver
 type customDeadLetter struct {
@@ -93,10 +90,11 @@ func newCustomDeadLetter() Receiver {
 // that deals with deadletters. It will store the deadletters in a slice.
 func (c *customDeadLetter) Receive(ctx *Context) {
 	switch ctx.Message().(type) {
-	case *DeadLetterFlush:
-		c.deadLetters = c.deadLetters[:0]
-	case *DeadLetterFetch:
+	case *customDeadLetterFetch:
 		ctx.Respond(c.deadLetters)
+		if ctx.Message().(*customDeadLetterFetch).flush {
+			c.deadLetters = make([]*DeadLetterEvent, 0)
+		}
 	case *DeadLetterEvent:
 		slog.Warn("received deadletter event")
 		msg, ok := ctx.Message().(*DeadLetterEvent)

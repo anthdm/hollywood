@@ -10,13 +10,6 @@ type DeadLetterEvent struct {
 	Sender  *PID
 }
 
-// DeadLetterFlush is used to flush the DeadLetter queue.
-type DeadLetterFlush struct{}
-
-type DeadLetterFetch struct {
-	Flush bool
-}
-
 // ActivationEvent is broadcasted over the EventStream each time
 // a Receiver is spawned and activated. This mean at the point of
 // receiving this event the Receiver is ready to process messages.
