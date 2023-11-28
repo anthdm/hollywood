@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"log/slog"
 	"os"
+	"sync"
 	"testing"
 	"time"
 )
@@ -15,7 +16,7 @@ import (
 // It will spawn a new actor, kill it, send a message to it and then check if the deadletter
 // received the message.
 func TestDeadLetterDefault(t *testing.T) {
-	logBuffer := bytes.Buffer{}
+	logBuffer := SafeBuffer{}
 	lh := log.NewHandler(&logBuffer, log.TextFormat, slog.LevelDebug)
 	e := NewEngine(EngineOptLogger(log.NewLogger("[engine]", lh)))
 	a1 := e.Spawn(newTestActor, "a1")
@@ -105,3 +106,22 @@ func (c *customDeadLetter) Receive(ctx *Context) {
 		c.deadLetters = append(c.deadLetters, msg)
 	}
 }
+
+type SafeBuffer struct {
+	buf bytes.Buffer
+	mu  sync.Mutex
+}
+
+func (sb *SafeBuffer) Write(p []byte) (n int, err error) {
+	sb.mu.Lock()
+	defer sb.mu.Unlock()
+	return sb.buf.Write(p)
+}
+
+func (sb *SafeBuffer) String() string {
+	sb.mu.Lock()
+	defer sb.mu.Unlock()
+	return sb.buf.String()
+}
+
+// Usage in goroutines...
