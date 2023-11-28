@@ -148,6 +148,11 @@ After configuring the Engine with a custom PID Separator the string representati
     // 127.0.0.1:3000->foo->bar->baz->1
 ```
 
+You can provide your own actor to do deadletter handling. This is useful if you want to forward deadletters to a
+monitoring service or log them somewhere. The default deadletter handler will, if you have enabled logging, 
+log the deadletter to the logs, using WARN as the log level. For details on how to set up a custom deadletter handler,
+please see the `actor/deadletter_test.go` file, where a custom deadletter handler is set up for testing purposes.
+
 Note that you can also provide a custom logger to the engine. See the Logging section for more details.
 
 ## Custom middleware
