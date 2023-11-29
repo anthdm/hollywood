@@ -12,6 +12,28 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestPoisonShouldFlush(t *testing.T) {
+	e := NewEngine()
+	pid := e.SpawnFunc(func(c *Context) {
+		switch c.Message().(type) {
+		case Started:
+			fmt.Println("started")
+		case Stopped:
+			fmt.Println("stopped")
+		}
+	}, "foo")
+
+	go func() {
+		for {
+			e.Send(pid, "themessage")
+		}
+	}()
+
+	time.Sleep(time.Second)
+	e.Poison(pid)
+	time.Sleep(time.Second * 2)
+}
+
 type tick struct{}
 type tickReceiver struct {
 	ticks int

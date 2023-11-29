@@ -63,6 +63,9 @@ func (p *process) Invoke(msgs []Envelope) {
 		nmsg = len(msgs)
 		// numbers of msgs that are processed.
 		nproc = 0
+		// TODO/FIXME: figure out why using nproc at the bottom
+		// of the function freezes tests.
+		processed = 0
 	)
 	defer func() {
 		// If we recovered, we buffer up all the messages that we could not process
@@ -82,17 +85,23 @@ func (p *process) Invoke(msgs []Envelope) {
 		nproc++
 		msg := msgs[i]
 		if pill, ok := msg.Msg.(poisonPill); ok {
+			fmt.Printf("Need to stop but still need to process %d messages out of %d\n", len(msgs)-processed, len(msgs))
 			p.cleanup(pill.wg)
 			return
 		}
-		p.context.message = msg.Msg
-		p.context.sender = msg.Sender
-		recv := p.context.receiver
-		if len(p.Opts.Middleware) > 0 {
-			applyMiddleware(recv.Receive, p.Opts.Middleware...)(p.context)
-		} else {
-			recv.Receive(p.context)
-		}
+		p.invokeMsg(msg)
+		processed++
+	}
+}
+
+func (p *process) invokeMsg(msg Envelope) {
+	p.context.message = msg.Msg
+	p.context.sender = msg.Sender
+	recv := p.context.receiver
+	if len(p.Opts.Middleware) > 0 {
+		applyMiddleware(recv.Receive, p.Opts.Middleware...)(p.context)
+	} else {
+		recv.Receive(p.context)
 	}
 }
 
