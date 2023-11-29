@@ -12,6 +12,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// TODO: How to test this thing huh? Should have bookkeeping counters
+// in the processor or the inbox..
 func TestPoisonShouldFlush(t *testing.T) {
 	e := NewEngine()
 	pid := e.SpawnFunc(func(c *Context) {
@@ -24,8 +26,10 @@ func TestPoisonShouldFlush(t *testing.T) {
 	}, "foo")
 
 	go func() {
+		i := 0
 		for {
-			e.Send(pid, "themessage")
+			e.Send(pid, i)
+			i++
 		}
 	}()
 

@@ -63,8 +63,9 @@ func (p *process) Invoke(msgs []Envelope) {
 		nmsg = len(msgs)
 		// numbers of msgs that are processed.
 		nproc = 0
-		// TODO/FIXME: figure out why using nproc at the bottom
-		// of the function freezes tests.
+		// FIXME: We could use nrpoc here, but for some reason placing nproc++ on the
+		// bottom of the function it freezes some tests. Hence, I created a new counter
+		// for bookkeeping.
 		processed = 0
 	)
 	defer func() {
@@ -85,7 +86,10 @@ func (p *process) Invoke(msgs []Envelope) {
 		nproc++
 		msg := msgs[i]
 		if pill, ok := msg.Msg.(poisonPill); ok {
-			fmt.Printf("Need to stop but still need to process %d messages out of %d\n", len(msgs)-processed, len(msgs))
+			msgsToProcess := msgs[processed:]
+			for _, m := range msgsToProcess {
+				p.invokeMsg(m)
+			}
 			p.cleanup(pill.wg)
 			return
 		}
