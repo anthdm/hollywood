@@ -38,7 +38,7 @@ func (pid *PID) Child(id string, tags ...string) *PID {
 }
 
 func (pid *PID) HasTag(tag string) bool {
-	panic("TODO")
+	return strings.Contains(pid.ID, pidSeparator+tag+pidSeparator)
 }
 
 func (pid *PID) LookupKey() uint64 {

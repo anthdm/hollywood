@@ -41,13 +41,19 @@ func (r *Remote) Start() {
 	}
 
 	mux := drpcmux.New()
-	DRPCRegisterRemote(mux, r.streamReader)
+	err = DRPCRegisterRemote(mux, r.streamReader)
+	if err != nil {
+		r.logger.Errorw("failed to register remote", "err", err)
+	}
 	s := drpcserver.New(mux)
 
 	r.streamRouterPID = r.engine.Spawn(newStreamRouter(r.engine, r.logger), "router", actor.WithInboxSize(1024*1024))
 	r.logger.Infow("server started", "listenAddr", r.config.ListenAddr)
 	ctx := context.Background()
-	go s.Serve(ctx, ln)
+	go func() {
+		err := s.Serve(ctx, ln)
+		r.logger.Errorw("drpcserver stopped", "err", err)
+	}()
 }
 
 // Send sends the given message to the process with the given pid over the network.

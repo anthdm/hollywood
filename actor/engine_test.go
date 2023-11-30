@@ -227,8 +227,8 @@ func TestStop(t *testing.T) {
 		e.Stop(pid, stopwg)
 		stopwg.Wait()
 		// When a process is poisoned it should be removed from the registry.
-		// Hence, we should get the dead letter process here.
-		assert.Equal(t, e.deadLetter, e.Registry.get(pid))
+		// Hence, we should get nil when looking it up in the registry.
+		assert.Nil(t, e.Registry.get(pid))
 	}
 }
 
@@ -277,8 +277,9 @@ func TestPoison(t *testing.T) {
 		e.Poison(pid, stopwg)
 		stopwg.Wait()
 		// When a process is poisoned it should be removed from the registry.
-		// Hence, we should get the dead letter process here.
-		assert.Equal(t, e.deadLetter, e.Registry.get(pid))
+		// Hence, we should get NIL when we try to get it.
+		assert.Nil(t, e.Registry.get(pid))
+
 	}
 }
 
@@ -294,10 +295,10 @@ func TestRequestResponse(t *testing.T) {
 	res, err := resp.Result()
 	assert.Nil(t, err)
 	assert.Equal(t, "bar", res)
-	// Response PID should be the dead letter PID. This is because
+	// Response PID should be nil here. This is because
 	// the actual response process that will handle this RPC
-	// is deregistered. Test that its actually cleaned up.
-	assert.Equal(t, e.deadLetter, e.Registry.get(resp.pid))
+	// is deregistered. Test that it is actually cleaned up.
+	assert.Nil(t, e.Registry.get(resp.pid))
 }
 
 // 56 ns/op
