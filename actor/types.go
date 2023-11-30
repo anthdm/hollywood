@@ -29,7 +29,8 @@ type InternalError struct {
 }
 
 type poisonPill struct {
-	wg *sync.WaitGroup
+	wg       *sync.WaitGroup
+	graceful bool
 }
 type Initialized struct{}
 type Started struct{}

@@ -182,6 +182,56 @@ func TestSpawn(t *testing.T) {
 	wg.Wait()
 }
 
+func TestStopWaitGroup(t *testing.T) {
+	var (
+		e  = NewEngine()
+		wg = sync.WaitGroup{}
+		x  = int32(0)
+	)
+	wg.Add(1)
+
+	pid := e.SpawnFunc(func(c *Context) {
+		switch c.Message().(type) {
+		case Started:
+			wg.Done()
+		case Stopped:
+			atomic.AddInt32(&x, 1)
+		}
+	}, "foo")
+	wg.Wait()
+
+	pwg := &sync.WaitGroup{}
+	e.Stop(pid, pwg)
+	pwg.Wait()
+	assert.Equal(t, int32(1), atomic.LoadInt32(&x))
+}
+
+func TestStop(t *testing.T) {
+	var (
+		e  = NewEngine()
+		wg = sync.WaitGroup{}
+	)
+	for i := 0; i < 4; i++ {
+		wg.Add(1)
+		tag := strconv.Itoa(i)
+		pid := e.SpawnFunc(func(c *Context) {
+			switch c.Message().(type) {
+			case Started:
+				wg.Done()
+			case Stopped:
+			}
+		}, "foo", WithTags(tag))
+
+		wg.Wait()
+		stopwg := &sync.WaitGroup{}
+		e.Stop(pid, stopwg)
+		stopwg.Wait()
+		// When a process is poisoned it should be removed from the registry.
+		// Hence, we should get the dead letter process here.
+		assert.Equal(t, e.deadLetter, e.Registry.get(pid))
+	}
+}
+
 func TestPoisonWaitGroup(t *testing.T) {
 	var (
 		e  = NewEngine()
