@@ -12,32 +12,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TODO: How to test this thing huh? Should have bookkeeping counters
-// in the processor or the inbox..
-func TestPoisonShouldFlush(t *testing.T) {
-	e := NewEngine()
-	pid := e.SpawnFunc(func(c *Context) {
-		switch c.Message().(type) {
-		case Started:
-			fmt.Println("started")
-		case Stopped:
-			fmt.Println("stopped")
-		}
-	}, "foo")
-
-	go func() {
-		i := 0
-		for {
-			e.Send(pid, i)
-			i++
-		}
-	}()
-
-	time.Sleep(time.Second)
-	e.Poison(pid)
-	time.Sleep(time.Second * 2)
-}
-
 type tick struct{}
 type tickReceiver struct {
 	ticks int
@@ -206,6 +180,56 @@ func TestSpawn(t *testing.T) {
 		}(i)
 	}
 	wg.Wait()
+}
+
+func TestStopWaitGroup(t *testing.T) {
+	var (
+		e  = NewEngine()
+		wg = sync.WaitGroup{}
+		x  = int32(0)
+	)
+	wg.Add(1)
+
+	pid := e.SpawnFunc(func(c *Context) {
+		switch c.Message().(type) {
+		case Started:
+			wg.Done()
+		case Stopped:
+			atomic.AddInt32(&x, 1)
+		}
+	}, "foo")
+	wg.Wait()
+
+	pwg := &sync.WaitGroup{}
+	e.Stop(pid, pwg)
+	pwg.Wait()
+	assert.Equal(t, int32(1), atomic.LoadInt32(&x))
+}
+
+func TestStop(t *testing.T) {
+	var (
+		e  = NewEngine()
+		wg = sync.WaitGroup{}
+	)
+	for i := 0; i < 4; i++ {
+		wg.Add(1)
+		tag := strconv.Itoa(i)
+		pid := e.SpawnFunc(func(c *Context) {
+			switch c.Message().(type) {
+			case Started:
+				wg.Done()
+			case Stopped:
+			}
+		}, "foo", WithTags(tag))
+
+		wg.Wait()
+		stopwg := &sync.WaitGroup{}
+		e.Stop(pid, stopwg)
+		stopwg.Wait()
+		// When a process is poisoned it should be removed from the registry.
+		// Hence, we should get the dead letter process here.
+		assert.Equal(t, e.deadLetter, e.Registry.get(pid))
+	}
 }
 
 func TestPoisonWaitGroup(t *testing.T) {
