@@ -86,9 +86,13 @@ func (p *process) Invoke(msgs []Envelope) {
 		nproc++
 		msg := msgs[i]
 		if pill, ok := msg.Msg.(poisonPill); ok {
-			msgsToProcess := msgs[processed:]
-			for _, m := range msgsToProcess {
-				p.invokeMsg(m)
+			// If we need to gracefuly stop, we process all the messages
+			// from the inbox, otherwise we ignore and cleanup.
+			if pill.graceful {
+				msgsToProcess := msgs[processed:]
+				for _, m := range msgsToProcess {
+					p.invokeMsg(m)
+				}
 			}
 			p.cleanup(pill.wg)
 			return

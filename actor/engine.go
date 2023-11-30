@@ -185,10 +185,21 @@ func (e *Engine) SendRepeat(pid *PID, msg any, interval time.Duration) SendRepea
 	return sr
 }
 
-// Poison will send a poisonPill to the process that is associated with the given PID.
-// The process will shut down once it processed all its messages before the poisonPill
-// was received. If given a WaitGroup, you can wait till the process is completely shutdown.
+// Stop will send a non-graceful poisonPill message to the process that is associated with the given PID.
+// The process will shut down immediately, once it has processed the poisonPill messsage.
+// If given a WaitGroup, it blocks till the process is completely shutdown.
+func (e *Engine) Stop(pid *PID, wg ...*sync.WaitGroup) *sync.WaitGroup {
+	return e.sendPoisonPill(pid, false, wg...)
+}
+
+// Poison will send a graceful poisonPill message to the process that is associated with the given PID.
+// The process will shut down gracefully once it has processed all the messages in the inbox.
+// If given a WaitGroup, it blocks till the process is completely shutdown.
 func (e *Engine) Poison(pid *PID, wg ...*sync.WaitGroup) *sync.WaitGroup {
+	return e.sendPoisonPill(pid, true, wg...)
+}
+
+func (e *Engine) sendPoisonPill(pid *PID, graceful bool, wg ...*sync.WaitGroup) *sync.WaitGroup {
 	var _wg *sync.WaitGroup
 	if len(wg) > 0 {
 		_wg = wg[0]
@@ -197,8 +208,12 @@ func (e *Engine) Poison(pid *PID, wg ...*sync.WaitGroup) *sync.WaitGroup {
 	}
 	_wg.Add(1)
 	proc := e.Registry.get(pid)
+	pill := poisonPill{
+		wg:       _wg,
+		graceful: graceful,
+	}
 	if proc != nil {
-		e.SendLocal(pid, poisonPill{_wg}, nil)
+		e.SendLocal(pid, pill, nil)
 	}
 	return _wg
 }
