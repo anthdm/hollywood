@@ -221,6 +221,12 @@ See the log package for more details about the implementation.
 make test
 ```
 
+# Used in Production By
+
+This project is currently used in production by the following organizations/projects:
+
+- [Sensora IoT](https://sensora.io)
+
 # License
 
 Hollywood is licensed under the MIT licence.

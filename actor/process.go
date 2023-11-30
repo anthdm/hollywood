@@ -63,6 +63,10 @@ func (p *process) Invoke(msgs []Envelope) {
 		nmsg = len(msgs)
 		// numbers of msgs that are processed.
 		nproc = 0
+		// FIXME: We could use nrpoc here, but for some reason placing nproc++ on the
+		// bottom of the function it freezes some tests. Hence, I created a new counter
+		// for bookkeeping.
+		processed = 0
 	)
 	defer func() {
 		// If we recovered, we buffer up all the messages that we could not process
@@ -82,17 +86,30 @@ func (p *process) Invoke(msgs []Envelope) {
 		nproc++
 		msg := msgs[i]
 		if pill, ok := msg.Msg.(poisonPill); ok {
+			// If we need to gracefuly stop, we process all the messages
+			// from the inbox, otherwise we ignore and cleanup.
+			if pill.graceful {
+				msgsToProcess := msgs[processed:]
+				for _, m := range msgsToProcess {
+					p.invokeMsg(m)
+				}
+			}
 			p.cleanup(pill.wg)
 			return
 		}
-		p.context.message = msg.Msg
-		p.context.sender = msg.Sender
-		recv := p.context.receiver
-		if len(p.Opts.Middleware) > 0 {
-			applyMiddleware(recv.Receive, p.Opts.Middleware...)(p.context)
-		} else {
-			recv.Receive(p.context)
-		}
+		p.invokeMsg(msg)
+		processed++
+	}
+}
+
+func (p *process) invokeMsg(msg Envelope) {
+	p.context.message = msg.Msg
+	p.context.sender = msg.Sender
+	recv := p.context.receiver
+	if len(p.Opts.Middleware) > 0 {
+		applyMiddleware(recv.Receive, p.Opts.Middleware...)(p.context)
+	} else {
+		recv.Receive(p.context)
 	}
 }
 
