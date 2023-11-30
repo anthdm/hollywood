@@ -1,5 +1,5 @@
-[![Go Report Card](https://goreportcard.com/badge/github.com/stevohuncho/hollywood)](https://goreportcard.com/report/github.com/stevohuncho/hollywood)
-![example workflow](https://github.com/stevohuncho/hollywood/actions/workflows/build.yml/badge.svg?branch=master)
+[![Go Report Card](https://goreportcard.com/badge/github.com/anthdm/hollywood)](https://goreportcard.com/report/github.com/anthdm/hollywood)
+![example workflow](https://github.com/anthdm/hollywood/actions/workflows/build.yml/badge.svg?branch=master)
 
 # Blazingly fast, low latency actors for Golang
 
@@ -40,12 +40,12 @@ make bench
 # Installation
 
 ```
-go get github.com/stevohuncho/hollywood/...
+go get github.com/anthdm/hollywood/...
 ```
 
 # Quickstart
 
-> The **[examples](https://github.com/stevohuncho/hollywood/tree/master/examples)** folder is the best place to learn and explore Hollywood.
+> The **[examples](https://github.com/anthdm/hollywood/tree/master/examples)** folder is the best place to learn and explore Hollywood.
 
 ```Go
 type message struct {
@@ -142,14 +142,14 @@ pid := actor.NewPID("127.0.0.1:3000", "foo", "bar", "baz", "1")
 
 You can add custom middleware to your Receivers. This can be usefull for storing metrics, saving and loading data for your Receivers on `actor.Started` and `actor.Stopped`.
 
-For examples on how to implement custom middleware, check out the middleware folder in the **[examples](https://github.com/stevohuncho/hollywood/tree/master/examples/middleware)**
+For examples on how to implement custom middleware, check out the middleware folder in the **[examples](https://github.com/anthdm/hollywood/tree/master/examples/middleware)**
 
 ## Logging
 
 You can set the log level of Hollywoods log module:
 
 ```Go
-import "github.com/stevohuncho/hollywood/log
+import "github.com/anthdm/hollywood/log
 
 log.SetLevel(log.LevelInfo)
 ```
@@ -157,7 +157,7 @@ log.SetLevel(log.LevelInfo)
 To disable all logging
 
 ```Go
-import "github.com/stevohuncho/hollywood/log
+import "github.com/anthdm/hollywood/log
 
 log.SetLevel(log.LevelPanic)
 ```

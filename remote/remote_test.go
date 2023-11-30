@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stevohuncho/hollywood/actor"
+	"github.com/anthdm/hollywood/actor"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

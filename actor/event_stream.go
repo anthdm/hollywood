@@ -5,7 +5,7 @@ import (
 	"math/rand"
 	"sync"
 
-	"github.com/stevohuncho/hollywood/log"
+	"github.com/anthdm/hollywood/log"
 )
 
 type EventSub struct {

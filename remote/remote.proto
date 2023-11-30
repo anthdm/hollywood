@@ -1,6 +1,6 @@
 syntax = "proto3";
 package remote;
-option go_package = "github.com/stevohuncho/hollywood/remote";
+option go_package = "github.com/anthdm/hollywood/remote";
 import "actor.proto";
 
 service Remote {

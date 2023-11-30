@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/stevohuncho/hollywood/actor"
-	"github.com/stevohuncho/hollywood/log"
+	"github.com/anthdm/hollywood/actor"
+	"github.com/anthdm/hollywood/log"
 	"storj.io/drpc/drpcconn"
 )
 

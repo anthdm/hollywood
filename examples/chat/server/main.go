@@ -1,10 +1,10 @@
 package main
 
 import (
-	"github.com/stevohuncho/hollywood/actor"
-	"github.com/stevohuncho/hollywood/examples/chat/types"
-	"github.com/stevohuncho/hollywood/log"
-	"github.com/stevohuncho/hollywood/remote"
+	"github.com/anthdm/hollywood/actor"
+	"github.com/anthdm/hollywood/examples/chat/types"
+	"github.com/anthdm/hollywood/log"
+	"github.com/anthdm/hollywood/remote"
 )
 
 type server struct {

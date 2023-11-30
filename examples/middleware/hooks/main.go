@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/stevohuncho/hollywood/actor"
+	"github.com/anthdm/hollywood/actor"
 )
 
 type Hooker interface {

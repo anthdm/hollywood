@@ -5,7 +5,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/stevohuncho/hollywood/actor"
+	"github.com/anthdm/hollywood/actor"
 )
 
 type (
@@ -25,7 +25,7 @@ func newNameResponder() actor.Receiver {
 func (r *nameResponder) Receive(ctx *actor.Context) {
 	switch ctx.Message().(type) {
 	case *nameRequest:
-		ctx.Respond(&nameResponse{name: "stevohuncho"})
+		ctx.Respond(&nameResponse{name: "anthdm"})
 	}
 }
 

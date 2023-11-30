@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/stevohuncho/hollywood/actor"
+	"github.com/anthdm/hollywood/actor"
 )
 
 type message struct {

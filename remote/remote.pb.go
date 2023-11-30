@@ -7,7 +7,7 @@
 package remote
 
 import (
-	actor "github.com/stevohuncho/hollywood/actor"
+	actor "github.com/anthdm/hollywood/actor"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"

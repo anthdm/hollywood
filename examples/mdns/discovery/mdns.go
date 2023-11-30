@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/anthdm/hollywood/actor"
+	"github.com/anthdm/hollywood/log"
 	"github.com/grandcat/zeroconf"
-	"github.com/stevohuncho/hollywood/actor"
-	"github.com/stevohuncho/hollywood/log"
 )
 
 type mdns struct {
