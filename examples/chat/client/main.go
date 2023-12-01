@@ -82,6 +82,6 @@ func main() {
 	// When breaked out of the loop on error let the server know
 	// we need to disconnect.
 	e.SendWithSender(serverPID, &types.Disconnect{}, clientPID)
-	e.Poison(clientPID)
+	e.Poison(clientPID).Wait()
 	slog.Info("client disconnected")
 }
