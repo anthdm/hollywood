@@ -1,6 +1,7 @@
 package actor
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/zeebo/xxh3"
@@ -37,8 +38,13 @@ func (pid *PID) Child(id string, tags ...string) *PID {
 	return NewPID(pid.Address, childID+pidSeparator+strings.Join(tags, pidSeparator))
 }
 
+// HasTag returns whether the provided tag is applied to a pid address or not
 func (pid *PID) HasTag(tag string) bool {
-	return strings.Contains(pid.ID, pidSeparator+tag+pidSeparator)
+	if len(tag) == 0 {
+		return false
+	}
+	parsedPid := strings.Split(pid.ID, pidSeparator)
+	return slices.Contains(parsedPid, tag)
 }
 
 func (pid *PID) LookupKey() uint64 {
