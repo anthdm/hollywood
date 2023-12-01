@@ -20,10 +20,9 @@ type EventStream struct {
 	logger log.Logger
 }
 
-func NewEventStream(l log.Logger) *EventStream {
+func NewEventStream() *EventStream {
 	return &EventStream{
-		subs:   make(map[*EventSub]EventStreamFunc),
-		logger: l.SubLogger("[eventStream]"),
+		subs: make(map[*EventSub]EventStreamFunc),
 	}
 }
 

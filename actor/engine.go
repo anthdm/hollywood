@@ -28,7 +28,7 @@ type Engine struct {
 
 	address    string
 	remote     Remoter
-	deadLetter Processer
+	deadLetter *PID
 	logger     log.Logger
 }
 
@@ -36,20 +36,27 @@ type Engine struct {
 // You can pass an optional logger through
 func NewEngine(opts ...func(*Engine)) *Engine {
 	e := &Engine{}
+	e.address = LocalLookupAddr
+	e.Registry = newRegistry(e)      // need to init the registry in case we want a custom deadletter
+	e.EventStream = NewEventStream() //
 	for _, o := range opts {
 		o(e)
 	}
-	e.EventStream = NewEventStream(e.logger)
-	e.address = LocalLookupAddr
-	e.Registry = newRegistry(e)
-	e.deadLetter = newDeadLetter(e.EventStream)
-	e.Registry.add(e.deadLetter)
+
+	// if no deadletter is registered, we will register the default deadletter from deadletter.go
+	if e.deadLetter == nil {
+		e.logger.Debugw("no deadletter receiver set, registering default")
+		e.deadLetter = e.Spawn(newDeadLetter, "deadletter")
+	}
 	return e
 }
 
 func EngineOptLogger(logger log.Logger) func(*Engine) {
 	return func(e *Engine) {
 		e.logger = logger
+		// This is a bit hacky, but we need to set the logger for the eventstream
+		// which cannot be set in the constructor since the logger is not set yet.
+		e.EventStream.logger = logger.SubLogger("[eventStream]")
 	}
 }
 
@@ -57,6 +64,12 @@ func EngineOptPidSeparator(sep string) func(*Engine) {
 	// This looks weird because the separator is a global variable.
 	return func(e *Engine) {
 		pidSeparator = sep
+	}
+}
+
+func EngineOptDeadletter(d Producer) func(*Engine) {
+	return func(e *Engine) {
+		e.deadLetter = e.Spawn(d, "deadletter")
 	}
 }
 
@@ -182,10 +195,21 @@ func (e *Engine) SendRepeat(pid *PID, msg any, interval time.Duration) SendRepea
 	return sr
 }
 
-// Poison will send a poisonPill to the process that is associated with the given PID.
-// The process will shut down once it processed all its messages before the poisonPill
-// was received. If given a WaitGroup, you can wait till the process is completely shutdown.
+// Stop will send a non-graceful poisonPill message to the process that is associated with the given PID.
+// The process will shut down immediately, once it has processed the poisonPill messsage.
+// If given a WaitGroup, it blocks till the process is completely shutdown.
+func (e *Engine) Stop(pid *PID, wg ...*sync.WaitGroup) *sync.WaitGroup {
+	return e.sendPoisonPill(pid, false, wg...)
+}
+
+// Poison will send a graceful poisonPill message to the process that is associated with the given PID.
+// The process will shut down gracefully once it has processed all the messages in the inbox.
+// If given a WaitGroup, it blocks till the process is completely shutdown.
 func (e *Engine) Poison(pid *PID, wg ...*sync.WaitGroup) *sync.WaitGroup {
+	return e.sendPoisonPill(pid, true, wg...)
+}
+
+func (e *Engine) sendPoisonPill(pid *PID, graceful bool, wg ...*sync.WaitGroup) *sync.WaitGroup {
 	var _wg *sync.WaitGroup
 	if len(wg) > 0 {
 		_wg = wg[0]
@@ -194,17 +218,40 @@ func (e *Engine) Poison(pid *PID, wg ...*sync.WaitGroup) *sync.WaitGroup {
 	}
 	_wg.Add(1)
 	proc := e.Registry.get(pid)
+	// deadletter - if we didn't find a process, we will send a deadletter message
+	if proc == nil {
+		e.Send(e.deadLetter, &DeadLetterEvent{
+			Target:  pid,
+			Message: poisonPill{_wg, graceful},
+			Sender:  nil,
+		})
+		return _wg
+	}
+	pill := poisonPill{
+		wg:       _wg,
+		graceful: graceful,
+	}
 	if proc != nil {
-		e.SendLocal(pid, poisonPill{_wg}, nil)
+		e.SendLocal(pid, pill, nil)
 	}
 	return _wg
 }
 
+// SendLocal will send the given message to the given PID. If the recipient is not found in the
+// registry, the message will be sent to the DeadLetter process instead. If there is no deadletter
+// process registered, the function will panic.
 func (e *Engine) SendLocal(pid *PID, msg any, sender *PID) {
 	proc := e.Registry.get(pid)
-	if proc != nil {
-		proc.Send(pid, msg, sender)
+	if proc == nil {
+		// send a deadletter message
+		e.Send(e.deadLetter, &DeadLetterEvent{
+			Target:  pid,
+			Message: msg,
+			Sender:  sender,
+		})
+		return
 	}
+	proc.Send(pid, msg, sender)
 }
 
 func (e *Engine) isLocalMessage(pid *PID) bool {

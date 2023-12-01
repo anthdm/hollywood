@@ -29,13 +29,17 @@ func (r *Registry) Remove(pid *PID) {
 	delete(r.lookup, pid.ID)
 }
 
+// get returns the processer for the given PID, if it exists.
+// If it doesn't exist, nil is returned so the caller must check for that
+// and direct the message to the deadletter processer instead.
+// Todo: consider returning a bool in addition to the processer so the semantics are clear.
 func (r *Registry) get(pid *PID) Processer {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	if proc, ok := r.lookup[pid.ID]; ok {
 		return proc
 	}
-	return r.engine.deadLetter
+	return nil // didn't find the processer
 }
 
 func (r *Registry) getByID(id string) Processer {

@@ -1,6 +1,8 @@
 package actor
 
-import "time"
+import (
+	"time"
+)
 
 const (
 	defaultInboxSize   = 1024
