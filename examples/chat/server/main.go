@@ -26,6 +26,7 @@ func (s *server) Receive(ctx *actor.Context) {
 	case *types.Message:
 		s.handleMessage(ctx, msg)
 	case *types.Disconnect:
+		s.logger.Info("client disconnected", "pid", ctx.Sender())
 		username, ok := s.clients[ctx.Sender()]
 		if !ok {
 			s.logger.Warn("unknown client disconnected", "client", ctx.Sender().GetID())

@@ -63,7 +63,7 @@ func main() {
 		clientPID = e.Spawn(newClient(*username, serverPID), "client")
 		scanner   = bufio.NewScanner(os.Stdin)
 	)
-
+	fmt.Println("Type 'quit' and press return to exit.")
 	for scanner.Scan() {
 		msg := &types.Message{
 			Msg:      scanner.Text(),
