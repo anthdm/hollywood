@@ -1,7 +1,6 @@
 package remote
 
 import (
-	"context"
 	"fmt"
 	"github.com/anthdm/hollywood/log"
 	"math/rand"
@@ -16,7 +15,7 @@ import (
 )
 
 const (
-	debugLog = false // if you want a lot of noise when debugging the tests set this to true.
+	debugLog = true // if you want a lot of noise when debugging the tests set this to true.
 )
 
 func init() {
@@ -26,13 +25,11 @@ func init() {
 
 func TestSend(t *testing.T) {
 	const msgs = 10
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 	aAddr := getRandomLocalhostAddr()
-	a, err := makeRemoteEngine(ctx, aAddr)
+	a, ra, err := makeRemoteEngine(aAddr)
 	assert.NoError(t, err)
 	bAddr := getRandomLocalhostAddr()
-	b, err := makeRemoteEngine(ctx, bAddr)
+	b, rb, err := makeRemoteEngine(bAddr)
 	assert.NoError(t, err)
 	wg := sync.WaitGroup{}
 
@@ -48,24 +45,21 @@ func TestSend(t *testing.T) {
 	for i := 0; i < msgs; i++ {
 		b.Send(pid, &TestMessage{Data: []byte("foo")})
 	}
-	wg.Wait()
-	cancel()
-	// potential race here. when we cancel() the socket is teared down.
-	// Is there a nice way to check that the remote is actually shut down?
+	wg.Wait()        // wait for messages to be received by the actor.
+	ra.Stop().Wait() // shutdown the remotes
+	rb.Stop().Wait()
 	err = tcpPing(aAddr)
-	fmt.Println("error", err)
 	assert.Error(t, err)
 	err = tcpPing(bAddr)
-	fmt.Println("error", err)
 	assert.Error(t, err)
 }
 
 func TestWithSender(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	a, err := makeRemoteEngine(ctx, getRandomLocalhostAddr())
+	a, ra, err := makeRemoteEngine(getRandomLocalhostAddr())
+	defer ra.Stop()
 	assert.NoError(t, err)
-	b, err := makeRemoteEngine(ctx, getRandomLocalhostAddr())
+	b, rb, err := makeRemoteEngine(getRandomLocalhostAddr())
+	defer rb.Stop()
 	assert.NoError(t, err)
 	wg := sync.WaitGroup{}
 	senderPID := actor.NewPID("a", "b")
@@ -89,11 +83,11 @@ func TestWithSender(t *testing.T) {
 }
 
 func TestRequestResponse(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	a, err := makeRemoteEngine(ctx, getRandomLocalhostAddr())
+	a, ra, err := makeRemoteEngine(getRandomLocalhostAddr())
+	defer ra.Stop()
 	assert.NoError(t, err)
-	b, err := makeRemoteEngine(ctx, getRandomLocalhostAddr())
+	b, rb, err := makeRemoteEngine(getRandomLocalhostAddr())
+	defer rb.Stop()
 	assert.NoError(t, err)
 	wg := sync.WaitGroup{}
 
@@ -116,7 +110,7 @@ func TestRequestResponse(t *testing.T) {
 	assert.Equal(t, resp.(*TestMessage).Data, []byte("foo"))
 }
 
-func makeRemoteEngine(ctx context.Context, listenAddr string) (*actor.Engine, error) {
+func makeRemoteEngine(listenAddr string) (*actor.Engine, *Remote, error) {
 	var e *actor.Engine
 	switch debugLog {
 	case false:
@@ -125,11 +119,11 @@ func makeRemoteEngine(ctx context.Context, listenAddr string) (*actor.Engine, er
 		e = actor.NewEngine(actor.EngineOptLogger(log.Debug()))
 	}
 	r := New(e, Config{ListenAddr: listenAddr})
-	err := e.WithRemote(ctx, r)
+	err := e.WithRemote(r)
 	if err != nil {
-		return nil, fmt.Errorf("WithRemote: %w", err)
+		return nil, nil, fmt.Errorf("WithRemote: %w", err)
 	}
-	return e, nil
+	return e, r, nil
 }
 
 func getRandomLocalhostAddr() string {

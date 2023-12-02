@@ -1,7 +1,6 @@
 package actor
 
 import (
-	"context"
 	"fmt"
 	"sync"
 	"time"
@@ -12,7 +11,8 @@ import (
 type Remoter interface {
 	Address() string
 	Send(*PID, any, *PID)
-	Start(ctx context.Context) error
+	Start() error
+	Stop() *sync.WaitGroup
 }
 
 // Producer is any function that can return a Receiver
@@ -83,14 +83,13 @@ func EngineOptDeadletter(d Producer) func(*Engine) {
 
 // WithRemote returns a new actor Engine with the given Remoter,
 // and will call its Start function
-// When the context is cancelled, the remote will stop listening.
-func (e *Engine) WithRemote(ctx context.Context, r Remoter) error {
+func (e *Engine) WithRemote(r Remoter) error {
 	if r == nil {
 		return fmt.Errorf("remote cannot be nil")
 	}
 	e.remote = r
 	e.address = r.Address()
-	err := r.Start(ctx)
+	err := r.Start()
 	if err != nil {
 		return fmt.Errorf("starting remote: %w", err)
 	}
@@ -160,8 +159,13 @@ func (e *Engine) send(pid *PID, msg any, sender *PID) {
 		return
 	}
 	if e.remote == nil {
-		e.logger.Errorw("failed sending messsage",
-			"err", "engine has no remote configured")
+		e.logger.Errorw("failed sending messsage, redirecting to deadletter queue",
+			"err", "engine has no remote configured", "pid", pid, "msg", msg, "sender", sender)
+		e.SendLocal(e.deadLetter, &DeadLetterEvent{
+			Target:  pid,
+			Message: msg,
+			Sender:  sender,
+		}, sender)
 		return
 	}
 	e.remote.Send(pid, msg, sender)
