@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"github.com/anthdm/hollywood/log"
 	"time"
@@ -14,9 +13,8 @@ import (
 func main() {
 	e := actor.NewEngine(actor.EngineOptLogger(log.Debug()))
 	r := remote.New(e, remote.Config{ListenAddr: "127.0.0.1:3000"})
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	err := e.WithRemote(ctx, r)
+	err := e.WithRemote(r)
+	defer r.Stop()
 	if err != nil {
 		panic(err)
 	}

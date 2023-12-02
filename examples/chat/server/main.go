@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"flag"
 	"log/slog"
 
@@ -62,7 +61,7 @@ func main() {
 	rem := remote.New(e, remote.Config{
 		ListenAddr: *listenAt,
 	})
-	err := e.WithRemote(context.TODO(), rem)
+	err := e.WithRemote(rem)
 	if err != nil {
 		panic(err)
 	}

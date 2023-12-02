@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"context"
 	"flag"
 	"fmt"
 	"github.com/anthdm/hollywood/log"
@@ -52,9 +51,7 @@ func main() {
 	rem := remote.New(e, remote.Config{
 		ListenAddr: *listenAt,
 	})
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	err := e.WithRemote(ctx, rem)
+	err := e.WithRemote(rem)
 	if err != nil {
 		slog.Error("WithRemote", "error", err)
 		os.Exit(1)
