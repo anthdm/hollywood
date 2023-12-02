@@ -47,6 +47,12 @@ func Default() Logger {
 	return NewLogger("[engine]", NewHandler(os.Stdout, TextFormat, slog.LevelInfo))
 }
 
+// Debug returns a logger that logs to stdout with the
+// TextFormat and log level Debug. This is the recommended logger to use when debugging.
+func Debug() Logger {
+	return NewLogger("[engine]", NewHandler(os.Stdout, TextFormat, slog.LevelDebug))
+}
+
 func NewHandler(w io.Writer, format LoggerFormat, loglevel slog.Level) slog.Handler {
 	switch format {
 	case JsonFormat:

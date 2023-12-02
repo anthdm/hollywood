@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"log/slog"
 
@@ -61,7 +62,10 @@ func main() {
 	rem := remote.New(e, remote.Config{
 		ListenAddr: *listenAt,
 	})
-	e.WithRemote(rem)
+	err := e.WithRemote(context.TODO(), rem)
+	if err != nil {
+		panic(err)
+	}
 	e.Spawn(newServer, "server")
 
 	select {}

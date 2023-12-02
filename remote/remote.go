@@ -2,6 +2,7 @@ package remote
 
 import (
 	"context"
+	"fmt"
 	"net"
 
 	"github.com/anthdm/hollywood/actor"
@@ -12,7 +13,6 @@ import (
 
 type Config struct {
 	ListenAddr string
-	Logger     log.Logger
 }
 
 type Remote struct {
@@ -28,32 +28,38 @@ func New(e *actor.Engine, cfg Config) *Remote {
 	r := &Remote{
 		engine: e,
 		config: cfg,
-		logger: cfg.Logger,
+		logger: e.GetLogger().SubLogger("[remote]"),
 	}
 	r.streamReader = newStreamReader(r)
 	return r
 }
 
-func (r *Remote) Start() {
+// Start starts the remote. The remote will listen on the given address.
+// It will spawn a new actor, "router", which will handle all incoming messages.
+// When the supplied context is cancelled, the remote will stop listening.
+func (r *Remote) Start(ctx context.Context) error {
 	ln, err := net.Listen("tcp", r.config.ListenAddr)
 	if err != nil {
-		panic("failed to listen: " + err.Error())
+		return fmt.Errorf("failed to listen: %w", err)
 	}
-
+	r.logger.Debugw("listening", "addr", r.config.ListenAddr)
 	mux := drpcmux.New()
 	err = DRPCRegisterRemote(mux, r.streamReader)
 	if err != nil {
-		r.logger.Errorw("failed to register remote", "err", err)
+		return fmt.Errorf("failed to register remote: %w", err)
 	}
 	s := drpcserver.New(mux)
-
 	r.streamRouterPID = r.engine.Spawn(newStreamRouter(r.engine, r.logger), "router", actor.WithInboxSize(1024*1024))
 	r.logger.Infow("server started", "listenAddr", r.config.ListenAddr)
-	ctx := context.Background()
 	go func() {
 		err := s.Serve(ctx, ln)
-		r.logger.Errorw("drpcserver stopped", "err", err)
+		if err != nil {
+			r.logger.Errorw("drpcserver", "err", err)
+		} else {
+			r.logger.Infow("drpcserver stopped")
+		}
 	}()
+	return nil
 }
 
 // Send sends the given message to the process with the given pid over the network.

@@ -1,6 +1,8 @@
 package actor
 
 import (
+	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -10,7 +12,7 @@ import (
 type Remoter interface {
 	Address() string
 	Send(*PID, any, *PID)
-	Start()
+	Start(ctx context.Context) error
 }
 
 // Producer is any function that can return a Receiver
@@ -33,7 +35,8 @@ type Engine struct {
 }
 
 // NewEngine returns a new actor Engine.
-// You can pass an optional logger through
+// You can pass configuration functions through the various functions starting with "EngineOpt"
+// These run after the engine is configured
 func NewEngine(opts ...func(*Engine)) *Engine {
 	e := &Engine{}
 	e.address = LocalLookupAddr
@@ -51,6 +54,7 @@ func NewEngine(opts ...func(*Engine)) *Engine {
 	return e
 }
 
+// EngineOptLogger configured the engine with a logger from the internal log package
 func EngineOptLogger(logger log.Logger) func(*Engine) {
 	return func(e *Engine) {
 		e.logger = logger
@@ -60,6 +64,8 @@ func EngineOptLogger(logger log.Logger) func(*Engine) {
 	}
 }
 
+// EngineOptPidSeparator sets the pid separator.
+// Todo: This should be local to the engine. It's currently a global variable. This is a good first issue.
 func EngineOptPidSeparator(sep string) func(*Engine) {
 	// This looks weird because the separator is a global variable.
 	return func(e *Engine) {
@@ -67,6 +73,8 @@ func EngineOptPidSeparator(sep string) func(*Engine) {
 	}
 }
 
+// EngineOptDeadletter takes an actor and configures the engine to use it for dead letter handling
+// This allows you to customize how deadletters are handled.
 func EngineOptDeadletter(d Producer) func(*Engine) {
 	return func(e *Engine) {
 		e.deadLetter = e.Spawn(d, "deadletter")
@@ -75,10 +83,18 @@ func EngineOptDeadletter(d Producer) func(*Engine) {
 
 // WithRemote returns a new actor Engine with the given Remoter,
 // and will call its Start function
-func (e *Engine) WithRemote(r Remoter) {
+// When the context is cancelled, the remote will stop listening.
+func (e *Engine) WithRemote(ctx context.Context, r Remoter) error {
+	if r == nil {
+		return fmt.Errorf("remote cannot be nil")
+	}
 	e.remote = r
 	e.address = r.Address()
-	r.Start()
+	err := r.Start(ctx)
+	if err != nil {
+		return fmt.Errorf("starting remote: %w", err)
+	}
+	return nil
 }
 
 // Spawn spawns a process that will producer by the given Producer and

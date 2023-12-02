@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"flag"
 	"fmt"
 	"github.com/anthdm/hollywood/log"
@@ -50,9 +51,16 @@ func main() {
 	e := actor.NewEngine(actor.EngineOptLogger(log.Default()))
 	rem := remote.New(e, remote.Config{
 		ListenAddr: *listenAt,
-		Logger:     log.NewLogger("[remote]", log.NewHandler(os.Stdout, log.TextFormat, slog.LevelDebug)),
+		// perbu:
+		// Logger:     log.NewLogger("[remote]", log.NewHandler(os.Stdout, log.TextFormat, slog.LevelDebug)),
 	})
-	e.WithRemote(rem)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	err := e.WithRemote(ctx, rem)
+	if err != nil {
+		slog.Error("WithRemote", "error", err)
+		os.Exit(1)
+	}
 
 	var (
 		// the process ID of the server
