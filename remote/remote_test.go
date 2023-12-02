@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	debugLog = true // if you want a lot of noise when debugging the tests set this to true.
+	debugLog = false // if you want a lot of noise when debugging the tests set this to true.
 )
 
 func init() {
@@ -116,22 +116,27 @@ func TestWeird(t *testing.T) {
 	if err != nil {
 		t.Fatalf("makeRemoteEngine: %v", err)
 	}
-	pid := a.SpawnFunc(func(c *actor.Context) {}, "test")
-
-	// let's start the remote once more.
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	pid := a.SpawnFunc(func(c *actor.Context) {
+		switch c.Message().(type) {
+		case actor.Stopped:
+			wg.Done()
+		}
+	}, "weirdactor")
+	// let's start the remote once more. this should do nothing.
 	err = ra.Start()
 	assert.Error(t, err)
 	err = ra.Start()
 	assert.Error(t, err)
 	err = ra.Start()
 	assert.Error(t, err)
-
 	// Now stop it a few times to make sure it doesn't freeze or panic:
 	ra.Stop().Wait()
 	ra.Stop().Wait()
 	ra.Stop().Wait()
-
-	a.Poison(pid)
+	a.Poison(pid) // poison the actor. this doesn't go via the remote, so it should be fine.
+	wg.Wait()
 }
 
 func makeRemoteEngine(listenAddr string) (*actor.Engine, *Remote, error) {

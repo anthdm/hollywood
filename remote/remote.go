@@ -51,13 +51,11 @@ func New(e *actor.Engine, cfg Config) *Remote {
 // Start starts the remote. The remote will listen on the given address.
 // It will spawn a new actor, "router", which will handle all incoming messages.
 // When the supplied context is cancelled, the remote will stop listening.
-//
-//goland:noinspection GoVetLostCancel
 func (r *Remote) Start() error {
 	if r.state.Load() != stateInitialized {
 		return fmt.Errorf("remote already started")
 	}
-	ctx, cancel := context.WithCancel(context.Background()) //nolint:govet
+	r.state.Store(stateRunning)
 	r.stopCh = make(chan struct{})
 	ln, err := net.Listen("tcp", r.config.ListenAddr)
 	if err != nil {
@@ -72,9 +70,9 @@ func (r *Remote) Start() error {
 	s := drpcserver.New(mux)
 	r.streamRouterPID = r.engine.Spawn(newStreamRouter(r.engine, r.logger), "router", actor.WithInboxSize(1024*1024))
 	r.logger.Infow("server started", "listenAddr", r.config.ListenAddr)
-	// start the server in a goroutine
 	r.stopWg = &sync.WaitGroup{}
 	r.stopWg.Add(1)
+	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
 		defer r.stopWg.Done()
 		err := s.Serve(ctx, ln)
@@ -96,22 +94,19 @@ func (r *Remote) Start() error {
 // Stop will stop the remote from listening.
 func (r *Remote) Stop() *sync.WaitGroup {
 	if r.state.Load() != stateRunning {
-		return &sync.WaitGroup{} // return empty waitgroup
+		return &sync.WaitGroup{} // return empty waitgroup so the caller can still wait without panicking.
 	}
 	r.state.Store(stateStopped)
 	r.stopCh <- struct{}{}
+	r.logger.Debugw("stop signal sent")
 	return r.stopWg
 }
 
 // Send sends the given message to the process with the given pid over the network.
 // Optional a "Sender PID" can be given to inform the receiving process who sent the
 // message.
+// Sending will work even if the remote is stopped. Receiving however, will not work.
 func (r *Remote) Send(pid *actor.PID, msg any, sender *actor.PID) {
-	if r.state.Load() != stateRunning {
-		// Todo: What should we do here?
-		// Should we care about the state at all?
-	}
-
 	r.engine.Send(r.streamRouterPID, &streamDeliver{
 		target: pid,
 		sender: sender,
