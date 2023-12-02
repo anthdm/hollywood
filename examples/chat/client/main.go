@@ -51,8 +51,6 @@ func main() {
 	e := actor.NewEngine(actor.EngineOptLogger(log.Default()))
 	rem := remote.New(e, remote.Config{
 		ListenAddr: *listenAt,
-		// perbu:
-		// Logger:     log.NewLogger("[remote]", log.NewHandler(os.Stdout, log.TextFormat, slog.LevelDebug)),
 	})
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

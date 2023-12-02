@@ -3,6 +3,7 @@ package remote
 import (
 	"context"
 	"fmt"
+	"github.com/anthdm/hollywood/log"
 	"math/rand"
 	"net"
 	"sync"
@@ -12,6 +13,10 @@ import (
 	"github.com/anthdm/hollywood/actor"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+)
+
+const (
+	debugLog = false // if you want a lot of noise when debugging the tests set this to true.
 )
 
 func init() {
@@ -53,7 +58,6 @@ func TestSend(t *testing.T) {
 	err = tcpPing(bAddr)
 	fmt.Println("error", err)
 	assert.Error(t, err)
-
 }
 
 func TestWithSender(t *testing.T) {
@@ -113,7 +117,13 @@ func TestRequestResponse(t *testing.T) {
 }
 
 func makeRemoteEngine(ctx context.Context, listenAddr string) (*actor.Engine, error) {
-	e := actor.NewEngine()
+	var e *actor.Engine
+	switch debugLog {
+	case false:
+		e = actor.NewEngine()
+	case true:
+		e = actor.NewEngine(actor.EngineOptLogger(log.Debug()))
+	}
 	r := New(e, Config{ListenAddr: listenAddr})
 	err := e.WithRemote(ctx, r)
 	if err != nil {
