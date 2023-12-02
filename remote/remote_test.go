@@ -110,6 +110,30 @@ func TestRequestResponse(t *testing.T) {
 	assert.Equal(t, resp.(*TestMessage).Data, []byte("foo"))
 }
 
+// TestWeird does unexpected things to the remote to see if it panics or freezes.
+func TestWeird(t *testing.T) {
+	a, ra, err := makeRemoteEngine(getRandomLocalhostAddr())
+	if err != nil {
+		t.Fatalf("makeRemoteEngine: %v", err)
+	}
+	pid := a.SpawnFunc(func(c *actor.Context) {}, "test")
+
+	// let's start the remote once more.
+	err = ra.Start()
+	assert.Error(t, err)
+	err = ra.Start()
+	assert.Error(t, err)
+	err = ra.Start()
+	assert.Error(t, err)
+
+	// Now stop it a few times to make sure it doesn't freeze or panic:
+	ra.Stop().Wait()
+	ra.Stop().Wait()
+	ra.Stop().Wait()
+
+	a.Poison(pid)
+}
+
 func makeRemoteEngine(listenAddr string) (*actor.Engine, *Remote, error) {
 	var e *actor.Engine
 	switch debugLog {

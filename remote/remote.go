@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"sync"
+	"sync/atomic"
 
 	"github.com/anthdm/hollywood/actor"
 	"github.com/anthdm/hollywood/log"
@@ -25,7 +26,15 @@ type Remote struct {
 	logger          log.Logger
 	stopCh          chan struct{} // Stop closes this channel to signal the remote to stop listening.
 	stopWg          *sync.WaitGroup
+	state           atomic.Uint32
 }
+
+const (
+	stateInvalid uint32 = iota
+	stateInitialized
+	stateRunning
+	stateStopped
+)
 
 // New creates a new "Remote" object given an engine and a Config.
 func New(e *actor.Engine, cfg Config) *Remote {
@@ -34,6 +43,7 @@ func New(e *actor.Engine, cfg Config) *Remote {
 		config: cfg,
 		logger: e.GetLogger().SubLogger("[remote]"),
 	}
+	r.state.Store(stateInitialized)
 	r.streamReader = newStreamReader(r)
 	return r
 }
@@ -41,8 +51,13 @@ func New(e *actor.Engine, cfg Config) *Remote {
 // Start starts the remote. The remote will listen on the given address.
 // It will spawn a new actor, "router", which will handle all incoming messages.
 // When the supplied context is cancelled, the remote will stop listening.
+//
+//goland:noinspection GoVetLostCancel
 func (r *Remote) Start() error {
-	ctx, cancel := context.WithCancel(context.Background())
+	if r.state.Load() != stateInitialized {
+		return fmt.Errorf("remote already started")
+	}
+	ctx, cancel := context.WithCancel(context.Background()) //nolint:govet
 	r.stopCh = make(chan struct{})
 	ln, err := net.Listen("tcp", r.config.ListenAddr)
 	if err != nil {
@@ -78,7 +93,12 @@ func (r *Remote) Start() error {
 	return nil
 }
 
+// Stop will stop the remote from listening.
 func (r *Remote) Stop() *sync.WaitGroup {
+	if r.state.Load() != stateRunning {
+		return &sync.WaitGroup{} // return empty waitgroup
+	}
+	r.state.Store(stateStopped)
 	r.stopCh <- struct{}{}
 	return r.stopWg
 }
@@ -87,6 +107,11 @@ func (r *Remote) Stop() *sync.WaitGroup {
 // Optional a "Sender PID" can be given to inform the receiving process who sent the
 // message.
 func (r *Remote) Send(pid *actor.PID, msg any, sender *actor.PID) {
+	if r.state.Load() != stateRunning {
+		// Todo: What should we do here?
+		// Should we care about the state at all?
+	}
+
 	r.engine.Send(r.streamRouterPID, &streamDeliver{
 		target: pid,
 		sender: sender,
