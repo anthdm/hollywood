@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"log/slog"
 	"os"
@@ -16,7 +15,7 @@ func makeRemoteEngine(addr string) *actor.Engine {
 	e := actor.NewEngine()
 	r := remote.New(e, remote.Config{ListenAddr: addr})
 
-	err := e.WithRemote(context.Background(), r)
+	err := e.WithRemote(r)
 	if err != nil {
 		slog.Error("WithRemote", "error", err)
 		os.Exit(1)
