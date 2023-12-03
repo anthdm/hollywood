@@ -38,9 +38,10 @@ func newTickReceiver(wg *sync.WaitGroup) Producer {
 
 func TestSendRepeat(t *testing.T) {
 	var (
-		e  = NewEngine()
 		wg = &sync.WaitGroup{}
 	)
+	e, err := NewEngine()
+	require.NoError(t, err)
 	wg.Add(1)
 	pid := e.Spawn(newTickReceiver(wg), "test")
 	repeater := e.SendRepeat(pid, tick{}, time.Millisecond*2)
@@ -49,7 +50,8 @@ func TestSendRepeat(t *testing.T) {
 }
 
 func TestRestartsMaxRestarts(t *testing.T) {
-	e := NewEngine()
+	e, err := NewEngine()
+	require.NoError(t, err)
 	restarts := 2
 	type payload struct {
 		data int
@@ -74,10 +76,11 @@ func TestRestartsMaxRestarts(t *testing.T) {
 
 func TestProcessInitStartOrder(t *testing.T) {
 	var (
-		e             = NewEngine()
 		wg            = sync.WaitGroup{}
 		started, init bool
 	)
+	e, err := NewEngine()
+	require.NoError(t, err)
 	pid := e.SpawnFunc(func(c *Context) {
 		switch c.Message().(type) {
 		case Initialized:
@@ -99,7 +102,8 @@ func TestProcessInitStartOrder(t *testing.T) {
 }
 
 func TestRestarts(t *testing.T) {
-	e := NewEngine()
+	e, err := NewEngine()
+	require.NoError(t, err)
 	wg := sync.WaitGroup{}
 	type payload struct {
 		data int
@@ -129,10 +133,11 @@ func TestRestarts(t *testing.T) {
 
 func TestSendWithSender(t *testing.T) {
 	var (
-		e      = NewEngine()
 		sender = NewPID("local", "sender")
 		wg     = sync.WaitGroup{}
 	)
+	e, err := NewEngine()
+	require.NoError(t, err)
 	wg.Add(1)
 
 	pid := e.SpawnFunc(func(c *Context) {
@@ -147,7 +152,8 @@ func TestSendWithSender(t *testing.T) {
 }
 
 func TestSendMsgRaceCon(t *testing.T) {
-	e := NewEngine()
+	e, err := NewEngine()
+	require.NoError(t, err)
 	wg := sync.WaitGroup{}
 
 	pid := e.SpawnFunc(func(c *Context) {
@@ -166,7 +172,8 @@ func TestSendMsgRaceCon(t *testing.T) {
 }
 
 func TestSpawn(t *testing.T) {
-	e := NewEngine()
+	e, err := NewEngine()
+	require.NoError(t, err)
 	wg := sync.WaitGroup{}
 
 	for i := 0; i < 10; i++ {
@@ -184,10 +191,11 @@ func TestSpawn(t *testing.T) {
 
 func TestStopWaitGroup(t *testing.T) {
 	var (
-		e  = NewEngine()
 		wg = sync.WaitGroup{}
 		x  = int32(0)
 	)
+	e, err := NewEngine()
+	require.NoError(t, err)
 	wg.Add(1)
 
 	pid := e.SpawnFunc(func(c *Context) {
@@ -208,9 +216,10 @@ func TestStopWaitGroup(t *testing.T) {
 
 func TestStop(t *testing.T) {
 	var (
-		e  = NewEngine()
 		wg = sync.WaitGroup{}
 	)
+	e, err := NewEngine()
+	require.NoError(t, err)
 	for i := 0; i < 4; i++ {
 		wg.Add(1)
 		tag := strconv.Itoa(i)
@@ -234,10 +243,11 @@ func TestStop(t *testing.T) {
 
 func TestPoisonWaitGroup(t *testing.T) {
 	var (
-		e  = NewEngine()
 		wg = sync.WaitGroup{}
 		x  = int32(0)
 	)
+	e, err := NewEngine()
+	require.NoError(t, err)
 	wg.Add(1)
 
 	pid := e.SpawnFunc(func(c *Context) {
@@ -258,9 +268,10 @@ func TestPoisonWaitGroup(t *testing.T) {
 
 func TestPoison(t *testing.T) {
 	var (
-		e  = NewEngine()
 		wg = sync.WaitGroup{}
 	)
+	e, err := NewEngine()
+	require.NoError(t, err)
 	for i := 0; i < 4; i++ {
 		wg.Add(1)
 		tag := strconv.Itoa(i)
@@ -284,7 +295,8 @@ func TestPoison(t *testing.T) {
 }
 
 func TestRequestResponse(t *testing.T) {
-	e := NewEngine()
+	e, err := NewEngine()
+	require.NoError(t, err)
 	pid := e.Spawn(NewTestProducer(t, func(t *testing.T, ctx *Context) {
 		if msg, ok := ctx.Message().(string); ok {
 			assert.Equal(t, "foo", msg)
@@ -303,7 +315,8 @@ func TestRequestResponse(t *testing.T) {
 
 // 56 ns/op
 func BenchmarkSendMessageLocal(b *testing.B) {
-	e := NewEngine()
+	e, err := NewEngine()
+	require.NoError(b, err)
 	pid := e.SpawnFunc(func(_ *Context) {}, "bench", WithInboxSize(128))
 
 	b.ResetTimer()
@@ -315,10 +328,11 @@ func BenchmarkSendMessageLocal(b *testing.B) {
 }
 
 func BenchmarkSendWithSenderMessageLocal(b *testing.B) {
-	e := NewEngine()
+	e, err := NewEngine()
+	require.NoError(b, err)
 	p := NewTestProducer(nil, func(_ *testing.T, _ *Context) {})
 	pid := e.Spawn(p, "bench", WithInboxSize(1024*8))
-
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		e.SendWithSender(pid, pid, pid)
 	}

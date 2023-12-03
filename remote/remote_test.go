@@ -175,11 +175,15 @@ func TestWeird(t *testing.T) {
 func makeRemoteEngine(listenAddr string) (*actor.Engine, *Remote, error) {
 	var e *actor.Engine
 	r := New(Config{ListenAddr: listenAddr})
+	var err error
 	switch debugLog {
 	case false:
-		e = actor.NewEngine(actor.EngineOptRemote(r))
+		e, err = actor.NewEngine(actor.EngineOptRemote(r))
 	case true:
-		e = actor.NewEngine(actor.EngineOptLogger(log.Debug()), actor.EngineOptRemote(r))
+		e, err = actor.NewEngine(actor.EngineOptLogger(log.Debug()), actor.EngineOptRemote(r))
+	}
+	if err != nil {
+		return nil, nil, fmt.Errorf("actor.NewEngine: %w", err)
 	}
 	return e, r, nil
 }

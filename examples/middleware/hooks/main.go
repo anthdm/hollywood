@@ -44,7 +44,10 @@ func WithHooks() func(actor.ReceiveFunc) actor.ReceiveFunc {
 
 func main() {
 	// Create a new engine
-	e := actor.NewEngine(actor.EngineOptPidSeparator("→"))
+	e, err := actor.NewEngine(actor.EngineOptPidSeparator("→"))
+	if err != nil {
+		panic(err)
+	}
 	// Spawn the a new "foo" receiver with middleware.
 	pid := e.Spawn(newFoo, "foo", actor.WithMiddleware(WithHooks()))
 	// Send a message to foo

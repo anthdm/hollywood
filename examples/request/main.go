@@ -30,7 +30,10 @@ func (r *nameResponder) Receive(ctx *actor.Context) {
 }
 
 func main() {
-	e := actor.NewEngine()
+	e, err := actor.NewEngine()
+	if err != nil {
+		log.Fatal(err)
+	}
 	pid := e.Spawn(newNameResponder, "responder")
 	// Request a name and block till we got a response or the request
 	// timed out.

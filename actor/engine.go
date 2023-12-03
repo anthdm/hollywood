@@ -32,17 +32,22 @@ type Engine struct {
 	deadLetter  *PID
 	eventStream *PID
 	logger      log.Logger
+	initErrors  []error
 }
 
 // NewEngine returns a new actor Engine.
 // You can pass configuration functions through the various functions starting with "EngineOpt"
 // These run after the engine is configured
-func NewEngine(opts ...func(*Engine)) *Engine {
+func NewEngine(opts ...func(*Engine)) (*Engine, error) {
 	e := &Engine{}
 	e.Registry = newRegistry(e) // need to init the registry in case we want a custom deadletter
 	e.address = LocalLookupAddr
+	e.initErrors = make([]error, 0)
 	for _, o := range opts {
 		o(e)
+	}
+	if len(e.initErrors) > 0 {
+		slog.Error("failed to initialize engine", "errors", e.initErrors)
 	}
 	if e.remote != nil {
 		e.address = e.remote.Address()
@@ -54,7 +59,7 @@ func NewEngine(opts ...func(*Engine)) *Engine {
 		e.logger.Debugw("no deadletter receiver set, registering default")
 		e.deadLetter = e.Spawn(newDeadLetter, "deadletter")
 	}
-	return e
+	return e, nil
 }
 
 // EngineOptLogger configured the engine with a logger from the internal log package

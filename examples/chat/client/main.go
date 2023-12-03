@@ -51,7 +51,11 @@ func main() {
 	rem := remote.New(remote.Config{
 		ListenAddr: *listenAt,
 	})
-	e := actor.NewEngine(actor.EngineOptLogger(log.Default()), actor.EngineOptRemote(rem))
+	e, err := actor.NewEngine(actor.EngineOptLogger(log.Default()), actor.EngineOptRemote(rem))
+	if err != nil {
+		slog.Error("failed to create engine", "err", err)
+		os.Exit(1)
+	}
 
 	var (
 		// the process ID of the server
