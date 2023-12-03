@@ -4,9 +4,10 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
-	"github.com/anthdm/hollywood/log"
 	"log/slog"
 	"os"
+
+	"github.com/anthdm/hollywood/log"
 
 	"github.com/anthdm/hollywood/actor"
 	"github.com/anthdm/hollywood/examples/chat/types"
@@ -47,12 +48,11 @@ func main() {
 	)
 	flag.Parse()
 
-	e := actor.NewEngine(actor.EngineOptLogger(log.Default()))
-	rem := remote.New(e, remote.Config{
+	rem := remote.New(remote.Config{
 		ListenAddr: *listenAt,
 		Logger:     log.NewLogger("[remote]", log.NewHandler(os.Stdout, log.TextFormat, slog.LevelDebug)),
 	})
-	e.WithRemote(rem)
+	e := actor.NewEngine(actor.EngineOptLogger(log.Default()), actor.EngineOptRemote(rem))
 
 	var (
 		// the process ID of the server

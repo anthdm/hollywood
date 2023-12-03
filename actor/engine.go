@@ -10,7 +10,7 @@ import (
 type Remoter interface {
 	Address() string
 	Send(*PID, any, *PID)
-	Start()
+	Start(*Engine)
 }
 
 // Producer is any function that can return a Receiver
@@ -36,13 +36,16 @@ type Engine struct {
 // You can pass an optional logger through
 func NewEngine(opts ...func(*Engine)) *Engine {
 	e := &Engine{}
-	e.address = LocalLookupAddr
 	e.Registry = newRegistry(e) // need to init the registry in case we want a custom deadletter
-	e.eventStream = e.Spawn(NewEventStream(), "eventstream")
 	for _, o := range opts {
 		o(e)
 	}
+	e.address = LocalLookupAddr
+	if e.remote != nil {
+		e.address = e.remote.Address()
+	}
 
+	e.eventStream = e.Spawn(NewEventStream(), "eventstream")
 	// if no deadletter is registered, we will register the default deadletter from deadletter.go
 	if e.deadLetter == nil {
 		e.logger.Debugw("no deadletter receiver set, registering default")
@@ -51,12 +54,24 @@ func NewEngine(opts ...func(*Engine)) *Engine {
 	return e
 }
 
+// TODO: Doc
 func EngineOptLogger(logger log.Logger) func(*Engine) {
 	return func(e *Engine) {
 		e.logger = logger
 	}
 }
 
+// TODO: Doc
+func EngineOptRemote(r Remoter) func(*Engine) {
+	return func(e *Engine) {
+		e.remote = r
+		e.address = r.Address()
+		// TODO: potential error not handled here
+		r.Start(e)
+	}
+}
+
+// TODO: Doc
 func EngineOptPidSeparator(sep string) func(*Engine) {
 	// This looks weird because the separator is a global variable.
 	return func(e *Engine) {
@@ -64,18 +79,11 @@ func EngineOptPidSeparator(sep string) func(*Engine) {
 	}
 }
 
+// TODO: Doc
 func EngineOptDeadletter(d Producer) func(*Engine) {
 	return func(e *Engine) {
 		e.deadLetter = e.Spawn(d, "deadletter")
 	}
-}
-
-// WithRemote returns a new actor Engine with the given Remoter,
-// and will call its Start function
-func (e *Engine) WithRemote(r Remoter) {
-	e.remote = r
-	e.address = r.Address()
-	r.Start()
 }
 
 // Spawn spawns a process that will producer by the given Producer and
@@ -135,11 +143,11 @@ func (e *Engine) Send(pid *PID, msg any) {
 	e.send(pid, msg, nil)
 }
 
-// PublishEvent will publish the given message over the eventstream, notifying all
+// BroadcastEvent will broadcast the given message over the eventstream, notifying all
 // actors that are subscribed.
-func (e *Engine) PublishEvent(msg any) {
+func (e *Engine) BroadcastEvent(msg any) {
 	if e.eventStream != nil {
-		e.SendLocal(e.eventStream, msg, nil)
+		e.send(e.eventStream, msg, nil)
 	}
 }
 

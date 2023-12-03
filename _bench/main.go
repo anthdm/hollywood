@@ -12,9 +12,8 @@ import (
 )
 
 func makeRemoteEngine(addr string) *actor.Engine {
-	e := actor.NewEngine()
-	r := remote.New(e, remote.Config{ListenAddr: addr})
-	e.WithRemote(r)
+	r := remote.New(remote.Config{ListenAddr: addr})
+	e := actor.NewEngine(actor.EngineOptRemote(r))
 	return e
 }
 

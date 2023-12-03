@@ -1,8 +1,10 @@
 package actor
 
 import (
-	"github.com/anthdm/hollywood/log"
+	fmt "fmt"
 	"reflect"
+
+	"github.com/anthdm/hollywood/log"
 )
 
 //
@@ -34,6 +36,7 @@ func (d *deadLetter) Receive(ctx *Context) {
 	case Initialized:
 		d.logger.Debugw("default deadletter actor initialized")
 	case *DeadLetterEvent:
+		fmt.Println("received deadletter", msg)
 		d.logger.Warnw("deadletter arrived", "msg-type", reflect.TypeOf(msg),
 			"sender", msg.Sender, "target", msg.Target, "msg", msg.Message)
 	default:

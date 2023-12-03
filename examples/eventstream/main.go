@@ -45,6 +45,6 @@ func main() {
 	}()
 
 	time.Sleep(time.Millisecond)
-	e.PublishEvent(MyCustomEvent{msg: "Hello World!"})
+	e.BroadcastEvent(MyCustomEvent{msg: "Hello World!"})
 	time.Sleep(time.Millisecond)
 }

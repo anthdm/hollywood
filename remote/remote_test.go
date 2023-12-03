@@ -93,10 +93,42 @@ func TestRequestResponse(t *testing.T) {
 	assert.Equal(t, resp.(*TestMessage).Data, []byte("foo"))
 }
 
+func TestEventStream(t *testing.T) {
+	// Events should work over the wire from the get go.
+	// Which is just insane, huh?
+	var (
+		engine = makeRemoteEngine(getRandomLocalhostAddr())
+		wg     = sync.WaitGroup{}
+	)
+	wg.Add(2)
+
+	engine.SpawnFunc(func(c *actor.Context) {
+		switch c.Message().(type) {
+		case actor.Started:
+			c.Engine().Subscribe(c.PID())
+		case *TestMessage:
+			fmt.Println("actor (a) received event")
+			wg.Done()
+		}
+	}, "actor_a")
+
+	engine.SpawnFunc(func(c *actor.Context) {
+		switch c.Message().(type) {
+		case actor.Started:
+			c.Engine().Subscribe(c.PID())
+		case *TestMessage:
+			fmt.Println("actor (b) received event")
+			wg.Done()
+		}
+	}, "actor_b")
+	time.Sleep(time.Millisecond)
+	engine.BroadcastEvent(&TestMessage{Data: []byte("testevent")})
+	wg.Wait()
+}
+
 func makeRemoteEngine(listenAddr string) *actor.Engine {
-	e := actor.NewEngine()
-	r := New(e, Config{ListenAddr: listenAddr})
-	e.WithRemote(r)
+	r := New(Config{ListenAddr: listenAddr})
+	e := actor.NewEngine(actor.EngineOptRemote(r))
 	return e
 }
 
