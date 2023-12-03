@@ -29,6 +29,7 @@ type Engine struct {
 	address    string
 	remote     Remoter
 	deadLetter *PID
+	event      *PID
 	logger     log.Logger
 }
 
@@ -39,6 +40,7 @@ func NewEngine(opts ...func(*Engine)) *Engine {
 	e.address = LocalLookupAddr
 	e.Registry = newRegistry(e)      // need to init the registry in case we want a custom deadletter
 	e.EventStream = NewEventStream() //
+	e.event = e.Spawn(NewEvent(), "event")
 	for _, o := range opts {
 		o(e)
 	}
@@ -138,6 +140,12 @@ func (e *Engine) Send(pid *PID, msg any) {
 	e.send(pid, msg, nil)
 }
 
+// PublishEvent will publish the given message over the eventstream, notifying all
+// actors that are subscribed.
+func (e *Engine) PublishEvent(msg any) {
+	e.Send(e.event, msg)
+}
+
 func (e *Engine) send(pid *PID, msg any, sender *PID) {
 	if e.isLocalMessage(pid) {
 		e.SendLocal(pid, msg, sender)
@@ -151,6 +159,7 @@ func (e *Engine) send(pid *PID, msg any, sender *PID) {
 	e.remote.Send(pid, msg, sender)
 }
 
+// TODO: documentation
 type SendRepeater struct {
 	engine   *Engine
 	self     *PID
@@ -252,6 +261,14 @@ func (e *Engine) SendLocal(pid *PID, msg any, sender *PID) {
 		return
 	}
 	proc.Send(pid, msg, sender)
+}
+
+func (e *Engine) Subscribe(pid *PID) {
+	e.Send(e.event, EventSub{pid: pid})
+}
+
+func (e *Engine) Unsubscribe(pid *PID) {
+	e.Send(e.event, EventUnsub{pid: pid})
 }
 
 func (e *Engine) isLocalMessage(pid *PID) bool {

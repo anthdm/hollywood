@@ -8,10 +8,6 @@ import (
 	"github.com/anthdm/hollywood/log"
 )
 
-type EventSub struct {
-	id uint32
-}
-
 type EventStreamFunc func(event any)
 
 type EventStream struct {

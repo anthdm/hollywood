@@ -2,51 +2,48 @@ package main
 
 import (
 	"fmt"
-	"github.com/anthdm/hollywood/log"
-	"log/slog"
-	"os"
-	"sync"
+	"time"
 
 	"github.com/anthdm/hollywood/actor"
 )
 
+// Custom event type that will be send over the event stream.
+type MyCustomEvent struct {
+	msg string
+}
+
+// Spawn 2 actors and subscribe them to the event stream.
+// When we call engine.PublishEvent both actors will be notified.
 func main() {
-	lh := log.NewHandler(os.Stdout, log.TextFormat, slog.LevelDebug)
-	e := actor.NewEngine(actor.EngineOptLogger(log.NewLogger("[engine]", lh)))
-	wg := sync.WaitGroup{}
-	wg.Add(1)
-
-	// Subscribe to a various list of events that are being broadcast by
-	// the engine, but also published by you.
-	eventSub := e.EventStream.Subscribe(func(event any) {
-		switch evt := event.(type) {
-		case *actor.DeadLetterEvent:
-			fmt.Printf("deadletter event to [%s] msg: %s\n", evt.Target, evt.Message)
-		case *actor.ActivationEvent:
-			fmt.Println("process is active", evt.PID)
-		case *actor.TerminationEvent:
-			fmt.Println("process terminated:", evt.PID)
-			wg.Done()
-		default:
-			fmt.Println("received event", evt)
-		}
-	})
-
-	pid := e.SpawnFunc(func(c *actor.Context) {
+	e := actor.NewEngine()
+	actorA := e.SpawnFunc(func(c *actor.Context) {
 		switch msg := c.Message().(type) {
 		case actor.Started:
-			fmt.Println("started")
-			_ = msg
+			fmt.Println("actor A started")
+		case MyCustomEvent:
+			fmt.Printf("actorA: event => %+v\n", msg)
 		}
-	}, "foo")
+	}, "actor_a")
+	// Subscribe the actor to the event stream from outside of the actor itself.
+	e.Subscribe(actorA)
 
-	deadPID := actor.NewPID("local", "bar")
-	e.Send(deadPID, "hello")
-	// Publish anything to the stream.
-	e.EventStream.Publish([]byte("some dirty bytes"))
-	e.Poison(pid)
+	actorB := e.SpawnFunc(func(c *actor.Context) {
+		switch msg := c.Message().(type) {
+		case actor.Started:
+			// Subscribe the actor to the event stream from inside the actor itself.
+			c.Engine().Subscribe(c.PID())
+		case MyCustomEvent:
+			fmt.Printf("actorB: event => %+v\n", msg)
+		}
+	}, "actor_b")
 
-	// Unsubscribe from the event stream
-	defer e.EventStream.Unsubscribe(eventSub)
-	wg.Wait()
+	// Unsubscribing both actors from the event stream.
+	defer func() {
+		e.Unsubscribe(actorA)
+		e.Unsubscribe(actorB)
+	}()
+
+	time.Sleep(time.Millisecond)
+	e.PublishEvent(MyCustomEvent{msg: "Hello World!"})
+	time.Sleep(time.Millisecond)
 }
