@@ -221,7 +221,7 @@ See the log package for more details about the implementation.
 make test
 ```
 
-# Community and discusions
+# Community and discussions
 Join our Discord community with over 2000 members for questions and a nice chat.
 ![Discord Banner 2](https://discordapp.com/api/guilds/anthonygg/widget.png?style=banner2)
 
