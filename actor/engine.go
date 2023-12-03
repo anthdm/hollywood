@@ -1,6 +1,8 @@
 package actor
 
 import (
+	"log/slog"
+	reflect "reflect"
 	"sync"
 	"time"
 
@@ -37,10 +39,10 @@ type Engine struct {
 func NewEngine(opts ...func(*Engine)) *Engine {
 	e := &Engine{}
 	e.Registry = newRegistry(e) // need to init the registry in case we want a custom deadletter
+	e.address = LocalLookupAddr
 	for _, o := range opts {
 		o(e)
 	}
-	e.address = LocalLookupAddr
 	if e.remote != nil {
 		e.address = e.remote.Address()
 	}
@@ -157,8 +159,12 @@ func (e *Engine) send(pid *PID, msg any, sender *PID) {
 		return
 	}
 	if e.remote == nil {
-		e.logger.Errorw("failed sending messsage",
-			"err", "engine has no remote configured")
+		slog.Error("failed sending messsage",
+			"err", "engine has no remote configured",
+			"to", pid,
+			"type", reflect.TypeOf(msg),
+			"msg", msg,
+		)
 		return
 	}
 	e.remote.Send(pid, msg, sender)
