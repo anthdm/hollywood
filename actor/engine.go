@@ -47,7 +47,7 @@ func NewEngine(opts ...func(*Engine)) (*Engine, error) {
 		o(e)
 	}
 	if len(e.initErrors) > 0 {
-		slog.Error("failed to initialize engine", "errors", e.initErrors)
+		return nil, ErrInitFailed{Errors: e.initErrors}
 	}
 	if e.remote != nil {
 		e.address = e.remote.Address()
