@@ -1,5 +1,6 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/anthdm/hollywood)](https://goreportcard.com/report/github.com/anthdm/hollywood)
 ![example workflow](https://github.com/anthdm/hollywood/actions/workflows/build.yml/badge.svg?branch=master)
+![Discord Shield](https://discordapp.com/api/guilds/1025692014903316490/widget.png?style=shield)
 
 # Blazingly fast, low latency actors for Golang
 
@@ -85,42 +86,25 @@ func main() {
 }
 ```
 
-## Spawning receivers with configuration
+## Spawning receivers (actors) 
 
+### With default configuration
 ```go
-    e.Spawn(newFoo, "foo",
-	actor.WithMaxRestarts(4),
-	actor.WithInboxSize(1024 * 2),
-	actor.WithTags("bar", "1"),
-)
+    e.Spawn(newFoo, "myactorname")
 ```
 
-## Subscribing and publishing to the Eventstream
-
+### With custom configuration
 ```go
-e := actor.NewEngine()
-
-// Subscribe to a various list of events that are being broadcast by
-// the engine.
-// The eventstream can also be used to publish custom events and notify all of the subscribers..
-eventSub := e.EventStream.Subscribe(func(event any) {
-	switch evt := event.(type) {
-	case *actor.DeadLetterEvent:
-		fmt.Printf("deadletter event to [%s] msg: %s\n", evt.Target, evt.Message)
-	case *actor.ActivationEvent:
-		fmt.Println("process is active", evt.PID)
-	case *actor.TerminationEvent:
-		fmt.Println("process terminated:", evt.PID)
-		wg.Done()
-	default:
-		fmt.Println("received event", evt)
-	}
-})
-
-// Cleanup subscription
-defer e.EventStream.Unsubscribe(eventSub)
-
-// Spawning receiver as a function
+    e.Spawn(newFoo, "myactorname",
+		actor.WithMaxRestarts(4),
+		actor.WithInboxSize(1024 * 2),
+		actor.WithTags("bar", "1"),
+	)
+)
+```
+### As a stateless function 
+Actors without state can be spawned as a function, because its quick and simple.
+```go
 e.SpawnFunc(func(c *actor.Context) {
 	switch msg := c.Message().(type) {
 	case actor.Started:
@@ -128,9 +112,26 @@ e.SpawnFunc(func(c *actor.Context) {
 		_ = msg
 	}
 }, "foo")
-
-time.Sleep(time.Second)
 ```
+
+## Remote actors
+Actors can communicate with eachother over the network with the Remote package. This works the same as local actors but "over the wire". Hollywood supports serialization with Protobuffer or JSON.
+
+***[Remote actor examples](https://github.com/anthdm/hollywood/tree/master/examples/remote)***
+
+## Eventstream
+The Eventstream is a powerfull tool that allows you to build flexible and plugable systems without dependencies. 
+
+1. Subscribe any actor to a various list of system events
+2. Broadcast your custom events to all subscribers 
+
+You can find more in-depth information on how to use the Eventstream in your application in the Eventstream ***[examples](https://github.com/anthdm/hollywood/tree/master/examples/eventstream)***
+
+### List of internal system events 
+* `ActorStartedEvent`
+* `ActorStoppedEvent`
+
+> TODO add and document more events
 
 ## Customizing the Engine
 
@@ -155,13 +156,12 @@ please see the `actor/deadletter_test.go` file, where a custom deadletter handle
 
 Note that you can also provide a custom logger to the engine. See the Logging section for more details.
 
-## Custom middleware
+## Middleware
 
 You can add custom middleware to your Receivers. This can be usefull for storing metrics, saving and loading data for
 your Receivers on `actor.Started` and `actor.Stopped`.
 
-For examples on how to implement custom middleware, check out the middleware folder in the *
-*[examples](https://github.com/anthdm/hollywood/tree/master/examples/middleware)**
+For examples on how to implement custom middleware, check out the middleware folder in the ***[examples](https://github.com/anthdm/hollywood/tree/master/examples/middleware)***
 
 ## Logging
 
@@ -220,6 +220,11 @@ See the log package for more details about the implementation.
 ```
 make test
 ```
+
+# Community and discussions
+Join our Discord community with over 2000 members for questions and a nice chat.
+![Discord Banner 2](https://discordapp.com/api/guilds/1025692014903316490/widget.png?style=banner2)
+
 
 # Used in Production By
 
