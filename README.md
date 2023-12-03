@@ -1,6 +1,6 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/anthdm/hollywood)](https://goreportcard.com/report/github.com/anthdm/hollywood)
 ![example workflow](https://github.com/anthdm/hollywood/actions/workflows/build.yml/badge.svg?branch=master)
-![Discord Shield](https://discordapp.com/api/guilds/anthonygg/widget.png?style=shield)
+![Discord Shield](https://discordapp.com/api/guilds/1025692014903316490/widget.png?style=shield)
 
 # Blazingly fast, low latency actors for Golang
 
@@ -223,7 +223,7 @@ make test
 
 # Community and discussions
 Join our Discord community with over 2000 members for questions and a nice chat.
-![Discord Banner 2](https://discordapp.com/api/guilds/anthonygg/widget.png?style=banner2)
+![Discord Banner 2](https://discordapp.com/api/guilds/1025692014903316490/widget.png?style=banner2)
 
 
 # Used in Production By
