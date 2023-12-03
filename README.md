@@ -1,7 +1,7 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/anthdm/hollywood)](https://goreportcard.com/report/github.com/anthdm/hollywood)
 ![example workflow](https://github.com/anthdm/hollywood/actions/workflows/build.yml/badge.svg?branch=master)
 <a href="https://discord.gg/gdwXmXYNTh">
-<img src="https://discordapp.com/api/guilds/1025692014903316490/widget.png?style=shield" alt="Discord Shield"/>
+	<img src="https://discordapp.com/api/guilds/1025692014903316490/widget.png?style=shield" alt="Discord Shield"/>
 </a>
 
 # Blazingly fast, low latency actors for Golang
@@ -88,16 +88,14 @@ func main() {
 }
 ```
 
-## Spawning receivers (actors)
+## Spawning receivers (actors) 
 
 ### With default configuration
-
 ```go
     e.Spawn(newFoo, "myactorname")
 ```
 
 ### With custom configuration
-
 ```go
     e.Spawn(newFoo, "myactorname",
 		actor.WithMaxRestarts(4),
@@ -106,11 +104,8 @@ func main() {
 	)
 )
 ```
-
-### As a stateless function
-
+### As a stateless function 
 Actors without state can be spawned as a function, because its quick and simple.
-
 ```go
 e.SpawnFunc(func(c *actor.Context) {
 	switch msg := c.Message().(type) {
@@ -122,24 +117,21 @@ e.SpawnFunc(func(c *actor.Context) {
 ```
 
 ## Remote actors
-
 Actors can communicate with eachother over the network with the Remote package. This works the same as local actors but "over the wire". Hollywood supports serialization with Protobuffer or JSON.
 
-**_[Remote actor examples](https://github.com/anthdm/hollywood/tree/master/examples/remote)_**
+***[Remote actor examples](https://github.com/anthdm/hollywood/tree/master/examples/remote)***
 
 ## Eventstream
-
-The Eventstream is a powerfull tool that allows you to build flexible and plugable systems without dependencies.
+The Eventstream is a powerfull tool that allows you to build flexible and plugable systems without dependencies. 
 
 1. Subscribe any actor to a various list of system events
-2. Broadcast your custom events to all subscribers
+2. Broadcast your custom events to all subscribers 
 
-You can find more in-depth information on how to use the Eventstream in your application in the Eventstream **_[examples](https://github.com/anthdm/hollywood/tree/master/examples/eventstream)_**
+You can find more in-depth information on how to use the Eventstream in your application in the Eventstream ***[examples](https://github.com/anthdm/hollywood/tree/master/examples/eventstream)***
 
-### List of internal system events
-
-- `ActorStartedEvent`
-- `ActorStoppedEvent`
+### List of internal system events 
+* `ActorStartedEvent`
+* `ActorStoppedEvent`
 
 > TODO add and document more events
 
@@ -160,7 +152,7 @@ After configuring the Engine with a custom PID Separator the string representati
 ```
 
 You can provide your own actor to do deadletter handling. This is useful if you want to forward deadletters to a
-monitoring service or log them somewhere. The default deadletter handler will, if you have enabled logging,
+monitoring service or log them somewhere. The default deadletter handler will, if you have enabled logging, 
 log the deadletter to the logs, using WARN as the log level. For details on how to set up a custom deadletter handler,
 please see the `actor/deadletter_test.go` file, where a custom deadletter handler is set up for testing purposes.
 
@@ -171,7 +163,7 @@ Note that you can also provide a custom logger to the engine. See the Logging se
 You can add custom middleware to your Receivers. This can be usefull for storing metrics, saving and loading data for
 your Receivers on `actor.Started` and `actor.Stopped`.
 
-For examples on how to implement custom middleware, check out the middleware folder in the **_[examples](https://github.com/anthdm/hollywood/tree/master/examples/middleware)_**
+For examples on how to implement custom middleware, check out the middleware folder in the ***[examples](https://github.com/anthdm/hollywood/tree/master/examples/middleware)***
 
 ## Logging
 
@@ -203,23 +195,23 @@ The various subsystems will change the log field to reflect their own name.
 
 The log levels are, in order of severity:
 
-- `slog.LevelDebug`
-- `slog.LevelInfo`
-- `slog.LevelWarn`
-- `slog.LevelError`
+* `slog.LevelDebug`
+* `slog.LevelInfo`
+* `slog.LevelWarn`
+* `slog.LevelError`
 
 ### Log components.
 
 The log field "log" will be populated with the name of the subsystem that is logging. The subsystems are:
 
-- `[engine]`
-- `[context`
-- `[deadLetter]`
-- `[eventStream]`
-- `[registry]`
-- `[stream_reader]`
-- `[stream_writer]`
-- `[stream_router]`
+* `[engine]`
+* `[context`
+* `[deadLetter]`
+* `[eventStream]`
+* `[registry]`
+* `[stream_reader]`
+* `[stream_writer]`
+* `[stream_router]`
 
 In addition, the logger will log with log=$ACTOR_NAME for any actor that has a name.
 
@@ -232,9 +224,13 @@ make test
 ```
 
 # Community and discussions
-
 Join our Discord community with over 2000 members for questions and a nice chat.
-![Discord Banner 2](https://discordapp.com/api/guilds/1025692014903316490/widget.png?style=banner2)
+<br>
+<a href="https://discord.gg/gdwXmXYNTh">
+	<img src="https://discordapp.com/api/guilds/1025692014903316490/widget.png?style=banner2" alt="Discord Banner"/>
+</a>
+
+
 
 # Used in Production By
 
