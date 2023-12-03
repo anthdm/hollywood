@@ -30,6 +30,7 @@ func main() {
 	actorB := e.SpawnFunc(func(c *actor.Context) {
 		switch msg := c.Message().(type) {
 		case actor.Started:
+			fmt.Println("actor B started")
 			// Subscribe the actor to the event stream from inside the actor itself.
 			c.Engine().Subscribe(c.PID())
 		case MyCustomEvent:

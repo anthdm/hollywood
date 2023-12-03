@@ -1,8 +1,6 @@
 package actor
 
-// EventSub
 type EventSub struct {
-	id  uint32 // backwards compat for now
 	pid *PID
 }
 

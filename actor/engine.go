@@ -23,8 +23,7 @@ type Receiver interface {
 
 // Engine represents the actor engine.
 type Engine struct {
-	EventStream *EventStream
-	Registry    *Registry
+	Registry *Registry
 
 	address    string
 	remote     Remoter
@@ -38,9 +37,8 @@ type Engine struct {
 func NewEngine(opts ...func(*Engine)) *Engine {
 	e := &Engine{}
 	e.address = LocalLookupAddr
-	e.Registry = newRegistry(e)      // need to init the registry in case we want a custom deadletter
-	e.EventStream = NewEventStream() //
-	e.event = e.Spawn(NewEvent(), "event")
+	e.Registry = newRegistry(e) // need to init the registry in case we want a custom deadletter
+	e.event = e.Spawn(NewEvent(), "eventstream")
 	for _, o := range opts {
 		o(e)
 	}
@@ -56,9 +54,6 @@ func NewEngine(opts ...func(*Engine)) *Engine {
 func EngineOptLogger(logger log.Logger) func(*Engine) {
 	return func(e *Engine) {
 		e.logger = logger
-		// This is a bit hacky, but we need to set the logger for the eventstream
-		// which cannot be set in the constructor since the logger is not set yet.
-		e.EventStream.logger = logger.SubLogger("[eventStream]")
 	}
 }
 
@@ -143,7 +138,9 @@ func (e *Engine) Send(pid *PID, msg any) {
 // PublishEvent will publish the given message over the eventstream, notifying all
 // actors that are subscribed.
 func (e *Engine) PublishEvent(msg any) {
-	e.Send(e.event, msg)
+	if e.event != nil {
+		e.SendLocal(e.event, msg, nil)
+	}
 }
 
 func (e *Engine) send(pid *PID, msg any, sender *PID) {

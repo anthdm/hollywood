@@ -10,6 +10,7 @@ import (
 	"storj.io/drpc/drpcserver"
 )
 
+// Config holds the remote configuration.
 type Config struct {
 	ListenAddr string
 	Logger     log.Logger
