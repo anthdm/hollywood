@@ -1,26 +1,28 @@
 package actor
 
+// EventSub is the message that will be send to subscribe to the event stream.
 type EventSub struct {
 	pid *PID
 }
 
+// EventUnSub is the message that will be send to unsubscribe from the event stream.
 type EventUnsub struct {
 	pid *PID
 }
 
-type Event struct {
+type EventStream struct {
 	subs map[*PID]bool
 }
 
-func NewEvent() Producer {
+func NewEventStream() Producer {
 	return func() Receiver {
-		return &Event{
+		return &EventStream{
 			subs: make(map[*PID]bool),
 		}
 	}
 }
 
-func (e *Event) Receive(c *Context) {
+func (e *EventStream) Receive(c *Context) {
 	switch msg := c.Message().(type) {
 	case EventSub:
 		e.subs[msg.pid] = true

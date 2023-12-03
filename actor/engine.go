@@ -25,11 +25,11 @@ type Receiver interface {
 type Engine struct {
 	Registry *Registry
 
-	address    string
-	remote     Remoter
-	deadLetter *PID
-	event      *PID
-	logger     log.Logger
+	address     string
+	remote      Remoter
+	deadLetter  *PID
+	eventStream *PID
+	logger      log.Logger
 }
 
 // NewEngine returns a new actor Engine.
@@ -38,7 +38,7 @@ func NewEngine(opts ...func(*Engine)) *Engine {
 	e := &Engine{}
 	e.address = LocalLookupAddr
 	e.Registry = newRegistry(e) // need to init the registry in case we want a custom deadletter
-	e.event = e.Spawn(NewEvent(), "eventstream")
+	e.eventStream = e.Spawn(NewEventStream(), "eventstream")
 	for _, o := range opts {
 		o(e)
 	}
@@ -138,8 +138,8 @@ func (e *Engine) Send(pid *PID, msg any) {
 // PublishEvent will publish the given message over the eventstream, notifying all
 // actors that are subscribed.
 func (e *Engine) PublishEvent(msg any) {
-	if e.event != nil {
-		e.SendLocal(e.event, msg, nil)
+	if e.eventStream != nil {
+		e.SendLocal(e.eventStream, msg, nil)
 	}
 }
 
@@ -260,12 +260,14 @@ func (e *Engine) SendLocal(pid *PID, msg any, sender *PID) {
 	proc.Send(pid, msg, sender)
 }
 
+// Subscribe will subscribe the given PID to the event stream.
 func (e *Engine) Subscribe(pid *PID) {
-	e.Send(e.event, EventSub{pid: pid})
+	e.Send(e.eventStream, EventSub{pid: pid})
 }
 
+// Unsubscribe will un subscribe the given PID from the event stream.
 func (e *Engine) Unsubscribe(pid *PID) {
-	e.Send(e.event, EventUnsub{pid: pid})
+	e.Send(e.eventStream, EventUnsub{pid: pid})
 }
 
 func (e *Engine) isLocalMessage(pid *PID) bool {
