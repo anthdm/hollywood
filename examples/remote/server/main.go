@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/anthdm/hollywood/log"
 
 	"github.com/anthdm/hollywood/actor"
 	"github.com/anthdm/hollywood/examples/remote/msg"
@@ -27,13 +26,8 @@ func (f *server) Receive(ctx *actor.Context) {
 }
 
 func main() {
-	e := actor.NewEngine(actor.EngineOptLogger(log.Debug()))
-	r := remote.New(e, remote.Config{ListenAddr: "127.0.0.1:4000"})
-	err := e.WithRemote(r)
-	if err != nil {
-		panic(err)
-	}
-	defer r.Stop()
+	r := remote.New(remote.Config{ListenAddr: "127.0.0.1:4000"})
+	e := actor.NewEngine(actor.EngineOptRemote(r))
 
 	e.Spawn(newServer, "server")
 	select {}

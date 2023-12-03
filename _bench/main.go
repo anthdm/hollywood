@@ -12,14 +12,8 @@ import (
 )
 
 func makeRemoteEngine(addr string) *actor.Engine {
-	e := actor.NewEngine()
-	r := remote.New(e, remote.Config{ListenAddr: addr})
-
-	err := e.WithRemote(r)
-	if err != nil {
-		slog.Error("WithRemote", "error", err)
-		os.Exit(1)
-	}
+	r := remote.New(remote.Config{ListenAddr: addr})
+	e := actor.NewEngine(actor.EngineOptRemote(r))
 	return e
 }
 
@@ -27,7 +21,7 @@ func benchmarkRemote() {
 	var (
 		a    = makeRemoteEngine("127.0.0.1:3000")
 		b    = makeRemoteEngine("127.0.0.1:3001")
-		pidB = b.SpawnFunc(func(c *actor.Context) {}, "bench", actor.WithInboxSize(1024*8))
+		pidB = b.SpawnFunc(func(c *actor.Context) {}, "bench", actor.WithInboxSize(1024*8), actor.WithMaxRestarts(0))
 	)
 	its := []int{
 		1_000_000,
@@ -44,7 +38,7 @@ func benchmarkRemote() {
 
 func benchmarkLocal() {
 	e := actor.NewEngine()
-	pid := e.SpawnFunc(func(c *actor.Context) {}, "bench", actor.WithInboxSize(1024*8))
+	pid := e.SpawnFunc(func(c *actor.Context) {}, "bench", actor.WithInboxSize(1024*8), actor.WithMaxRestarts(0))
 	its := []int{
 		1_000_000,
 		10_000_000,

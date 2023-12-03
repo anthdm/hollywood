@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-	"github.com/anthdm/hollywood/log"
 	"time"
 
 	"github.com/anthdm/hollywood/actor"
@@ -11,18 +9,12 @@ import (
 )
 
 func main() {
-	e := actor.NewEngine(actor.EngineOptLogger(log.Debug()))
-	r := remote.New(e, remote.Config{ListenAddr: "127.0.0.1:3000"})
-	err := e.WithRemote(r)
-	defer r.Stop()
-	if err != nil {
-		panic(err)
-	}
+	r := remote.New(remote.Config{ListenAddr: "127.0.0.1:3000"})
+	e := actor.NewEngine(actor.EngineOptRemote(r))
 
 	pid := actor.NewPID("127.0.0.1:4000", "server")
 	for {
 		e.Send(pid, &msg.Message{Data: "hello!"})
-		fmt.Println("sent message")
 		time.Sleep(time.Second)
 	}
 }

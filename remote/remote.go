@@ -13,6 +13,7 @@ import (
 	"storj.io/drpc/drpcserver"
 )
 
+// Config holds the remote configuration.
 type Config struct {
 	ListenAddr string
 	Wg         *sync.WaitGroup
@@ -36,30 +37,26 @@ const (
 	stateStopped
 )
 
-// New creates a new "Remote" object given an engine and a Config.
-func New(e *actor.Engine, cfg Config) *Remote {
+// New creates a new "Remote" object given a Config.
+func New(cfg Config) *Remote {
 	r := &Remote{
-		engine: e,
 		config: cfg,
-		logger: e.GetLogger().SubLogger("[remote]"),
 	}
 	r.state.Store(stateInitialized)
 	r.streamReader = newStreamReader(r)
 	return r
 }
 
-// Start starts the remote. The remote will listen on the given address.
-// It will spawn a new actor, "router", which will handle all incoming messages.
-// When the supplied context is cancelled, the remote will stop listening.
-func (r *Remote) Start() error {
+func (r *Remote) Start(e *actor.Engine, logger log.Logger) error {
 	if r.state.Load() != stateInitialized {
 		return fmt.Errorf("remote already started")
 	}
 	r.state.Store(stateRunning)
-	r.stopCh = make(chan struct{})
+	r.logger = logger
+	r.engine = e
 	ln, err := net.Listen("tcp", r.config.ListenAddr)
 	if err != nil {
-		return fmt.Errorf("failed to listen: %w", err)
+		panic("failed to listen: " + err.Error())
 	}
 	r.logger.Debugw("listening", "addr", r.config.ListenAddr)
 	mux := drpcmux.New()
@@ -68,10 +65,12 @@ func (r *Remote) Start() error {
 		return fmt.Errorf("failed to register remote: %w", err)
 	}
 	s := drpcserver.New(mux)
+
 	r.streamRouterPID = r.engine.Spawn(newStreamRouter(r.engine, r.logger), "router", actor.WithInboxSize(1024*1024))
 	r.logger.Infow("server started", "listenAddr", r.config.ListenAddr)
 	r.stopWg = &sync.WaitGroup{}
 	r.stopWg.Add(1)
+	r.stopCh = make(chan struct{})
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
 		defer r.stopWg.Done()
@@ -94,8 +93,10 @@ func (r *Remote) Start() error {
 // Stop will stop the remote from listening.
 func (r *Remote) Stop() *sync.WaitGroup {
 	if r.state.Load() != stateRunning {
+		r.logger.Warnw("remote already stopped but stop was called", "state", r.state.Load())
 		return &sync.WaitGroup{} // return empty waitgroup so the caller can still wait without panicking.
 	}
+	r.logger.Debugw("stopping remote")
 	r.state.Store(stateStopped)
 	r.stopCh <- struct{}{}
 	r.logger.Debugw("stop signal sent")
