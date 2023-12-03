@@ -10,6 +10,7 @@ import (
 	"storj.io/drpc/drpcserver"
 )
 
+// Config holds the remote configuration.
 type Config struct {
 	ListenAddr string
 	Logger     log.Logger
@@ -23,10 +24,9 @@ type Remote struct {
 	logger          log.Logger
 }
 
-// New creates a new "Remote" object given an engine and a Config.
-func New(e *actor.Engine, cfg Config) *Remote {
+// New creates a new "Remote" object given a Config.
+func New(cfg Config) *Remote {
 	r := &Remote{
-		engine: e,
 		config: cfg,
 		logger: cfg.Logger,
 	}
@@ -34,7 +34,8 @@ func New(e *actor.Engine, cfg Config) *Remote {
 	return r
 }
 
-func (r *Remote) Start() {
+func (r *Remote) Start(e *actor.Engine) {
+	r.engine = e
 	ln, err := net.Listen("tcp", r.config.ListenAddr)
 	if err != nil {
 		panic("failed to listen: " + err.Error())

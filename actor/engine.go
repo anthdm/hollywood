@@ -1,6 +1,8 @@
 package actor
 
 import (
+	"log/slog"
+	reflect "reflect"
 	"sync"
 	"time"
 
@@ -10,7 +12,7 @@ import (
 type Remoter interface {
 	Address() string
 	Send(*PID, any, *PID)
-	Start()
+	Start(*Engine)
 }
 
 // Producer is any function that can return a Receiver
@@ -23,26 +25,29 @@ type Receiver interface {
 
 // Engine represents the actor engine.
 type Engine struct {
-	EventStream *EventStream
-	Registry    *Registry
+	Registry *Registry
 
-	address    string
-	remote     Remoter
-	deadLetter *PID
-	logger     log.Logger
+	address     string
+	remote      Remoter
+	deadLetter  *PID
+	eventStream *PID
+	logger      log.Logger
 }
 
 // NewEngine returns a new actor Engine.
 // You can pass an optional logger through
 func NewEngine(opts ...func(*Engine)) *Engine {
 	e := &Engine{}
+	e.Registry = newRegistry(e) // need to init the registry in case we want a custom deadletter
 	e.address = LocalLookupAddr
-	e.Registry = newRegistry(e)      // need to init the registry in case we want a custom deadletter
-	e.EventStream = NewEventStream() //
 	for _, o := range opts {
 		o(e)
 	}
+	if e.remote != nil {
+		e.address = e.remote.Address()
+	}
 
+	e.eventStream = e.Spawn(NewEventStream(), "eventstream")
 	// if no deadletter is registered, we will register the default deadletter from deadletter.go
 	if e.deadLetter == nil {
 		e.logger.Debugw("no deadletter receiver set, registering default")
@@ -51,15 +56,24 @@ func NewEngine(opts ...func(*Engine)) *Engine {
 	return e
 }
 
+// TODO: Doc
 func EngineOptLogger(logger log.Logger) func(*Engine) {
 	return func(e *Engine) {
 		e.logger = logger
-		// This is a bit hacky, but we need to set the logger for the eventstream
-		// which cannot be set in the constructor since the logger is not set yet.
-		e.EventStream.logger = logger.SubLogger("[eventStream]")
 	}
 }
 
+// TODO: Doc
+func EngineOptRemote(r Remoter) func(*Engine) {
+	return func(e *Engine) {
+		e.remote = r
+		e.address = r.Address()
+		// TODO: potential error not handled here
+		r.Start(e)
+	}
+}
+
+// TODO: Doc
 func EngineOptPidSeparator(sep string) func(*Engine) {
 	// This looks weird because the separator is a global variable.
 	return func(e *Engine) {
@@ -67,18 +81,11 @@ func EngineOptPidSeparator(sep string) func(*Engine) {
 	}
 }
 
+// TODO: Doc
 func EngineOptDeadletter(d Producer) func(*Engine) {
 	return func(e *Engine) {
 		e.deadLetter = e.Spawn(d, "deadletter")
 	}
-}
-
-// WithRemote returns a new actor Engine with the given Remoter,
-// and will call its Start function
-func (e *Engine) WithRemote(r Remoter) {
-	e.remote = r
-	e.address = r.Address()
-	r.Start()
 }
 
 // Spawn spawns a process that will producer by the given Producer and
@@ -138,19 +145,32 @@ func (e *Engine) Send(pid *PID, msg any) {
 	e.send(pid, msg, nil)
 }
 
+// BroadcastEvent will broadcast the given message over the eventstream, notifying all
+// actors that are subscribed.
+func (e *Engine) BroadcastEvent(msg any) {
+	if e.eventStream != nil {
+		e.send(e.eventStream, msg, nil)
+	}
+}
+
 func (e *Engine) send(pid *PID, msg any, sender *PID) {
 	if e.isLocalMessage(pid) {
 		e.SendLocal(pid, msg, sender)
 		return
 	}
 	if e.remote == nil {
-		e.logger.Errorw("failed sending messsage",
-			"err", "engine has no remote configured")
+		slog.Error("failed sending messsage",
+			"err", "engine has no remote configured",
+			"to", pid,
+			"type", reflect.TypeOf(msg),
+			"msg", msg,
+		)
 		return
 	}
 	e.remote.Send(pid, msg, sender)
 }
 
+// TODO: documentation
 type SendRepeater struct {
 	engine   *Engine
 	self     *PID
@@ -252,6 +272,16 @@ func (e *Engine) SendLocal(pid *PID, msg any, sender *PID) {
 		return
 	}
 	proc.Send(pid, msg, sender)
+}
+
+// Subscribe will subscribe the given PID to the event stream.
+func (e *Engine) Subscribe(pid *PID) {
+	e.Send(e.eventStream, EventSub{pid: pid})
+}
+
+// Unsubscribe will un subscribe the given PID from the event stream.
+func (e *Engine) Unsubscribe(pid *PID) {
+	e.Send(e.eventStream, EventUnsub{pid: pid})
 }
 
 func (e *Engine) isLocalMessage(pid *PID) bool {

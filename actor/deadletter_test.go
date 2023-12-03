@@ -3,13 +3,14 @@ package actor
 import (
 	"bytes"
 	"fmt"
-	"github.com/anthdm/hollywood/log"
-	"github.com/stretchr/testify/assert"
 	"log/slog"
 	"os"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/anthdm/hollywood/log"
+	"github.com/stretchr/testify/assert"
 )
 
 // TestDeadLetterDefault tests the default deadletter handling.
@@ -49,6 +50,8 @@ func TestDeadLetterCustom(t *testing.T) {
 	e.Poison(a1).Wait() // poison the a1 actor
 	// should be in deadletter
 	fmt.Println("==== sending message via a1 to deadletter ====")
+	fmt.Println(e.Registry)
+	fmt.Println("ID=> ", dl.PID())
 	e.Send(a1, testMessage{"bar"})
 	time.Sleep(time.Millisecond) // a flush would be nice here :-)
 	resp, err := e.Request(dl.PID(), &customDeadLetterFetch{flush: true}, time.Millisecond*10).Result()

@@ -9,9 +9,8 @@ import (
 )
 
 func main() {
-	e := actor.NewEngine()
-	r := remote.New(e, remote.Config{ListenAddr: "127.0.0.1:3000"})
-	e.WithRemote(r)
+	r := remote.New(remote.Config{ListenAddr: "127.0.0.1:3000"})
+	e := actor.NewEngine(actor.EngineOptRemote(r))
 
 	pid := actor.NewPID("127.0.0.1:4000", "server")
 	for {

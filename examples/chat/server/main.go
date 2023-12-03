@@ -57,11 +57,11 @@ func main() {
 		listenAt = flag.String("listen", "127.0.0.1:4000", "")
 	)
 	flag.Parse()
-	e := actor.NewEngine()
-	rem := remote.New(e, remote.Config{
+	rem := remote.New(remote.Config{
 		ListenAddr: *listenAt,
 	})
-	e.WithRemote(rem)
+	e := actor.NewEngine(actor.EngineOptRemote(rem))
+
 	e.Spawn(newServer, "server")
 
 	select {}

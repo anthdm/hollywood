@@ -128,7 +128,7 @@ func (p *process) Start() {
 
 	p.context.message = Started{}
 	applyMiddleware(recv.Receive, p.Opts.Middleware...)(p.context)
-	p.context.engine.EventStream.Publish(&ActivationEvent{PID: p.pid})
+	p.context.engine.BroadcastEvent(&ActorStartedEvent{PID: p.pid})
 	p.logger.Debugw("actor started", "pid", p.pid)
 	// If we have messages in our buffer, invoke them.
 	if len(p.mbuffer) > 0 {
@@ -197,8 +197,7 @@ func (p *process) cleanup(wg *sync.WaitGroup) {
 		}
 	}
 	p.logger.Debugw("shutdown", "pid", p.pid)
-	// Send TerminationEvent to the eventstream
-	p.context.engine.EventStream.Publish(&TerminationEvent{PID: p.pid})
+	p.context.engine.BroadcastEvent(&ActorStoppedEvent{PID: p.pid})
 	if wg != nil {
 		wg.Done()
 	}
