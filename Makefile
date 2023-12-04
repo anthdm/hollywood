@@ -12,7 +12,9 @@ build:
 	go build -o bin/restarts examples/restarts/main.go 
 	go build -o bin/eventstream examples/eventstream/main.go 
 	go build -o bin/tcpserver examples/tcpserver/main.go 
-	go build -o bin/metrics examples/metrics/main.go 
+	go build -o bin/metrics examples/metrics/main.go
+	go build -o bin/chatserver examples/chat/server/main.go
+	go build -o bin/chatclient examples/chat/client/main.go
 
 bench:
 	go run _bench/main.go

@@ -86,9 +86,11 @@ func main() {
 	go func() {
 		http.ListenAndServe(*promListenAddr, promhttp.Handler())
 	}()
-
+	e, err := actor.NewEngine()
+	if err != nil {
+		panic(err)
+	}
 	var (
-		e          = actor.NewEngine()
 		foometrics = newPromMetrics("foo")
 		barmetrics = newPromMetrics("bar")
 		fooPID     = e.Spawn(newFoo, "foo", actor.WithMiddleware(foometrics.WithMetrics()))

@@ -142,7 +142,10 @@ func (s *server) acceptLoop(c *actor.Context) {
 func main() {
 	listenAddr := flag.String("listenaddr", ":6000", "listen address of the TCP server")
 
-	e := actor.NewEngine()
+	e, err := actor.NewEngine()
+	if err != nil {
+		panic(err)
+	}
 	serverPID := e.Spawn(newServer(*listenAddr), "server")
 
 	sigch := make(chan os.Signal, 1)
