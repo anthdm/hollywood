@@ -2,9 +2,10 @@ package actor
 
 import (
 	fmt "fmt"
-	"github.com/stretchr/testify/assert"
 	"sync"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 type CustomEvent struct {
@@ -42,9 +43,39 @@ func TestEventStreamLocal(t *testing.T) {
 }
 
 func TestEventStreamActorStartedEvent(t *testing.T) {
+	e, _ := NewEngine()
+	wg := sync.WaitGroup{}
 
+	wg.Add(1)
+	pidb := e.SpawnFunc(func(c *Context) {
+		switch msg := c.Message().(type) {
+		case ActorStartedEvent:
+			assert.Equal(t, msg.PID.ID, "a")
+			wg.Done()
+		}
+	}, "b")
+	e.Subscribe(pidb)
+
+	e.SpawnFunc(func(c *Context) {}, "a")
+	wg.Wait()
 }
 
 func TestEventStreamActorStoppedEvent(t *testing.T) {
+	e, _ := NewEngine()
+	wg := sync.WaitGroup{}
 
+	wg.Add(1)
+	a := e.SpawnFunc(func(c *Context) {}, "a")
+	pidb := e.SpawnFunc(func(c *Context) {
+		switch msg := c.Message().(type) {
+		case ActorStoppedEvent:
+			assert.Equal(t, msg.PID.ID, "a")
+			wg.Done()
+		}
+	}, "b")
+
+	e.Subscribe(pidb)
+	e.Poison(a).Wait()
+
+	wg.Wait()
 }

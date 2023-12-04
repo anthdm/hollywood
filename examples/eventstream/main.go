@@ -22,6 +22,9 @@ func main() {
 			fmt.Println("actor A started")
 		case MyCustomEvent:
 			fmt.Printf("actorA: event => %+v\n", msg)
+			// Get notified when other actors start.
+		case actor.ActorStartedEvent:
+			fmt.Printf("another actor started => %+v\n", msg.PID)
 		}
 	}, "actor_a")
 	// Subscribe the actor to the event stream from outside of the actor itself.
