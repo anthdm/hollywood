@@ -53,7 +53,6 @@ type tradeExecutorActor struct {
 	pk              string
 	status          string
 	lastPrice       float64
-	active          bool
 	expires         int64
 }
 
@@ -61,9 +60,6 @@ func (te *tradeExecutorActor) Receive(c *actor.Context) {
 	switch msg := c.Message().(type) {
 	case actor.Started:
 		slog.Info("Started Trade Executor Actor", "id", te.id, "wallet", te.wallet)
-
-		// set flag for goroutine
-		te.active = true
 
 		te.ActorEngine = c.Engine()
 		te.PID = c.PID()
@@ -76,7 +72,6 @@ func (te *tradeExecutorActor) Receive(c *actor.Context) {
 
 	case actor.Stopped:
 		slog.Info("Stopped Trade Executor Actor", "id", te.id, "wallet", te.wallet)
-		te.active = false
 
 	case TradeInfoRequest:
 		slog.Info("Got TradeInfoRequest", "id", te.id, "wallet", te.wallet)
