@@ -6,9 +6,6 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"os/signal"
-	"sync"
-	"syscall"
 	"time"
 
 	"github.com/anthdm/hollywood/actor"
@@ -18,7 +15,6 @@ import (
 )
 
 func main() {
-	done := make(chan struct{}, 1)
 
 	logHandler := log.NewHandler(os.Stdout, log.TextFormat, slog.LevelInfo)
 	e, err := actor.NewEngine(actor.EngineOptLogger(log.NewLogger("[engine]", logHandler)))
@@ -48,7 +44,7 @@ func main() {
 	}
 
 	time.Sleep(time.Second * 20)
-	fmt.Println("\n\ncreating 1 trade order to test cancellation")
+	fmt.Println("\n\ncreating 1 trade order to test getting trade info and cancelling")
 	tradeOrder := types.TradeOrderRequest{
 		TradeID:    GenID(),
 		Token0:     "token0",
@@ -75,25 +71,6 @@ func main() {
 	fmt.Println("\n\ncancelling trade order")
 	e.Send(tradeEnginePID, types.CancelOrderRequest{TradeID: tradeOrder.TradeID})
 
-	// wait for signal
-	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
-
-	go func() {
-		call := <-sigs
-		slog.Info("received signal", "signal", call)
-
-		wg := &sync.WaitGroup{}
-		e.Poison(tradeEnginePID, wg)
-		wg.Wait()
-
-		slog.Info("shutdown completed")
-
-		done <- struct{}{}
-	}()
-
-	// wait until done
-	<-done
 }
 
 // The GenID function generates a random ID string of length 16 using a cryptographic random number
