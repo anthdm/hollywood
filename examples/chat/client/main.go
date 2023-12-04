@@ -9,6 +9,7 @@ import (
 	"github.com/anthdm/hollywood/log"
 	"github.com/anthdm/hollywood/remote"
 	"log/slog"
+	"math/rand"
 	"os"
 )
 
@@ -43,12 +44,14 @@ func (c *client) Receive(ctx *actor.Context) {
 
 func main() {
 	var (
-		listenAt  = flag.String("listen", "127.0.0.1:3000", "")
-		connectTo = flag.String("connect", "127.0.0.1:4000", "")
+		listenAt  = flag.String("listen", "", "specify address to listen to, will pick a random port if not specified")
+		connectTo = flag.String("connect", "127.0.0.1:4000", "the address of the server to connect to")
 		username  = flag.String("username", os.Getenv("USER"), "")
 	)
 	flag.Parse()
-
+	if *listenAt == "" {
+		*listenAt = fmt.Sprintf("127.0.0.1:%d", rand.Int31n(50000)+10000)
+	}
 	rem := remote.New(remote.Config{
 		ListenAddr: *listenAt,
 	})
