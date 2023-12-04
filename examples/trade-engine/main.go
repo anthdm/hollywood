@@ -31,14 +31,14 @@ func main() {
 	// Expiry of 10s so after 10s the orders will be cancelled
 	// the price watcher will be stopped due to inactivity
 	fmt.Println("\n\ncreating 5 trade orders")
-	for i := 0; i < 5; i++ {
+	for i := 1; i < 6; i++ {
 		o := &tradeEngine.TradeOrderRequest{
 			TradeID:    GenID(),
 			Token0:     "token0",
 			Token1:     "token1",
 			Chain:      "ETH",
-			Wallet:     "random wallet", // for example
-			PrivateKey: "private key",   // for example
+			Wallet:     fmt.Sprintf("wallet_%d", i),     // for example
+			PrivateKey: fmt.Sprintf("privateKey_%d", i), // for example
 			// expire after 10 seconds
 			Expires: time.Now().Add(time.Second * 10).UnixMilli(),
 		}
@@ -53,9 +53,9 @@ func main() {
 		Token0:     "token0",
 		Token1:     "token1",
 		Chain:      "ETH",
-		Wallet:     "random wallet", // for example
-		PrivateKey: "private key",   // for example
-		Expires:    0,
+		Wallet:     "wallet6",
+		PrivateKey: "privateKey",
+		Expires:    0, // does not expire
 	}
 
 	e.Send(tradeEnginePID, tradeOrder)
