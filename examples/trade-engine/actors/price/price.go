@@ -18,7 +18,7 @@ type priceWatcherActor struct {
 	chain       string
 	lastPrice   float64
 	updatedAt   int64
-	subscribers []*actor.PID
+	subscribers map[*actor.PID]bool
 }
 
 func (pw *priceWatcherActor) Receive(c *actor.Context) {
@@ -40,19 +40,14 @@ func (pw *priceWatcherActor) Receive(c *actor.Context) {
 	case types.Subscribe:
 		slog.Info("priceWatcher.Subscribe", "ticker", pw.ticker, "subscriber", msg.Sendto)
 
-		// add the subscriber to the slice
-		pw.subscribers = append(pw.subscribers, msg.Sendto)
+		// add the subscriber to the map
+		pw.subscribers[msg.Sendto] = true
 
 	case types.Unsubscribe:
 		slog.Info("priceWatcher.Unsubscribe", "ticker", pw.ticker, "subscriber", msg.Sendto)
 
-		// remove the subscriber from the slice
-		for i, sub := range pw.subscribers {
-			if sub == msg.Sendto {
-				pw.subscribers = append(pw.subscribers[:i], pw.subscribers[i+1:]...)
-				break
-			}
-		}
+		// remove the subscriber from the map
+		delete(pw.subscribers, msg.Sendto)
 
 	case types.TriggerPriceUpdate:
 		pw.refresh()
@@ -74,8 +69,8 @@ func (pw *priceWatcherActor) refresh() {
 	pw.updatedAt = time.Now().UnixMilli()
 
 	// send the price update to all executors
-	for _, sub := range pw.subscribers {
-		pw.ActorEngine.Send(sub, types.PriceUpdate{
+	for pid := range pw.subscribers {
+		pw.ActorEngine.Send(pid, types.PriceUpdate{
 			Ticker:    pw.ticker,
 			UpdatedAt: pw.updatedAt,
 			Price:     pw.lastPrice,
@@ -101,10 +96,11 @@ func (pw *priceWatcherActor) Kill() {
 func NewPriceActor(opts types.PriceOptions) actor.Producer {
 	return func() actor.Receiver {
 		return &priceWatcherActor{
-			ticker: opts.Ticker,
-			token0: opts.Token0,
-			token1: opts.Token1,
-			chain:  opts.Chain,
+			ticker:      opts.Ticker,
+			token0:      opts.Token0,
+			token1:      opts.Token1,
+			chain:       opts.Chain,
+			subscribers: make(map[*actor.PID]bool),
 		}
 	}
 }
