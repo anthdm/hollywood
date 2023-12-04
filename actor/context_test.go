@@ -11,11 +11,12 @@ import (
 
 func TestContextSendRepeat(t *testing.T) {
 	var (
-		e  = NewEngine()
 		wg = &sync.WaitGroup{}
 		mu sync.Mutex
 		sr SendRepeater
 	)
+	e, err := NewEngine()
+	require.NoError(t, err)
 	wg.Add(1)
 
 	e.SpawnFunc(func(c *Context) {
@@ -38,12 +39,12 @@ func TestContextSendRepeat(t *testing.T) {
 func TestSpawnChildPID(t *testing.T) {
 	pidSeparator = ">"
 	var (
-		e           = NewEngine()
 		wg          = sync.WaitGroup{}
 		childfn     = func(c *Context) {}
 		expectedPID = NewPID(LocalLookupAddr, "parent", "child")
 	)
-
+	e, err := NewEngine()
+	require.NoError(t, err)
 	wg.Add(1)
 	e.SpawnFunc(func(c *Context) {
 		switch c.Message().(type) {
@@ -61,9 +62,10 @@ func TestSpawnChildPID(t *testing.T) {
 
 func TestChild(t *testing.T) {
 	var (
-		e  = NewEngine()
 		wg = sync.WaitGroup{}
 	)
+	e, err := NewEngine()
+	require.NoError(t, err)
 	wg.Add(1)
 	e.SpawnFunc(func(c *Context) {
 		switch c.Message().(type) {
@@ -81,10 +83,11 @@ func TestChild(t *testing.T) {
 
 func TestParent(t *testing.T) {
 	var (
-		e      = NewEngine()
 		wg     = sync.WaitGroup{}
 		parent = NewPID(LocalLookupAddr, "foo", "bar", "baz")
 	)
+	e, err := NewEngine()
+	require.NoError(t, err)
 	wg.Add(1)
 
 	childfn := func(c *Context) {
@@ -107,7 +110,8 @@ func TestParent(t *testing.T) {
 }
 
 func TestGetPID(t *testing.T) {
-	e := NewEngine()
+	e, err := NewEngine()
+	require.NoError(t, err)
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 	e.SpawnFunc(func(c *Context) {
@@ -123,10 +127,10 @@ func TestGetPID(t *testing.T) {
 
 func TestSpawnChild(t *testing.T) {
 	var (
-		e  = NewEngine()
 		wg = sync.WaitGroup{}
 	)
-
+	e, err := NewEngine()
+	require.NoError(t, err)
 	wg.Add(1)
 	childFunc := func(c *Context) {
 		switch c.Message().(type) {

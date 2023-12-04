@@ -32,7 +32,10 @@ func (f *foo) Receive(ctx *actor.Context) {
 
 func main() {
 	lh := log.NewHandler(os.Stdout, log.TextFormat, slog.LevelDebug)
-	engine := actor.NewEngine(actor.EngineOptLogger(log.NewLogger("[engine]", lh)))
+	engine, err := actor.NewEngine(actor.EngineOptLogger(log.NewLogger("[engine]", lh)))
+	if err != nil {
+		panic(err)
+	}
 
 	pid := engine.Spawn(newFoo, "my_actor")
 	for i := 0; i < 100; i++ {

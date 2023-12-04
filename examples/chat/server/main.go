@@ -22,7 +22,7 @@ func newServer() actor.Receiver {
 func (s *server) Receive(ctx *actor.Context) {
 	switch msg := ctx.Message().(type) {
 	case *types.Message:
-		s.handleMessage(ctx, msg)
+		s.handleMessage(ctx)
 	case *types.Disconnect:
 		username, ok := s.clients[ctx.Sender()]
 		if !ok {
@@ -43,7 +43,7 @@ func (s *server) Receive(ctx *actor.Context) {
 }
 
 // handle the incoming message by broadcasting it to all connected clients.
-func (s *server) handleMessage(ctx *actor.Context, msg *types.Message) {
+func (s *server) handleMessage(ctx *actor.Context) {
 	for pid := range s.clients {
 		// dont send message to ourselves
 		if !pid.Equals(ctx.Sender()) {
@@ -60,7 +60,10 @@ func main() {
 	rem := remote.New(remote.Config{
 		ListenAddr: *listenAt,
 	})
-	e := actor.NewEngine(actor.EngineOptRemote(rem))
+	e, err := actor.NewEngine(actor.EngineOptRemote(rem))
+	if err != nil {
+		panic(err)
+	}
 
 	e.Spawn(newServer, "server")
 

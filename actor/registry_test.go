@@ -11,7 +11,8 @@ func TestGetByName(t *testing.T) {
 	restorepidSeparator := pidSeparator
 	pidSeparator = "."
 
-	e := NewEngine()
+	e, err := NewEngine()
+	require.NoError(t, err)
 	e.SpawnFunc(func(c *Context) {}, "foo") // local/foo
 	time.Sleep(time.Millisecond * 10)
 	proc := e.Registry.getByID("foo")
@@ -31,7 +32,8 @@ func TestGetByName(t *testing.T) {
 func TestGetByNameFromContext(t *testing.T) {
 	const PidName = "ReceiverFunc"
 
-	e := NewEngine()
+	e, err := NewEngine()
+	require.NoError(t, err)
 
 	// Receiver staless actor with given name:
 	e.SpawnFunc(func(c *Context) {}, PidName)
@@ -50,7 +52,8 @@ func TestGetByNameFromContext(t *testing.T) {
 func TestGetByNameFromContextWithTags(t *testing.T) {
 	const PidName = "ReceiverFunc"
 
-	e := NewEngine()
+	e, err := NewEngine()
+	require.NoError(t, err)
 
 	// Receiver staless actor with given name:
 	e.SpawnFunc(func(c *Context) {}, PidName, WithTags("tag1", "tag2"))

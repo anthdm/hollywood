@@ -12,7 +12,7 @@ import (
 type Remoter interface {
 	Address() string
 	Send(*PID, any, *PID)
-	Start(*Engine)
+	Start(*Engine, log.Logger) error
 }
 
 // Producer is any function that can return a Receiver
@@ -32,16 +32,22 @@ type Engine struct {
 	deadLetter  *PID
 	eventStream *PID
 	logger      log.Logger
+	initErrors  []error
 }
 
 // NewEngine returns a new actor Engine.
-// You can pass an optional logger through
-func NewEngine(opts ...func(*Engine)) *Engine {
+// You can pass configuration functions through the various functions starting with "EngineOpt"
+// These run after the engine is configured
+func NewEngine(opts ...func(*Engine)) (*Engine, error) {
 	e := &Engine{}
 	e.Registry = newRegistry(e) // need to init the registry in case we want a custom deadletter
 	e.address = LocalLookupAddr
+	e.initErrors = make([]error, 0)
 	for _, o := range opts {
 		o(e)
+	}
+	if len(e.initErrors) > 0 {
+		return nil, ErrInitFailed{Errors: e.initErrors}
 	}
 	if e.remote != nil {
 		e.address = e.remote.Address()
@@ -53,10 +59,10 @@ func NewEngine(opts ...func(*Engine)) *Engine {
 		e.logger.Debugw("no deadletter receiver set, registering default")
 		e.deadLetter = e.Spawn(newDeadLetter, "deadletter")
 	}
-	return e
+	return e, nil
 }
 
-// TODO: Doc
+// EngineOptLogger configured the engine with a logger from the internal log package
 func EngineOptLogger(logger log.Logger) func(*Engine) {
 	return func(e *Engine) {
 		e.logger = logger
@@ -69,11 +75,12 @@ func EngineOptRemote(r Remoter) func(*Engine) {
 		e.remote = r
 		e.address = r.Address()
 		// TODO: potential error not handled here
-		r.Start(e)
+		r.Start(e, e.logger)
 	}
 }
 
 // TODO: Doc
+// Todo: make the pid separator a struct variable
 func EngineOptPidSeparator(sep string) func(*Engine) {
 	// This looks weird because the separator is a global variable.
 	return func(e *Engine) {
@@ -81,11 +88,20 @@ func EngineOptPidSeparator(sep string) func(*Engine) {
 	}
 }
 
-// TODO: Doc
+// EngineOptDeadletter takes an actor and configures the engine to use it for dead letter handling
+// This allows you to customize how deadletters are handled.
 func EngineOptDeadletter(d Producer) func(*Engine) {
 	return func(e *Engine) {
 		e.deadLetter = e.Spawn(d, "deadletter")
 	}
+}
+
+// WithRemote returns a new actor Engine with the given Remoter,
+// and will call its Start function
+func (e *Engine) WithRemote(r Remoter) {
+	e.remote = r
+	e.address = r.Address()
+	r.Start(e, e.logger)
 }
 
 // Spawn spawns a process that will producer by the given Producer and
