@@ -2,6 +2,7 @@ package actor
 
 import (
 	fmt "fmt"
+	"github.com/stretchr/testify/assert"
 	"sync"
 	"testing"
 )
@@ -11,7 +12,8 @@ type CustomEvent struct {
 }
 
 func TestEventStreamLocal(t *testing.T) {
-	e := NewEngine()
+	e, err := NewEngine()
+	assert.NoError(t, err)
 	wg := sync.WaitGroup{}
 	wg.Add(2)
 	e.SpawnFunc(func(c *Context) {

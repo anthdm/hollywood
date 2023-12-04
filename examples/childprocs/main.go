@@ -62,7 +62,10 @@ type message struct {
 }
 
 func main() {
-	e := actor.NewEngine()
+	e, err := actor.NewEngine()
+	if err != nil {
+		panic(err)
+	}
 	pid := e.Spawn(newFooReceiver, "foo")
 	e.Send(pid, message{data: fmt.Sprintf("msg_%d", 1)})
 	time.Sleep(time.Second * 8)

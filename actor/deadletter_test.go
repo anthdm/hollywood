@@ -19,7 +19,8 @@ import (
 func TestDeadLetterDefault(t *testing.T) {
 	logBuffer := SafeBuffer{}
 	lh := log.NewHandler(&logBuffer, log.TextFormat, slog.LevelDebug)
-	e := NewEngine(EngineOptLogger(log.NewLogger("[engine]", lh)))
+	e, err := NewEngine(EngineOptLogger(log.NewLogger("[engine]", lh)))
+	assert.NoError(t, err)
 	a1 := e.Spawn(newTestActor, "a1")
 	assert.NotNil(t, a1)
 	dl := e.Registry.getByID("deadletter")
@@ -39,9 +40,10 @@ func TestDeadLetterDefault(t *testing.T) {
 // It is using the custom deadletter receiver below.
 func TestDeadLetterCustom(t *testing.T) {
 	lh := log.NewHandler(os.Stdout, log.TextFormat, slog.LevelDebug)
-	e := NewEngine(
+	e, err := NewEngine(
 		EngineOptLogger(log.NewLogger("[engine]", lh)),
 		EngineOptDeadletter(newCustomDeadLetter))
+	assert.NoError(t, err)
 	a1 := e.Spawn(newTestActor, "a1")
 	assert.NotNil(t, a1)
 	dl := e.Registry.getByID("deadletter")

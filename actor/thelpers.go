@@ -2,6 +2,8 @@ package actor
 
 import "testing"
 
+// Todo: move this to the test files. It's not used anywhere else.
+
 type TestReceiveFunc func(*testing.T, *Context)
 
 type TestReceiver struct {
