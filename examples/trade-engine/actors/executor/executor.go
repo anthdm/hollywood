@@ -1,29 +1,14 @@
 package executor
 
 import (
-	"fmt"
 	"log/slog"
 	"time"
 
 	"github.com/anthdm/hollywood/actor"
-	"github.com/anthdm/hollywood/examples/trade-engine/actors/price"
+	"github.com/anthdm/hollywood/examples/trade-engine/types"
 )
 
-// message to get trade info
-type TradeInfoRequest struct{}
-
-// message to cancel order
-type CancelOrderRequest struct{}
-
-// response message for trade info
-type TradeInfoResponse struct {
-	// info regarding the current position
-	// eg price, pnl, etc
-	foo   int
-	bar   int
-	price float64 // using float in example
-}
-
+// Options for creating a new executor
 type ExecutorOptions struct {
 	PriceWatcherPID *actor.PID
 	TradeID         string
@@ -55,48 +40,44 @@ type tradeExecutorActor struct {
 func (te *tradeExecutorActor) Receive(c *actor.Context) {
 	switch msg := c.Message().(type) {
 	case actor.Started:
-		slog.Info("Started Trade Executor Actor", "id", te.id, "wallet", te.wallet)
+		slog.Info("tradeExecutor.Started", "id", te.id, "wallet", te.wallet)
 
+		// set actorEngine and PID
 		te.ActorEngine = c.Engine()
 		te.PID = c.PID()
 
 		// subscribe to price updates
-		te.ActorEngine.Send(te.priceWatcherPID, price.Subscribe{Sendto: te.PID})
+		te.ActorEngine.Send(te.priceWatcherPID, types.Subscribe{Sendto: te.PID})
 
 	case actor.Stopped:
-		slog.Info("Stopped Trade Executor Actor", "id", te.id, "wallet", te.wallet)
+		slog.Info("tradeExecutor.Stopped", "id", te.id, "wallet", te.wallet)
 
-	case price.PriceUpdate:
-		// ensure correct ticker
-		if msg.Ticker != te.ticker {
-			return
-		}
+	case types.PriceUpdate:
 		// update the price
 		te.processUpdate(msg)
 
-	case TradeInfoRequest:
-		slog.Info("Got TradeInfoRequest", "id", te.id, "wallet", te.wallet)
-		te.replyWithTradeInfo(c)
+	case types.TradeInfoRequest:
+		slog.Info("tradeExecutor.TradeInfoRequest", "id", te.id, "wallet", te.wallet)
 
-	case CancelOrderRequest:
-		slog.Info("Got CancelOrderRequest", "id", te.id, "wallet", te.wallet)
+		// handle the request
+		te.handleTradeInfoRequest(c)
+
+	case types.CancelOrderRequest:
+		slog.Info("tradeExecutor.CancelOrderRequest", "id", te.id, "wallet", te.wallet)
+
 		// update status
 		te.status = "cancelled"
 
 		// stop the executor
 		te.Finished()
-
-	default:
-		_ = msg
-
 	}
 }
 
-func (te *tradeExecutorActor) processUpdate(update price.PriceUpdate) {
+func (te *tradeExecutorActor) processUpdate(update types.PriceUpdate) {
 
 	// if expires is set and is less than current time, cancel the order
 	if te.expires != 0 && time.Now().UnixMilli() > te.expires {
-		slog.Warn("Trade Expired", "id", te.id, "wallet", te.wallet)
+		slog.Info("Trade Expired", "id", te.id, "wallet", te.wallet)
 		te.Finished()
 		return
 	}
@@ -107,20 +88,21 @@ func (te *tradeExecutorActor) processUpdate(update price.PriceUpdate) {
 	// do something with the price
 	// eg update pnl, etc
 
-	fmt.Println("price update", update.Price)
-
+	// for example just print price
+	slog.Info("tradeExecutor.PriceUpdate", "ticker", update.Ticker, "price", update.Price)
 }
 
-func (te *tradeExecutorActor) replyWithTradeInfo(c *actor.Context) {
-	c.Respond(&TradeInfoResponse{
-		foo:   100,
-		bar:   100,
-		price: te.lastPrice,
+func (te *tradeExecutorActor) handleTradeInfoRequest(c *actor.Context) {
+	c.Respond(types.TradeInfoResponse{
+		// for example
+		Foo:   100,
+		Bar:   100,
+		Price: te.lastPrice,
 	})
 }
 
 func (te *tradeExecutorActor) Finished() {
-	// make sure actorEngine is safe
+	// make sure ActorEngine and PID are set
 	if te.ActorEngine == nil {
 		slog.Error("tradeExecutor.actorEngine is <nil>")
 	}
@@ -130,7 +112,7 @@ func (te *tradeExecutorActor) Finished() {
 	}
 
 	// unsubscribe from price updates
-	te.ActorEngine.Send(te.priceWatcherPID, price.Unsubscribe{Sendto: te.PID})
+	te.ActorEngine.Send(te.priceWatcherPID, types.Unsubscribe{Sendto: te.PID})
 
 	// poision itself
 	te.ActorEngine.Poison(te.PID)

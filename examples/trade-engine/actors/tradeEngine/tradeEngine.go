@@ -3,53 +3,53 @@ package tradeEngine
 import (
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/anthdm/hollywood/actor"
 	"github.com/anthdm/hollywood/examples/trade-engine/actors/executor"
 	"github.com/anthdm/hollywood/examples/trade-engine/actors/price"
+	"github.com/anthdm/hollywood/examples/trade-engine/types"
 )
 
-type tradeEngine struct {
+// tradeEngineActor is the main actor for the trade engine
+type tradeEngineActor struct {
 }
 
-type TradeOrderRequest struct {
-	TradeID    string
-	Token0     string
-	Token1     string
-	Chain      string
-	Wallet     string
-	PrivateKey string
-	Expires    int64
-}
+// TradeOrderRequest is the message sent to the trade engine to create a new trade order
 
-type CancelOrderRequest struct {
-	ID string
-}
-
-func (t *tradeEngine) Receive(c *actor.Context) {
+func (t *tradeEngineActor) Receive(c *actor.Context) {
 	switch msg := c.Message().(type) {
-	case actor.Stopped:
-		slog.Info("Stopped Trade Engine")
-
 	case actor.Started:
-		slog.Info("Started Trade Engine")
+		slog.Info("tradeEngine.Started")
 
-	case *TradeOrderRequest:
+	case actor.Stopped:
+		slog.Info("tradeEngine.Stopped")
+
+	case types.TradeOrderRequest:
 		// got new trade order, create the executor
-		slog.Info("Got New Trade Order", "id", msg.TradeID, "wallet", msg.Wallet)
+		slog.Info("tradeEngine.TradeOrderRequest", "id", msg.TradeID, "wallet", msg.Wallet)
+
+		// spawn the executor
 		t.spawnExecutor(msg, c)
 
-	case CancelOrderRequest:
+	case types.CancelOrderRequest:
 		// cancel the order
-		slog.Info("Cancelling Trade Order", "id", msg.ID)
-		t.cancelOrder(msg.ID, c)
+		slog.Info("tradeEngine.CancelOrderRequest", "id", msg.TradeID)
 
+		// cancel the order
+		t.cancelOrder(msg.TradeID, c)
+
+	case types.TradeInfoRequest:
+		// get trade info
+		slog.Info("tradeEngine.TradeInfoRequest", "id", msg.TradeID)
+
+		t.handleTradeInfoRequest(msg, c)
 	}
 }
 
-func (t *tradeEngine) spawnExecutor(msg *TradeOrderRequest, c *actor.Context) {
-	// make sure is price stream for the pair
-	pricePID := t.ensurePriceStream(msg, c)
+func (t *tradeEngineActor) spawnExecutor(msg types.TradeOrderRequest, c *actor.Context) {
+	// make sure there is a price Watcher for this token pair
+	pricePID := t.ensurePriceWatcher(msg, c)
 
 	// spawn the executor
 	options := &executor.ExecutorOptions{
@@ -66,18 +66,21 @@ func (t *tradeEngine) spawnExecutor(msg *TradeOrderRequest, c *actor.Context) {
 
 	// spawn the actor
 	c.SpawnChild(executor.NewExecutorActor(options), msg.TradeID)
-
 }
 
-func (t *tradeEngine) ensurePriceStream(order *TradeOrderRequest, c *actor.Context) *actor.PID {
+func (t *tradeEngineActor) ensurePriceWatcher(order types.TradeOrderRequest, c *actor.Context) *actor.PID {
+	// create the ticker string
 	ticker := toTicker(order.Token0, order.Token1, order.Chain)
 
+	// look for existing price watcher in trade-engine child actors
 	pid := c.Child("trade-engine/" + ticker)
 	if pid != nil {
+		// if we found a price watcher, return it
 		return pid
 	}
 
-	options := price.PriceOptions{
+	// no price watcher found, spawn a new one
+	options := types.PriceOptions{
 		Ticker: ticker,
 		Token0: order.Token0,
 		Token1: order.Token1,
@@ -89,25 +92,54 @@ func (t *tradeEngine) ensurePriceStream(order *TradeOrderRequest, c *actor.Conte
 	return pid
 }
 
-func (t *tradeEngine) cancelOrder(id string, c *actor.Context) {
+func (t *tradeEngineActor) cancelOrder(id string, c *actor.Context) {
 	// get the executor
 	pid := c.Child("trade-engine/" + id)
 	if pid == nil {
-		slog.Error("Failed to cancel order", "err", "order not found", "id", id)
+		// no executor found
+		slog.Error("Failed to cancel order", "err", "tradeExecutor PID not found", "id", id)
 		return
 	}
 
 	// send cancel message
-	// sending specific message to handle cancel
-	c.Send(pid, executor.CancelOrderRequest{})
+	c.Send(pid, types.CancelOrderRequest{})
+}
+
+func (t *tradeEngineActor) handleTradeInfoRequest(msg types.TradeInfoRequest, c *actor.Context) {
+	// get the executor
+	pid := c.Child("trade-engine/" + msg.TradeID)
+	if pid == nil {
+		// no executor found
+		slog.Error("Failed to get trade info", "err", "tradeExecutor PID not found", "id", msg.TradeID)
+		return
+	}
+
+	// send tradeInfo Request
+	resp := c.Request(pid, types.TradeInfoRequest{}, time.Second*5)
+	res, err := resp.Result()
+	if err != nil {
+		slog.Error("Failed to get trade info", "err", err)
+		return
+	}
+
+	switch msg := res.(type) {
+
+	case types.TradeInfoResponse:
+		c.Respond(msg)
+
+	default:
+		slog.Error("Failed to get trade info", "err", "unknown response type")
+	}
+
 }
 
 func NewTradeEngine() actor.Producer {
 	return func() actor.Receiver {
-		return &tradeEngine{}
+		return &tradeEngineActor{}
 	}
 }
 
+// utility function to format the ticker
 func toTicker(token0, token1, chain string) string {
 	return fmt.Sprintf("%s-%s-%s", token0, token1, chain)
 }
