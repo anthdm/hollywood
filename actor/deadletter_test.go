@@ -4,12 +4,10 @@ import (
 	"bytes"
 	"fmt"
 	"log/slog"
-	"os"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/anthdm/hollywood/log"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -18,8 +16,10 @@ import (
 // received the message.
 func TestDeadLetterDefault(t *testing.T) {
 	logBuffer := SafeBuffer{}
-	lh := log.NewHandler(&logBuffer, log.TextFormat, slog.LevelDebug)
-	e, err := NewEngine(EngineOptLogger(log.NewLogger("[engine]", lh)))
+	lh := slog.NewTextHandler(&logBuffer, nil)
+	logger := slog.New(lh)
+	slog.SetDefault(logger)
+	e, err := NewEngine()
 	assert.NoError(t, err)
 	a1 := e.Spawn(newTestActor, "a1")
 	assert.NotNil(t, a1)
@@ -39,9 +39,7 @@ func TestDeadLetterDefault(t *testing.T) {
 // received the message.
 // It is using the custom deadletter receiver below.
 func TestDeadLetterCustom(t *testing.T) {
-	lh := log.NewHandler(os.Stdout, log.TextFormat, slog.LevelDebug)
 	e, err := NewEngine(
-		EngineOptLogger(log.NewLogger("[engine]", lh)),
 		EngineOptDeadletter(newCustomDeadLetter))
 	assert.NoError(t, err)
 	a1 := e.Spawn(newTestActor, "a1")

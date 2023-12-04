@@ -5,14 +5,12 @@ import (
 	reflect "reflect"
 	"sync"
 	"time"
-
-	"github.com/anthdm/hollywood/log"
 )
 
 type Remoter interface {
 	Address() string
 	Send(*PID, any, *PID)
-	Start(*Engine, log.Logger) error
+	Start(*Engine) error
 }
 
 // Producer is any function that can return a Receiver
@@ -31,7 +29,6 @@ type Engine struct {
 	remote      Remoter
 	deadLetter  *PID
 	eventStream *PID
-	logger      log.Logger
 	initErrors  []error
 }
 
@@ -56,17 +53,9 @@ func NewEngine(opts ...func(*Engine)) (*Engine, error) {
 	e.eventStream = e.Spawn(NewEventStream(), "eventstream")
 	// if no deadletter is registered, we will register the default deadletter from deadletter.go
 	if e.deadLetter == nil {
-		e.logger.Debugw("no deadletter receiver set, registering default")
 		e.deadLetter = e.Spawn(newDeadLetter, "deadletter")
 	}
 	return e, nil
-}
-
-// EngineOptLogger configured the engine with a logger from the internal log package
-func EngineOptLogger(logger log.Logger) func(*Engine) {
-	return func(e *Engine) {
-		e.logger = logger
-	}
 }
 
 // TODO: Doc
@@ -75,7 +64,7 @@ func EngineOptRemote(r Remoter) func(*Engine) {
 		e.remote = r
 		e.address = r.Address()
 		// TODO: potential error not handled here
-		r.Start(e, e.logger)
+		r.Start(e)
 	}
 }
 
@@ -101,7 +90,7 @@ func EngineOptDeadletter(d Producer) func(*Engine) {
 func (e *Engine) WithRemote(r Remoter) {
 	e.remote = r
 	e.address = r.Address()
-	r.Start(e, e.logger)
+	r.Start(e)
 }
 
 // Spawn spawns a process that will producer by the given Producer and

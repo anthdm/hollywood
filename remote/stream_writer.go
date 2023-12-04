@@ -4,12 +4,12 @@ import (
 	"context"
 	"errors"
 	"io"
+	"log/slog"
 	"net"
 	"sync"
 	"time"
 
 	"github.com/anthdm/hollywood/actor"
-	"github.com/anthdm/hollywood/log"
 	"storj.io/drpc/drpcconn"
 )
 
@@ -28,10 +28,9 @@ type streamWriter struct {
 	pid         *actor.PID
 	inbox       actor.Inboxer
 	serializer  Serializer
-	logger      log.Logger
 }
 
-func newStreamWriter(e *actor.Engine, rpid *actor.PID, address string, logger log.Logger) actor.Processer {
+func newStreamWriter(e *actor.Engine, rpid *actor.PID, address string) actor.Processer {
 	return &streamWriter{
 		writeToAddr: address,
 		engine:      e,
@@ -39,7 +38,6 @@ func newStreamWriter(e *actor.Engine, rpid *actor.PID, address string, logger lo
 		inbox:       actor.NewInbox(streamWriterBatchSize),
 		pid:         actor.NewPID(e.Address(), "stream", address),
 		serializer:  ProtoSerializer{},
-		logger:      logger,
 	}
 }
 
@@ -72,7 +70,7 @@ func (s *streamWriter) Invoke(msgs []actor.Envelope) {
 
 		b, err := s.serializer.Serialize(stream.msg)
 		if err != nil {
-			s.logger.Errorw("serialize", "err", err)
+			slog.Error("serialize", "err", err)
 			continue
 		}
 
@@ -96,7 +94,7 @@ func (s *streamWriter) Invoke(msgs []actor.Envelope) {
 			_ = s.conn.Close()
 			return
 		}
-		s.logger.Errorw("failed sending message",
+		slog.Error("failed sending message",
 			"err", err,
 		)
 	}
@@ -113,7 +111,7 @@ func (s *streamWriter) init() {
 	for {
 		rawconn, err = net.Dial("tcp", s.writeToAddr)
 		if err != nil {
-			s.logger.Errorw("net.Dial", "err", err, "remote", s.writeToAddr)
+			slog.Error("net.Dial", "err", err, "remote", s.writeToAddr)
 			time.Sleep(delay)
 			continue
 		}
@@ -132,19 +130,19 @@ func (s *streamWriter) init() {
 
 	stream, err := client.Receive(context.Background())
 	if err != nil {
-		s.logger.Errorw("receive", "err", err, "remote", s.writeToAddr)
+		slog.Error("receive", "err", err, "remote", s.writeToAddr)
 	}
 
 	s.stream = stream
 	s.conn = conn
 
-	s.logger.Debugw("connected",
+	slog.Debug("connected",
 		"remote", s.writeToAddr,
 	)
 
 	go func() {
 		<-s.conn.Closed()
-		s.logger.Debugw("lost connection",
+		slog.Debug("lost connection",
 			"remote", s.writeToAddr,
 		)
 		s.Shutdown(nil)
