@@ -58,6 +58,12 @@ func (c *Cluster) Start(e *actor.Engine) error {
 	return c.remote.Start(e, l)
 }
 
-func (c *Cluster) MemberJoin() {
-	c.engine.Send(c.agentPID, "foo")
+type Member struct {
+	ID   string
+	Host string
+	Port int
+}
+
+func (c *Cluster) MemberJoin(member Member) {
+	c.engine.Send(c.agentPID, &MemberJoin{})
 }

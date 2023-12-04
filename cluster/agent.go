@@ -16,7 +16,7 @@ func NewAgent() actor.Receiver {
 func (a *Agent) Receive(c *actor.Context) {
 	switch msg := c.Message().(type) {
 	case actor.Started:
-		slog.Debug("cluster agent started")
+		slog.Info("cluster agent started")
 		_ = msg
 	}
 }

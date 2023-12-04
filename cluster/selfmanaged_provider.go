@@ -1,6 +1,8 @@
 package cluster
 
 import (
+	"log/slog"
+
 	"github.com/anthdm/hollywood/actor"
 )
 
@@ -17,7 +19,10 @@ func NewSelfManagedProvider(c *Cluster) actor.Producer {
 }
 
 func (p *SelfManagedProvider) Receive(c *actor.Context) {
-	switch c.Message().(type) {
-
+	switch msg := c.Message().(type) {
+	case actor.Started:
+		slog.Info("provider selfmanaged started")
+	case *MemberJoin:
+		slog.Info("new member joined the cluster", "id", msg.ID, "host", msg.Host, "port", msg.Port)
 	}
 }
