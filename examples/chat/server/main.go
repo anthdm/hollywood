@@ -24,7 +24,7 @@ func newServer() actor.Receiver {
 func (s *server) Receive(ctx *actor.Context) {
 	switch msg := ctx.Message().(type) {
 	case *types.Message:
-		s.handleMessage(ctx, msg)
+		s.handleMessage(ctx)
 	case *types.Disconnect:
 		s.logger.Info("client disconnected", "pid", ctx.Sender())
 		username, ok := s.clients[ctx.Sender()]
@@ -46,8 +46,7 @@ func (s *server) Receive(ctx *actor.Context) {
 }
 
 // handle the incoming message by broadcasting it to all connected clients.
-func (s *server) handleMessage(ctx *actor.Context, msg *types.Message) {
-	s.logger.Info("incoming message", "from", msg.Username, "message", msg.Msg)
+func (s *server) handleMessage(ctx *actor.Context) {
 	for pid := range s.clients {
 		// dont send message to the place where it came from.
 		if !pid.Equals(ctx.Sender()) {
@@ -62,11 +61,14 @@ func main() {
 		listenAt = flag.String("listen", "127.0.0.1:4000", "")
 	)
 	flag.Parse()
-	e := actor.NewEngine()
-	rem := remote.New(e, remote.Config{
+	rem := remote.New(remote.Config{
 		ListenAddr: *listenAt,
 	})
-	e.WithRemote(rem)
+	e, err := actor.NewEngine(actor.EngineOptRemote(rem))
+	if err != nil {
+		panic(err)
+	}
+
 	e.Spawn(newServer, "server")
 
 	select {}

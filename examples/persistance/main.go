@@ -134,8 +134,11 @@ func (r *RedisStore) Load(key string) ([]byte, error) {
 }
 
 func main() {
+	e, err := actor.NewEngine()
+	if err != nil {
+		log.Fatal(err)
+	}
 	var (
-		e           = actor.NewEngine()
 		redisClient = redis.NewClient(&redis.Options{
 			Addr:     "localhost:6379",
 			Password: "", // no password set

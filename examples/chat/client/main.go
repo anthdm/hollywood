@@ -49,12 +49,14 @@ func main() {
 	)
 	flag.Parse()
 
-	e := actor.NewEngine(actor.EngineOptLogger(log.Default()))
-	rem := remote.New(e, remote.Config{
+	rem := remote.New(remote.Config{
 		ListenAddr: *listenAt,
-		Logger:     log.NewLogger("[remote]", log.NewHandler(os.Stdout, log.TextFormat, slog.LevelDebug)),
 	})
-	e.WithRemote(rem)
+	e, err := actor.NewEngine(actor.EngineOptLogger(log.Default()), actor.EngineOptRemote(rem))
+	if err != nil {
+		slog.Error("failed to create engine", "err", err)
+		os.Exit(1)
+	}
 
 	var (
 		// the process ID of the server
@@ -79,6 +81,7 @@ func main() {
 	if err := scanner.Err(); err != nil {
 		slog.Error("failed to read message from stdin", "err", err)
 	}
+
 	// When breaked out of the loop on error let the server know
 	// we need to disconnect.
 	e.SendWithSender(serverPID, &types.Disconnect{}, clientPID)

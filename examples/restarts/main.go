@@ -34,7 +34,10 @@ func (f *foo) Receive(ctx *actor.Context) {
 }
 
 func main() {
-	engine := actor.NewEngine()
+	engine, err := actor.NewEngine()
+	if err != nil {
+		panic(err)
+	}
 	pid := engine.Spawn(newFoo, "foo", actor.WithMaxRestarts(3))
 	wg.Add(1)
 	engine.Send(pid, &message{data: "failed"})

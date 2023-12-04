@@ -1,41 +1,50 @@
 package actor
 
 import (
-	sync "sync"
-	"testing"
-
+	fmt "fmt"
 	"github.com/stretchr/testify/assert"
+	"sync"
+	"testing"
 )
 
-func TestEventStream(t *testing.T) {
-	e := NewEngine()
+type CustomEvent struct {
+	msg string
+}
+
+func TestEventStreamLocal(t *testing.T) {
+	e, err := NewEngine()
+	assert.NoError(t, err)
 	wg := sync.WaitGroup{}
-	subs := []*EventSub{}
-	var mu sync.RWMutex
-
-	for i := 0; i < 10; i++ {
-		wg.Add(1)
-		go func(i int) {
-			sub := e.EventStream.Subscribe(func(event any) {
-				s, ok := event.(string)
-				assert.True(t, ok)
-				assert.Equal(t, "foo", s)
-			})
-
-			e.EventStream.Publish("foo")
-			mu.Lock()
-			subs = append(subs, sub)
-			mu.Unlock()
+	wg.Add(2)
+	e.SpawnFunc(func(c *Context) {
+		switch c.Message().(type) {
+		case Started:
+			c.Engine().Subscribe(c.PID())
+		case CustomEvent:
+			fmt.Println("actor a received event")
 			wg.Done()
-		}(i)
-	}
+		}
+	}, "actor_a")
 
+	e.SpawnFunc(func(c *Context) {
+		switch c.Message().(type) {
+		case Started:
+			c.Engine().Subscribe(c.PID())
+		case CustomEvent:
+			fmt.Println("actor b received event")
+			wg.Done()
+		}
+	}, "actor_b")
+	e.BroadcastEvent(CustomEvent{msg: "foo"})
+	// make sure both actors have received the event.
+	// If so, the test has passed.
 	wg.Wait()
-	assert.Equal(t, 10, e.EventStream.Len())
+}
 
-	for _, sub := range subs {
-		e.EventStream.Unsubscribe(sub)
-	}
+func TestEventStreamActorStartedEvent(t *testing.T) {
 
-	assert.Equal(t, 0, e.EventStream.Len())
+}
+
+func TestEventStreamActorStoppedEvent(t *testing.T) {
+
 }
