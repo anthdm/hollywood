@@ -15,36 +15,24 @@ import (
 )
 
 func main() {
+	// example script showing the trade engine in action
+	// this script creates a trade order, gets the trade info and then cancels the order
 
+	// set up log handler
 	logHandler := log.NewHandler(os.Stdout, log.TextFormat, slog.LevelInfo)
+
+	// create the actor engine
 	e, err := actor.NewEngine(actor.EngineOptLogger(log.NewLogger("[engine]", logHandler)))
 	if err != nil {
-		panic(err)
+		fmt.Printf("failed to create actor engine: %v", err)
+		os.Exit(1)
 	}
 
+	// spawn the trade engine
 	tradeEnginePID := e.Spawn(tradeEngine.NewTradeEngine(), "trade-engine")
 
-	// create 5 trade orders
-	// Expiry of 10s so after 10s the orders will be cancelled
-	// the price watcher will be stopped due to inactivity
-	fmt.Println("\n\ncreating 5 trade orders")
-	for i := 1; i < 6; i++ {
-		o := types.TradeOrderRequest{
-			TradeID:    GenID(),
-			Token0:     "token0",
-			Token1:     "token1",
-			Chain:      "ETH",
-			Wallet:     fmt.Sprintf("wallet_%d", i),     // for example
-			PrivateKey: fmt.Sprintf("privateKey_%d", i), // for example
-			// expire after 10 seconds
-			Expires: time.Now().Add(time.Second * 10),
-		}
-
-		e.Send(tradeEnginePID, o)
-	}
-
-	time.Sleep(time.Second * 20)
-	fmt.Println("\n\ncreating 1 trade order to test getting trade info and cancelling")
+	// create the trade order
+	fmt.Println("Creating 1 trade order to test getting trade info and cancelling")
 	tradeOrder := types.TradeOrderRequest{
 		TradeID:    GenID(),
 		Token0:     "token0",
@@ -55,21 +43,36 @@ func main() {
 		// Expires:    (the zero time indicate no expiry)
 	}
 
+	// send the trade order
 	e.Send(tradeEnginePID, tradeOrder)
-	time.Sleep(time.Second * 5)
 
 	// get trade info
-	fmt.Println("\n\ngetting trade info")
+	fmt.Println("\nGetting trade info")
+
+	// send a TradeInfoRequest to the tradeEngine
 	resp := e.Request(tradeEnginePID, types.TradeInfoRequest{TradeID: tradeOrder.TradeID}, 5*time.Second)
-	res, _ := resp.Result()
-	switch msg := res.(type) {
-	case types.TradeInfoResponse:
-		fmt.Println("trade info", msg)
+
+	// wait for response
+	res, err := resp.Result()
+	if err != nil {
+		fmt.Printf("Failed to get trade info: %v", err)
+		os.Exit(1)
 	}
 
-	// cancel trade order
-	fmt.Println("\n\ncancelling trade order")
+	tradeInfo, ok := res.(types.TradeInfoResponse)
+	if !ok {
+		fmt.Printf("Failed to cast response to TradeInfoResponse")
+		os.Exit(1)
+	}
+	fmt.Printf("Trade info: %+v\n", tradeInfo)
+
+	// small delay before cancelling
+	time.Sleep(2 * time.Second)
+
+	fmt.Println("\nCancelling trade order")
 	e.Send(tradeEnginePID, types.CancelOrderRequest{TradeID: tradeOrder.TradeID})
+
+	time.Sleep(2 * time.Second)
 
 }
 
