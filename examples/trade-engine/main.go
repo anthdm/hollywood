@@ -20,7 +20,10 @@ func main() {
 	done := make(chan struct{}, 1)
 
 	logHandler := log.NewHandler(os.Stdout, log.TextFormat, slog.LevelInfo)
-	e := actor.NewEngine(actor.EngineOptLogger(log.NewLogger("[engine]", logHandler)))
+	e, err := actor.NewEngine(actor.EngineOptLogger(log.NewLogger("[engine]", logHandler)))
+	if err != nil {
+		panic(err)
+	}
 
 	tradeEnginePID := e.Spawn(tradeEngine.NewTradeEngine(), "trade-engine")
 
