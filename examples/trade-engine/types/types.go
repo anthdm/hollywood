@@ -1,6 +1,9 @@
 package types
 
-import "github.com/anthdm/hollywood/actor"
+import (
+	"github.com/anthdm/hollywood/actor"
+	"time"
+)
 
 // message to cancel a trade
 type CancelOrderRequest struct {
@@ -29,7 +32,7 @@ type TradeOrderRequest struct {
 	Chain      string
 	Wallet     string
 	PrivateKey string
-	Expires    int64
+	Expires    time.Time
 }
 
 // options when creating new price watcher
@@ -43,7 +46,7 @@ type PriceOptions struct {
 // price update from price watcher
 type PriceUpdate struct {
 	Ticker    string
-	UpdatedAt int64
+	UpdatedAt time.Time
 	Price     float64
 }
 

@@ -21,17 +21,13 @@ func (t *tradeEngineActor) Receive(c *actor.Context) {
 	switch msg := c.Message().(type) {
 	case actor.Started:
 		slog.Info("tradeEngine.Started")
-
 	case actor.Stopped:
 		slog.Info("tradeEngine.Stopped")
-
 	case types.TradeOrderRequest:
 		// got new trade order, create the executor
 		slog.Info("tradeEngine.TradeOrderRequest", "id", msg.TradeID, "wallet", msg.Wallet)
-
 		// spawn the executor
 		t.spawnExecutor(msg, c)
-
 	case types.CancelOrderRequest:
 		// cancel the order
 		slog.Info("tradeEngine.CancelOrderRequest", "id", msg.TradeID)

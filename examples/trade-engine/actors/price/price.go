@@ -17,7 +17,7 @@ type priceWatcherActor struct {
 	token1      string
 	chain       string
 	lastPrice   float64
-	updatedAt   int64
+	updatedAt   time.Time
 	subscribers map[*actor.PID]bool
 }
 
@@ -66,7 +66,7 @@ func (pw *priceWatcherActor) refresh() {
 
 	// for example, just increment the price by 2
 	pw.lastPrice += 2
-	pw.updatedAt = time.Now().UnixMilli()
+	pw.updatedAt = time.Now()
 
 	// send the price update to all executors
 	for pid := range pw.subscribers {

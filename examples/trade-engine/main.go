@@ -41,7 +41,7 @@ func main() {
 			Wallet:     fmt.Sprintf("wallet_%d", i),     // for example
 			PrivateKey: fmt.Sprintf("privateKey_%d", i), // for example
 			// expire after 10 seconds
-			Expires: time.Now().Add(time.Second * 10).UnixMilli(),
+			Expires: time.Now().Add(time.Second * 10),
 		}
 
 		e.Send(tradeEnginePID, o)
@@ -56,7 +56,7 @@ func main() {
 		Chain:      "ETH",
 		Wallet:     "wallet6",
 		PrivateKey: "privateKey",
-		Expires:    0, // does not expire
+		// Expires:    (the zero time indicate no expiry)
 	}
 
 	e.Send(tradeEnginePID, tradeOrder)

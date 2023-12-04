@@ -18,7 +18,7 @@ type ExecutorOptions struct {
 	Chain           string
 	Wallet          string
 	Pk              string
-	Expires         int64
+	Expires         time.Time
 }
 
 type tradeExecutorActor struct {
@@ -34,7 +34,7 @@ type tradeExecutorActor struct {
 	pk              string
 	status          string
 	lastPrice       float64
-	expires         int64
+	expires         time.Time
 }
 
 func (te *tradeExecutorActor) Receive(c *actor.Context) {
@@ -76,7 +76,7 @@ func (te *tradeExecutorActor) Receive(c *actor.Context) {
 func (te *tradeExecutorActor) processUpdate(update types.PriceUpdate) {
 
 	// if expires is set and is less than current time, cancel the order
-	if te.expires != 0 && time.Now().UnixMilli() > te.expires {
+	if !te.expires.IsZero() && time.Now().After(te.expires) {
 		slog.Info("Trade Expired", "id", te.id, "wallet", te.wallet)
 		te.Finished()
 		return
@@ -89,7 +89,8 @@ func (te *tradeExecutorActor) processUpdate(update types.PriceUpdate) {
 	// eg update pnl, etc
 
 	// for example just print price
-	slog.Info("tradeExecutor.PriceUpdate", "ticker", update.Ticker, "price", update.Price)
+	// XXX a bit too much noise.
+	// slog.Info("tradeExecutor.PriceUpdate", "ticker", update.Ticker, "price", update.Price)
 }
 
 func (te *tradeExecutorActor) handleTradeInfoRequest(c *actor.Context) {
