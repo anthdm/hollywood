@@ -20,6 +20,14 @@ type PriceUpdate struct {
 	Price     float64
 }
 
+type Subscribe struct {
+	Sendto *actor.PID
+}
+
+type Unsubscribe struct {
+	Sendto *actor.PID
+}
+
 type updatePrice struct{}
 
 type priceWatcherActor struct {
@@ -34,6 +42,7 @@ type priceWatcherActor struct {
 	lastPrice   float64
 	updatedAt   int64
 	callCount   int64
+	subscribers []*actor.PID
 }
 
 func (pw *priceWatcherActor) Receive(c *actor.Context) {
@@ -47,6 +56,19 @@ func (pw *priceWatcherActor) Receive(c *actor.Context) {
 		pw.PID = c.PID()
 
 		pw.repeater = pw.ActorEngine.SendRepeat(pw.PID, updatePrice{}, time.Millisecond*200)
+
+	case Subscribe:
+		slog.Info("Got Subscribe", "ticker", pw.ticker, "subscriber", msg.Sendto)
+		pw.subscribers = append(pw.subscribers, msg.Sendto)
+
+	case Unsubscribe:
+		slog.Info("Got Unsubscribe", "ticker", pw.ticker, "subscriber", msg.Sendto)
+		for i, sub := range pw.subscribers {
+			if sub == msg.Sendto {
+				pw.subscribers = append(pw.subscribers[:i], pw.subscribers[i+1:]...)
+				break
+			}
+		}
 
 	case updatePrice:
 		pw.refresh()
@@ -73,11 +95,13 @@ func (pw *priceWatcherActor) refresh() {
 	pw.updatedAt = time.Now().UnixMilli()
 
 	// send the price update to all executors
-	pw.ActorEngine.BroadcastEvent(PriceUpdate{
-		Ticker:    pw.ticker,
-		UpdatedAt: pw.updatedAt,
-		Price:     pw.lastPrice,
-	})
+	for _, sub := range pw.subscribers {
+		pw.ActorEngine.Send(sub, PriceUpdate{
+			Ticker:    pw.ticker,
+			UpdatedAt: pw.updatedAt,
+			Price:     pw.lastPrice,
+		})
+	}
 
 }
 

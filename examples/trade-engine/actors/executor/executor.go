@@ -61,7 +61,7 @@ func (te *tradeExecutorActor) Receive(c *actor.Context) {
 		te.PID = c.PID()
 
 		// subscribe to eventstream
-		te.ActorEngine.Subscribe(te.PID)
+		te.ActorEngine.Send(te.priceWatcherPID, price.Subscribe{Sendto: te.PID})
 
 	case actor.Stopped:
 		slog.Info("Stopped Trade Executor Actor", "id", te.id, "wallet", te.wallet)
@@ -129,8 +129,8 @@ func (te *tradeExecutorActor) Finished() {
 		slog.Error("tradeExecutor.PID is <nil>")
 	}
 
-	// unsubscribe from eventstream (is that needed?)
-	te.ActorEngine.Unsubscribe(te.PID)
+	// unsubscribe from price updates
+	te.ActorEngine.Send(te.priceWatcherPID, price.Unsubscribe{Sendto: te.PID})
 
 	// poision itself
 	te.ActorEngine.Poison(te.PID)
