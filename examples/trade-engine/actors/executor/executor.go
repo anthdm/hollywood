@@ -60,7 +60,7 @@ func (te *tradeExecutorActor) Receive(c *actor.Context) {
 		te.ActorEngine = c.Engine()
 		te.PID = c.PID()
 
-		// subscribe to eventstream
+		// subscribe to price updates
 		te.ActorEngine.Send(te.priceWatcherPID, price.Subscribe{Sendto: te.PID})
 
 	case actor.Stopped:
