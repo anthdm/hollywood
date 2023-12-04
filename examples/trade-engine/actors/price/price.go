@@ -14,11 +14,10 @@ type PriceOptions struct {
 	Chain  string
 }
 
-type FetchPriceRequest struct{}
-
-type FetchPriceResponse struct {
-	Iat   int64
-	Price float64 // using float in example
+type PriceUpdate struct {
+	Ticker    string
+	UpdatedAt int64
+	Price     float64
 }
 
 type updatePrice struct{}
@@ -47,28 +46,13 @@ func (pw *priceWatcherActor) Receive(c *actor.Context) {
 		pw.lastCall = time.Now().UnixMilli()
 		pw.PID = c.PID()
 
-		pw.repeater = pw.ActorEngine.SendRepeat(pw.PID, updatePrice{}, time.Millisecond*20)
+		pw.repeater = pw.ActorEngine.SendRepeat(pw.PID, updatePrice{}, time.Millisecond*200)
 
 	case updatePrice:
 		pw.refresh()
 
 	case actor.Stopped:
 		slog.Info("Stopped Price Actor", "ticker", pw.ticker)
-
-	case FetchPriceRequest:
-		slog.Info("Fetching Price Request", "ticker", pw.ticker)
-
-		// update last called time
-		pw.lastCall = time.Now().UnixMilli()
-
-		// increment call count
-		pw.callCount++
-
-		// respond with the lastest price
-		c.Respond(FetchPriceResponse{
-			Iat:   time.Now().UnixMilli(),
-			Price: pw.lastPrice,
-		})
 
 	default:
 		_ = msg
@@ -85,10 +69,15 @@ func (pw *priceWatcherActor) refresh() {
 		pw.Kill()
 	}
 
-	// mimic fetching the price every 2s
-	time.Sleep(time.Millisecond * 2)
-	pw.lastPrice += 0.0001
+	pw.lastPrice += 2
 	pw.updatedAt = time.Now().UnixMilli()
+
+	// send the price update to all executors
+	pw.ActorEngine.BroadcastEvent(PriceUpdate{
+		Ticker:    pw.ticker,
+		UpdatedAt: pw.updatedAt,
+		Price:     pw.lastPrice,
+	})
 
 }
 

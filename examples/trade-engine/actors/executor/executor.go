@@ -1,8 +1,8 @@
 package executor
 
 import (
+	"fmt"
 	"log/slog"
-	"reflect"
 	"time"
 
 	"github.com/anthdm/hollywood/actor"
@@ -14,9 +14,6 @@ type TradeInfoRequest struct{}
 
 // message to cancel order
 type CancelOrderRequest struct{}
-
-// message to update price
-type updatePrice struct{}
 
 // response message for trade info
 type TradeInfoResponse struct {
@@ -43,7 +40,6 @@ type tradeExecutorActor struct {
 	id              string
 	ActorEngine     *actor.Engine
 	PID             *actor.PID
-	repeater        actor.SendRepeater
 	priceWatcherPID *actor.PID
 	ticker          string
 	token0          string
@@ -64,14 +60,19 @@ func (te *tradeExecutorActor) Receive(c *actor.Context) {
 		te.ActorEngine = c.Engine()
 		te.PID = c.PID()
 
-		// start the executor
-		te.repeater = te.ActorEngine.SendRepeat(te.PID, updatePrice{}, time.Second*2)
-
-	case updatePrice:
-		te.processUpdate(c)
+		// subscribe to eventstream
+		te.ActorEngine.Subscribe(te.PID)
 
 	case actor.Stopped:
 		slog.Info("Stopped Trade Executor Actor", "id", te.id, "wallet", te.wallet)
+
+	case price.PriceUpdate:
+		// ensure correct ticker
+		if msg.Ticker != te.ticker {
+			return
+		}
+		// update the price
+		te.processUpdate(msg)
 
 	case TradeInfoRequest:
 		slog.Info("Got TradeInfoRequest", "id", te.id, "wallet", te.wallet)
@@ -91,7 +92,7 @@ func (te *tradeExecutorActor) Receive(c *actor.Context) {
 	}
 }
 
-func (te *tradeExecutorActor) processUpdate(c *actor.Context) {
+func (te *tradeExecutorActor) processUpdate(update price.PriceUpdate) {
 
 	// if expires is set and is less than current time, cancel the order
 	if te.expires != 0 && time.Now().UnixMilli() > te.expires {
@@ -100,29 +101,14 @@ func (te *tradeExecutorActor) processUpdate(c *actor.Context) {
 		return
 	}
 
-	if te.priceWatcherPID == nil {
-		slog.Error("tradeExecutor.priceWatcherPID is <nil>")
-		return
-	}
+	// update the price
+	te.lastPrice = update.Price
 
-	// get the price from the price actor, 2s timeout
-	response := c.Request(te.priceWatcherPID, price.FetchPriceRequest{}, time.Second*2)
+	// do something with the price
+	// eg update pnl, etc
 
-	// wait for result
-	result, err := response.Result()
-	if err != nil {
-		slog.Error("Error getting price response", "error", err.Error())
-		return
-	}
+	fmt.Println("price update", update.Price)
 
-	switch r := result.(type) {
-	case price.FetchPriceResponse:
-		slog.Info("Got Price Response", "price", r.Price)
-		te.lastPrice = r.Price
-	default:
-		slog.Warn("Got Invalid Type from priceWatcher", "type", reflect.TypeOf(r))
-
-	}
 }
 
 func (te *tradeExecutorActor) replyWithTradeInfo(c *actor.Context) {
@@ -143,8 +129,8 @@ func (te *tradeExecutorActor) Finished() {
 		slog.Error("tradeExecutor.PID is <nil>")
 	}
 
-	// stop the repeater
-	te.repeater.Stop()
+	// unsubscribe from eventstream (is that needed?)
+	te.ActorEngine.Unsubscribe(te.PID)
 
 	// poision itself
 	te.ActorEngine.Poison(te.PID)
