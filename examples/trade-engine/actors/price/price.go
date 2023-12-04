@@ -1,6 +1,7 @@
 package price
 
 import (
+	"fmt"
 	"log/slog"
 	"time"
 
@@ -28,10 +29,7 @@ type priceWatcher struct {
 	token0      string
 	token1      string
 	chain       string
-	lastPrice   float64 // using float in example
-	updatedAt   int64
-	lastCall    int64
-	callCount   uint64
+	states      *priceStates
 }
 
 func (pw *priceWatcher) Receive(c *actor.Context) {
@@ -41,7 +39,7 @@ func (pw *priceWatcher) Receive(c *actor.Context) {
 		slog.Info("Started Price Actor", "ticker", pw.ticker)
 
 		pw.actorEngine = c.Engine()
-		pw.lastCall = time.Now().UnixMilli()
+		pw.states.SetLastCall(time.Now().UnixMilli())
 		pw.PID = c.PID()
 
 		// start updating the price
@@ -54,15 +52,15 @@ func (pw *priceWatcher) Receive(c *actor.Context) {
 		slog.Info("Fetching Price Request", "ticker", pw.ticker)
 
 		// update last called time
-		pw.lastCall = time.Now().UnixMilli()
+		pw.states.SetLastCall(time.Now().UnixMilli())
 
 		// increment call count
-		pw.callCount++
+		pw.states.IncCallCount()
 
 		// respond with the lastest price
 		c.Respond(&FetchPriceResponse{
 			Iat:   time.Now().UnixMilli(),
-			Price: pw.lastPrice,
+			Price: pw.states.LastPrice(),
 		})
 
 	default:
@@ -71,12 +69,13 @@ func (pw *priceWatcher) Receive(c *actor.Context) {
 }
 
 func (pw *priceWatcher) start() {
+	fmt.Println("starting price watcher", pw.ticker)
 
 	// mimic getting price every 2 seconds
 	for {
 		// check if the last call was more than 10 seconds ago
-		if pw.lastCall < time.Now().UnixMilli()-(time.Second.Milliseconds()*10) {
-			slog.Warn("Inactivity: Killing Price Watcher", "ticker", pw.ticker, "callCount", pw.callCount)
+		if pw.states.LastCall() < time.Now().UnixMilli()-(time.Second.Milliseconds()*10) {
+			slog.Warn("Inactivity: Killing Price Watcher", "ticker", pw.ticker, "callCount", pw.states.CallCount())
 
 			// if no call in 10 seconds => kill itself
 			pw.Kill()
@@ -85,8 +84,8 @@ func (pw *priceWatcher) start() {
 
 		// mimic fetching the price every 2s
 		time.Sleep(time.Millisecond * 2)
-		pw.lastPrice += 1
-		pw.updatedAt = time.Now().UnixMilli()
+		pw.states.SetLastPrice(10)
+		pw.states.SetUpdatedAt(time.Now().UnixMilli())
 
 	}
 }
@@ -110,6 +109,7 @@ func NewPriceActor(opts PriceOptions) actor.Producer {
 			token0: opts.Token0,
 			token1: opts.Token1,
 			chain:  opts.Chain,
+			states: NewPriceStates(),
 		}
 	}
 }

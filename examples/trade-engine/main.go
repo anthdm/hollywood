@@ -27,7 +27,7 @@ func main() {
 	// create 5 trade orders
 	// Expiry of 10s so after 10s the orders will be cancelled
 	// the price watcher will be stopped due to inactivity
-	fmt.Println("creating 5 trade orders")
+	fmt.Println("\n\ncreating 5 trade orders")
 	for i := 0; i < 5; i++ {
 		o := &tradeEngine.TradeOrderRequest{
 			TradeID:    GenID(),
@@ -44,7 +44,7 @@ func main() {
 	}
 
 	time.Sleep(time.Second * 20)
-	fmt.Println("creating 1 trade order to test cancellation")
+	fmt.Println("\n\ncreating 1 trade order to test cancellation")
 	tradeOrder := &tradeEngine.TradeOrderRequest{
 		TradeID:    GenID(),
 		Token0:     "token0",

@@ -38,18 +38,15 @@ type ExecutorOptions struct {
 type tradeExecutor struct {
 	id              string
 	actorEngine     *actor.Engine
-	PID             *actor.PID
+	pid             *actor.PID
 	priceWatcherPID *actor.PID
-	Expires         int64
-	status          string
 	ticker          string
 	token0          string
 	token1          string
 	chain           string
 	wallet          string
 	pk              string
-	price           float64 // using float in example
-	active          bool
+	states          *executorStates
 }
 
 func (te *tradeExecutor) Receive(c *actor.Context) {
@@ -58,17 +55,17 @@ func (te *tradeExecutor) Receive(c *actor.Context) {
 		slog.Info("Started Trade Executor Actor", "id", te.id, "wallet", te.wallet)
 
 		// set flag for goroutine
-		te.active = true
+		te.states.SetActive(true)
 
 		te.actorEngine = c.Engine()
-		te.PID = c.PID()
+		te.pid = c.PID()
 
 		// start the trade process
 		go te.start(c)
 
 	case actor.Stopped:
 		slog.Info("Stopped Trade Executor Actor", "id", te.id, "wallet", te.wallet)
-		te.active = false
+		te.states.SetActive(false)
 
 	case TradeInfoRequest:
 		slog.Info("Got TradeInfoRequest", "id", te.id, "wallet", te.wallet)
@@ -77,7 +74,7 @@ func (te *tradeExecutor) Receive(c *actor.Context) {
 	case CancelOrderRequest:
 		slog.Info("Got CancelOrderRequest", "id", te.id, "wallet", te.wallet)
 		// update status
-		te.status = "cancelled"
+		te.states.SetStatus("cancelled")
 
 		// stop the executor
 		te.Finished()
@@ -95,11 +92,14 @@ func (te *tradeExecutor) start(c *actor.Context) {
 		time.Sleep(time.Second * 2)
 
 		// check flag. Will be false if actor is killed
-		if !te.active {
+		if !te.states.Active() {
 			return
 		}
 
-		if te.Expires != 0 && time.Now().UnixMilli() > te.Expires {
+		exp := te.states.Expires()
+
+		// if expires is set and is less than current time, cancel the order
+		if exp != 0 && time.Now().UnixMilli() > exp {
 			slog.Warn("Trade Expired", "id", te.id, "wallet", te.wallet)
 			te.Finished()
 			return
@@ -123,6 +123,7 @@ func (te *tradeExecutor) start(c *actor.Context) {
 		switch r := result.(type) {
 		case *price.FetchPriceResponse:
 			slog.Info("Got Price Response", "price", r.Price)
+			te.states.SetPrice(r.Price)
 		default:
 			slog.Warn("Got Invalid Type from priceWatcher", "type", reflect.TypeOf(r))
 
@@ -134,24 +135,24 @@ func (te *tradeExecutor) tradeInfo(c *actor.Context) {
 	c.Respond(&TradeInfoResponse{
 		foo:   100,
 		bar:   100,
-		price: te.price,
+		price: te.states.price,
 	})
 }
 
 func (te *tradeExecutor) Finished() {
 	// set the flag to flase so goroutine terminates
-	te.active = false
+	te.states.SetActive(false)
 
 	// make sure actorEngine is safe
 	if te.actorEngine == nil {
 		slog.Error("tradeExecutor.actorEngine is <nil>")
 	}
 
-	if te.PID == nil {
+	if te.pid == nil {
 		slog.Error("tradeExecutor.PID is <nil>")
 	}
 
-	te.actorEngine.Poison(te.PID)
+	te.actorEngine.Poison(te.pid)
 }
 
 func NewExecutorActor(opts *ExecutorOptions) actor.Producer {
@@ -165,8 +166,11 @@ func NewExecutorActor(opts *ExecutorOptions) actor.Producer {
 			wallet:          opts.Wallet,
 			pk:              opts.Pk,
 			priceWatcherPID: opts.PriceWatcherPID,
-			Expires:         opts.Expires,
-			status:          "pending",
+			states: &executorStates{
+				active:  true,
+				status:  "pending",
+				expires: opts.Expires,
+			},
 		}
 	}
 }
