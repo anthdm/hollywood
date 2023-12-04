@@ -1,115 +1,106 @@
 package price
 
 import (
-	"fmt"
 	"log/slog"
 	"time"
 
 	"github.com/anthdm/hollywood/actor"
+	"github.com/anthdm/hollywood/examples/trade-engine/types"
 )
 
-type PriceOptions struct {
-	Ticker string
-	Token0 string
-	Token1 string
-	Chain  string
-}
-
-type FetchPriceRequest struct{}
-
-type FetchPriceResponse struct {
-	Iat   int64
-	Price float64 // using float in example
-}
-
-type priceWatcher struct {
-	actorEngine *actor.Engine
+type priceWatcherActor struct {
+	ActorEngine *actor.Engine
 	PID         *actor.PID
+	repeater    actor.SendRepeater
 	ticker      string
 	token0      string
 	token1      string
 	chain       string
-	states      *priceStates
+	lastPrice   float64
+	updatedAt   int64
+	subscribers map[*actor.PID]bool
 }
 
-func (pw *priceWatcher) Receive(c *actor.Context) {
+func (pw *priceWatcherActor) Receive(c *actor.Context) {
 
 	switch msg := c.Message().(type) {
 	case actor.Started:
-		slog.Info("Started Price Actor", "ticker", pw.ticker)
+		slog.Info("priceWatcher.Started", "ticker", pw.ticker)
 
-		pw.actorEngine = c.Engine()
-		pw.states.SetLastCall(time.Now().UnixMilli())
+		// set actorEngine and PID
+		pw.ActorEngine = c.Engine()
 		pw.PID = c.PID()
 
-		// start updating the price
-		go pw.start()
+		// create a repeater to trigger price updates every 200ms
+		pw.repeater = pw.ActorEngine.SendRepeat(pw.PID, types.TriggerPriceUpdate{}, time.Millisecond*200)
 
 	case actor.Stopped:
-		slog.Info("Stopped Price Actor", "ticker", pw.ticker)
+		slog.Info("priceWatcher.Stopped", "ticker", pw.ticker)
 
-	case FetchPriceRequest:
-		slog.Info("Fetching Price Request", "ticker", pw.ticker)
+	case types.Subscribe:
+		slog.Info("priceWatcher.Subscribe", "ticker", pw.ticker, "subscriber", msg.Sendto)
 
-		// update last called time
-		pw.states.SetLastCall(time.Now().UnixMilli())
+		// add the subscriber to the map
+		pw.subscribers[msg.Sendto] = true
 
-		// increment call count
-		pw.states.IncCallCount()
+	case types.Unsubscribe:
+		slog.Info("priceWatcher.Unsubscribe", "ticker", pw.ticker, "subscriber", msg.Sendto)
 
-		// respond with the lastest price
-		c.Respond(&FetchPriceResponse{
-			Iat:   time.Now().UnixMilli(),
-			Price: pw.states.LastPrice(),
+		// remove the subscriber from the map
+		delete(pw.subscribers, msg.Sendto)
+
+	case types.TriggerPriceUpdate:
+		pw.refresh()
+	}
+}
+
+func (pw *priceWatcherActor) refresh() {
+
+	// check if there are any subscribers
+	if len(pw.subscribers) == 0 {
+		slog.Info("No Subscribers: Killing Price Watcher", "ticker", pw.ticker)
+
+		// if no subscribers, kill itself
+		pw.Kill()
+	}
+
+	// for example, just increment the price by 2
+	pw.lastPrice += 2
+	pw.updatedAt = time.Now().UnixMilli()
+
+	// send the price update to all executors
+	for pid := range pw.subscribers {
+		pw.ActorEngine.Send(pid, types.PriceUpdate{
+			Ticker:    pw.ticker,
+			UpdatedAt: pw.updatedAt,
+			Price:     pw.lastPrice,
 		})
-
-	default:
-		_ = msg
 	}
 }
 
-func (pw *priceWatcher) start() {
-	fmt.Println("starting price watcher", pw.ticker)
-
-	// mimic getting price every 2 seconds
-	for {
-		// check if the last call was more than 10 seconds ago
-		if pw.states.LastCall() < time.Now().UnixMilli()-(time.Second.Milliseconds()*10) {
-			slog.Warn("Inactivity: Killing Price Watcher", "ticker", pw.ticker, "callCount", pw.states.CallCount())
-
-			// if no call in 10 seconds => kill itself
-			pw.Kill()
-			return // stops goroutine
-		}
-
-		// mimic fetching the price every 2s
-		time.Sleep(time.Millisecond * 2)
-		pw.states.SetLastPrice(10)
-		pw.states.SetUpdatedAt(time.Now().UnixMilli())
-
-	}
-}
-
-func (pw *priceWatcher) Kill() {
-	// kill itself
-	if pw.actorEngine == nil {
+func (pw *priceWatcherActor) Kill() {
+	if pw.ActorEngine == nil {
 		slog.Error("priceWatcher.actorEngine is <nil>", "ticker", pw.ticker)
 	}
 	if pw.PID == nil {
 		slog.Error("priceWatcher.PID is <nil>", "ticker", pw.ticker)
 	}
 
-	pw.actorEngine.Poison(pw.PID)
+	// stop the repeater
+	pw.repeater.Stop()
+
+	// poision itself
+	pw.ActorEngine.Poison(pw.PID)
 }
 
-func NewPriceActor(opts PriceOptions) actor.Producer {
+func NewPriceActor(opts types.PriceOptions) actor.Producer {
 	return func() actor.Receiver {
-		return &priceWatcher{
-			ticker: opts.Ticker,
-			token0: opts.Token0,
-			token1: opts.Token1,
-			chain:  opts.Chain,
-			states: NewPriceStates(),
+		return &priceWatcherActor{
+			ticker:      opts.Ticker,
+			token0:      opts.Token0,
+			token1:      opts.Token1,
+			chain:       opts.Chain,
+			subscribers: make(map[*actor.PID]bool),
 		}
 	}
 }

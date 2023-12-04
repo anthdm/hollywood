@@ -2,27 +2,13 @@ package executor
 
 import (
 	"log/slog"
-	"reflect"
 	"time"
 
 	"github.com/anthdm/hollywood/actor"
-	"github.com/anthdm/hollywood/examples/trade-engine/actors/price"
+	"github.com/anthdm/hollywood/examples/trade-engine/types"
 )
 
-// message to get trade info
-type TradeInfoRequest struct{}
-
-type CancelOrderRequest struct{}
-
-// response message for trade info
-type TradeInfoResponse struct {
-	// info regarding the current position
-	// eg price, pnl, etc
-	foo   int
-	bar   int
-	price float64 // using float in example
-}
-
+// Options for creating a new executor
 type ExecutorOptions struct {
 	PriceWatcherPID *actor.PID
 	TradeID         string
@@ -35,10 +21,10 @@ type ExecutorOptions struct {
 	Expires         int64
 }
 
-type tradeExecutor struct {
+type tradeExecutorActor struct {
 	id              string
-	actorEngine     *actor.Engine
-	pid             *actor.PID
+	ActorEngine     *actor.Engine
+	PID             *actor.PID
 	priceWatcherPID *actor.PID
 	ticker          string
 	token0          string
@@ -46,118 +32,95 @@ type tradeExecutor struct {
 	chain           string
 	wallet          string
 	pk              string
-	states          *executorStates
+	status          string
+	lastPrice       float64
+	expires         int64
 }
 
-func (te *tradeExecutor) Receive(c *actor.Context) {
+func (te *tradeExecutorActor) Receive(c *actor.Context) {
 	switch msg := c.Message().(type) {
 	case actor.Started:
-		slog.Info("Started Trade Executor Actor", "id", te.id, "wallet", te.wallet)
+		slog.Info("tradeExecutor.Started", "id", te.id, "wallet", te.wallet)
 
-		// set flag for goroutine
-		te.states.SetActive(true)
+		// set actorEngine and PID
+		te.ActorEngine = c.Engine()
+		te.PID = c.PID()
 
-		te.actorEngine = c.Engine()
-		te.pid = c.PID()
-
-		// start the trade process
-		go te.start(c)
+		// subscribe to price updates
+		te.ActorEngine.Send(te.priceWatcherPID, types.Subscribe{Sendto: te.PID})
 
 	case actor.Stopped:
-		slog.Info("Stopped Trade Executor Actor", "id", te.id, "wallet", te.wallet)
-		te.states.SetActive(false)
+		slog.Info("tradeExecutor.Stopped", "id", te.id, "wallet", te.wallet)
 
-	case TradeInfoRequest:
-		slog.Info("Got TradeInfoRequest", "id", te.id, "wallet", te.wallet)
-		te.tradeInfo(c)
+	case types.PriceUpdate:
+		// update the price
+		te.processUpdate(msg)
 
-	case CancelOrderRequest:
-		slog.Info("Got CancelOrderRequest", "id", te.id, "wallet", te.wallet)
+	case types.TradeInfoRequest:
+		slog.Info("tradeExecutor.TradeInfoRequest", "id", te.id, "wallet", te.wallet)
+
+		// handle the request
+		te.handleTradeInfoRequest(c)
+
+	case types.CancelOrderRequest:
+		slog.Info("tradeExecutor.CancelOrderRequest", "id", te.id, "wallet", te.wallet)
+
 		// update status
-		te.states.SetStatus("cancelled")
+		te.status = "cancelled"
 
 		// stop the executor
 		te.Finished()
-
-	default:
-		_ = msg
-
 	}
 }
 
-func (te *tradeExecutor) start(c *actor.Context) {
-	// example of a long running process
-	for {
-		// refresh price every 2s
-		time.Sleep(time.Second * 2)
+func (te *tradeExecutorActor) processUpdate(update types.PriceUpdate) {
 
-		// check flag. Will be false if actor is killed
-		if !te.states.Active() {
-			return
-		}
-
-		exp := te.states.Expires()
-
-		// if expires is set and is less than current time, cancel the order
-		if exp != 0 && time.Now().UnixMilli() > exp {
-			slog.Warn("Trade Expired", "id", te.id, "wallet", te.wallet)
-			te.Finished()
-			return
-		}
-
-		if (te.priceWatcherPID == nil) || (te.priceWatcherPID == &actor.PID{}) {
-			slog.Error("tradeExecutor.priceWatcherPID is <nil>")
-			return
-		}
-
-		// get the price from the price actor, 2s timeout
-		response := c.Request(te.priceWatcherPID, price.FetchPriceRequest{}, time.Second*2)
-
-		// wait for result
-		result, err := response.Result()
-		if err != nil {
-			slog.Error("Error getting price response", "error", err.Error())
-			return
-		}
-
-		switch r := result.(type) {
-		case *price.FetchPriceResponse:
-			slog.Info("Got Price Response", "price", r.Price)
-			te.states.SetPrice(r.Price)
-		default:
-			slog.Warn("Got Invalid Type from priceWatcher", "type", reflect.TypeOf(r))
-
-		}
+	// if expires is set and is less than current time, cancel the order
+	if te.expires != 0 && time.Now().UnixMilli() > te.expires {
+		slog.Info("Trade Expired", "id", te.id, "wallet", te.wallet)
+		te.Finished()
+		return
 	}
+
+	// update the price
+	te.lastPrice = update.Price
+
+	// do something with the price
+	// eg update pnl, etc
+
+	// for example just print price
+	slog.Info("tradeExecutor.PriceUpdate", "ticker", update.Ticker, "price", update.Price)
 }
 
-func (te *tradeExecutor) tradeInfo(c *actor.Context) {
-	c.Respond(&TradeInfoResponse{
-		foo:   100,
-		bar:   100,
-		price: te.states.price,
+func (te *tradeExecutorActor) handleTradeInfoRequest(c *actor.Context) {
+	c.Respond(types.TradeInfoResponse{
+		// for example
+		Foo:   100,
+		Bar:   100,
+		Price: te.lastPrice,
 	})
 }
 
-func (te *tradeExecutor) Finished() {
-	// set the flag to flase so goroutine terminates
-	te.states.SetActive(false)
-
-	// make sure actorEngine is safe
-	if te.actorEngine == nil {
+func (te *tradeExecutorActor) Finished() {
+	// make sure ActorEngine and PID are set
+	if te.ActorEngine == nil {
 		slog.Error("tradeExecutor.actorEngine is <nil>")
 	}
 
-	if te.pid == nil {
+	if te.PID == nil {
 		slog.Error("tradeExecutor.PID is <nil>")
 	}
 
-	te.actorEngine.Poison(te.pid)
+	// unsubscribe from price updates
+	te.ActorEngine.Send(te.priceWatcherPID, types.Unsubscribe{Sendto: te.PID})
+
+	// poision itself
+	te.ActorEngine.Poison(te.PID)
 }
 
 func NewExecutorActor(opts *ExecutorOptions) actor.Producer {
 	return func() actor.Receiver {
-		return &tradeExecutor{
+		return &tradeExecutorActor{
 			id:              opts.TradeID,
 			ticker:          opts.Ticker,
 			token0:          opts.Token0,
@@ -166,11 +129,8 @@ func NewExecutorActor(opts *ExecutorOptions) actor.Producer {
 			wallet:          opts.Wallet,
 			pk:              opts.Pk,
 			priceWatcherPID: opts.PriceWatcherPID,
-			states: &executorStates{
-				active:  true,
-				status:  "pending",
-				expires: opts.Expires,
-			},
+			expires:         opts.Expires,
+			status:          "active",
 		}
 	}
 }

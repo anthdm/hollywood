@@ -13,6 +13,7 @@ import (
 
 	"github.com/anthdm/hollywood/actor"
 	"github.com/anthdm/hollywood/examples/trade-engine/actors/tradeEngine"
+	"github.com/anthdm/hollywood/examples/trade-engine/types"
 	"github.com/anthdm/hollywood/log"
 )
 
@@ -31,14 +32,14 @@ func main() {
 	// Expiry of 10s so after 10s the orders will be cancelled
 	// the price watcher will be stopped due to inactivity
 	fmt.Println("\n\ncreating 5 trade orders")
-	for i := 0; i < 5; i++ {
-		o := &tradeEngine.TradeOrderRequest{
+	for i := 1; i < 6; i++ {
+		o := types.TradeOrderRequest{
 			TradeID:    GenID(),
 			Token0:     "token0",
 			Token1:     "token1",
 			Chain:      "ETH",
-			Wallet:     "random wallet", // for example
-			PrivateKey: "private key",   // for example
+			Wallet:     fmt.Sprintf("wallet_%d", i),     // for example
+			PrivateKey: fmt.Sprintf("privateKey_%d", i), // for example
 			// expire after 10 seconds
 			Expires: time.Now().Add(time.Second * 10).UnixMilli(),
 		}
@@ -48,20 +49,31 @@ func main() {
 
 	time.Sleep(time.Second * 20)
 	fmt.Println("\n\ncreating 1 trade order to test cancellation")
-	tradeOrder := &tradeEngine.TradeOrderRequest{
+	tradeOrder := types.TradeOrderRequest{
 		TradeID:    GenID(),
 		Token0:     "token0",
 		Token1:     "token1",
 		Chain:      "ETH",
-		Wallet:     "random wallet", // for example
-		PrivateKey: "private key",   // for example
-		Expires:    0,
+		Wallet:     "wallet6",
+		PrivateKey: "privateKey",
+		Expires:    0, // does not expire
 	}
 
 	e.Send(tradeEnginePID, tradeOrder)
 	time.Sleep(time.Second * 5)
-	fmt.Println("cancelling trade order")
-	e.Send(tradeEnginePID, tradeEngine.CancelOrderRequest{ID: tradeOrder.TradeID})
+
+	// get trade info
+	fmt.Println("\n\ngetting trade info")
+	resp := e.Request(tradeEnginePID, types.TradeInfoRequest{TradeID: tradeOrder.TradeID}, 5*time.Second)
+	res, _ := resp.Result()
+	switch msg := res.(type) {
+	case types.TradeInfoResponse:
+		fmt.Println("trade info", msg)
+	}
+
+	// cancel trade order
+	fmt.Println("\n\ncancelling trade order")
+	e.Send(tradeEnginePID, types.CancelOrderRequest{TradeID: tradeOrder.TradeID})
 
 	// wait for signal
 	sigs := make(chan os.Signal, 1)
