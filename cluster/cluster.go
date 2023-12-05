@@ -2,62 +2,57 @@ package cluster
 
 import (
 	"github.com/anthdm/hollywood/actor"
-	"github.com/anthdm/hollywood/remote"
 )
 
 type Producer func(c *Cluster) actor.Producer
 
+type Provider interface {
+	Start(*Cluster) error
+	Stop() error
+}
+
 type Config struct {
-	ID               string
-	ListenAddr       string
-	ProviderProducer Producer
-	Engine           *actor.Engine
+	ID       string
+	Engine   *actor.Engine
+	Provider Provider
 }
 
 type Cluster struct {
-	ID string
+	id string
 
-	engine *actor.Engine
-	remote *remote.Remote
+	engine   *actor.Engine
+	provider Provider
 
-	providerProducer Producer
-	providerPID      *actor.PID
-	agentPID         *actor.PID
+	agentPID *actor.PID
 }
 
-func New(cfg Config) *Cluster {
-	remote := remote.New(remote.Config{
-		ListenAddr: cfg.ListenAddr,
-	})
-
+func New(cfg Config) (*Cluster, error) {
 	if len(cfg.ID) == 0 {
 		cfg.ID = "TODO SOMETHING RANDOM"
 	}
-	if cfg.ProviderProducer == nil {
-		cfg.ProviderProducer = NewSelfManagedProvider()
-	}
-
 	return &Cluster{
-		ID:               cfg.ID,
-		remote:           remote,
-		providerProducer: cfg.ProviderProducer,
-		engine:           cfg.Engine,
-	}
+		id:       cfg.ID,
+		provider: cfg.Provider,
+		engine:   cfg.Engine,
+	}, nil
 }
 
 func (c *Cluster) Start() error {
-	c.providerPID = c.engine.Spawn(c.providerProducer(c), c.ID, actor.WithTags("provider"))
-	c.agentPID = c.engine.Spawn(NewAgent, c.ID, actor.WithTags("agent"))
-
-	return c.remote.Start(c.engine)
+	c.agentPID = c.engine.Spawn(NewAgent, "cluster", actor.WithTags(c.id, "agent"))
+	c.provider.Start(c)
+	return nil
 }
 
-type Member struct {
-	ID   string
-	Host string
-	Port int
+func (c *Cluster) MemberJoin(member *Member) {
+	c.engine.Send(c.agentPID, MemberJoin{
+		Member: member,
+	})
 }
 
-func (c *Cluster) MemberJoin(member Member) {
-	c.engine.Send(c.agentPID, &MemberJoin{})
+// Member return the member info of this cluster.
+func (c *Cluster) Member() Member {
+	return Member{
+		ID:  c.id,
+		PID: actor.NewPID(c.engine.Address(), "cluster", c.id, "agent"),
+	}
 }

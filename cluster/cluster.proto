@@ -12,10 +12,13 @@ message CID {
 	actor.PID pid = 2;
 }
 
-message MemberJoin {
+message Member {
 	string ID = 1;
-	string host = 2;
-	int32 port = 3;
+	actor.PID PID = 2;
+}
+
+message MemberJoin {
+	Member member = 1;
 }
 
 message Envelope {
