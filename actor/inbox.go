@@ -1,6 +1,7 @@
 package actor
 
 import (
+	"math"
 	"runtime"
 	"sync/atomic"
 
@@ -72,15 +73,15 @@ func (in *Inbox) process() {
 
 func (in *Inbox) run() {
 	i, t := 0, in.scheduler.Throughput()
-	for in.procStatus != stopped {
+	for atomic.LoadInt32(&in.procStatus) != stopped {
 		if i > t {
 			i = 0
 			runtime.Gosched()
 		}
 		i++
 
-		if msg, ok := in.rb.Pop(); ok {
-			in.proc.Invoke([]Envelope{msg})
+		if msgs, ok := in.rb.PopN(math.MaxInt); ok && len(msgs) > 0 {
+			in.proc.Invoke(msgs)
 		} else {
 			return
 		}
@@ -92,6 +93,6 @@ func (in *Inbox) Start(proc Processer) {
 }
 
 func (in *Inbox) Stop() error {
-	in.procStatus = stopped
+	atomic.StoreInt32(&in.procStatus, stopped)
 	return nil
 }

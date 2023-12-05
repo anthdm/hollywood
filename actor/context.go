@@ -1,10 +1,10 @@
 package actor
 
 import (
+	"log/slog"
 	"strings"
 	"time"
 
-	"github.com/anthdm/hollywood/log"
 	"github.com/anthdm/hollywood/safemap"
 )
 
@@ -43,9 +43,7 @@ func (c *Context) Request(pid *PID, msg any, timeout time.Duration) *Response {
 // Respond will sent the given message to the sender of the current received message.
 func (c *Context) Respond(msg any) {
 	if c.sender == nil {
-		log.Warnw("[RESPOND] context got no sender", log.M{
-			"pid": c.PID(),
-		})
+		slog.Warn("context got no sender", "func", "Respond", "pid", c.PID())
 		return
 	}
 	c.engine.Send(c.sender, msg)

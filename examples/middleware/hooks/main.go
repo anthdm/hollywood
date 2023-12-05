@@ -43,12 +43,11 @@ func WithHooks() func(actor.ReceiveFunc) actor.ReceiveFunc {
 }
 
 func main() {
-	// Set the process ID separator to something custom.
-	cfg := actor.Config{
-		PIDSeparator: "→",
-	}
 	// Create a new engine
-	e := actor.NewEngine(cfg)
+	e, err := actor.NewEngine(actor.EngineOptPidSeparator("→"))
+	if err != nil {
+		panic(err)
+	}
 	// Spawn the a new "foo" receiver with middleware.
 	pid := e.Spawn(newFoo, "foo", actor.WithMiddleware(WithHooks()))
 	// Send a message to foo

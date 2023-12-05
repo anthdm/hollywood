@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log/slog"
 	"net"
 	"os"
 	"os/signal"
@@ -11,7 +12,6 @@ import (
 	"time"
 
 	"github.com/anthdm/hollywood/actor"
-	"github.com/anthdm/hollywood/log"
 )
 
 type handler struct{}
@@ -49,7 +49,7 @@ func (s *session) Receive(c *actor.Context) {
 	switch c.Message().(type) {
 	case actor.Initialized:
 	case actor.Started:
-		log.Infow("new connection", log.M{"addr": s.conn.RemoteAddr()})
+		slog.Info("new connection", "addr", s.conn.RemoteAddr())
 		go s.readLoop(c)
 	case actor.Stopped:
 		s.conn.Close()
@@ -61,7 +61,7 @@ func (s *session) readLoop(c *actor.Context) {
 	for {
 		n, err := s.conn.Read(buf)
 		if err != nil {
-			log.Errorw("conn read error", log.M{"err": err})
+			slog.Error("conn read error", "err", err)
 			break
 		}
 		// copy shared buffer, to prevent race conditions.
@@ -110,16 +110,16 @@ func (s *server) Receive(c *actor.Context) {
 		// start the handler that will handle the incomming messages from clients/sessions.
 		c.SpawnChild(newHandler, "handler")
 	case actor.Started:
-		log.Infow("server started", log.M{"addr": s.listenAddr})
+		slog.Info("server started", "addr", s.listenAddr)
 		go s.acceptLoop(c)
 	case actor.Stopped:
 		// on stop all the childs sessions will automatically get the stop
 		// message and close all their underlying connection.
 	case *connAdd:
-		log.Tracew("added new connection to my map", log.M{"addr": msg.conn.RemoteAddr(), "pid": msg.pid})
+		slog.Debug("added new connection to my map", "addr", msg.conn.RemoteAddr(), "pid", msg.pid)
 		s.sessions[msg.pid] = msg.conn
 	case *connRem:
-		log.Tracew("removed connection from my map", log.M{"pid": msg.pid})
+		slog.Debug("removed connection from my map", "pid", msg.pid)
 		delete(s.sessions, msg.pid)
 	}
 }
@@ -128,7 +128,7 @@ func (s *server) acceptLoop(c *actor.Context) {
 	for {
 		conn, err := s.ln.Accept()
 		if err != nil {
-			log.Errorw("accept error", log.M{"err": err})
+			slog.Error("accept error", "err", err)
 			break
 		}
 		pid := c.SpawnChild(newSession(conn), "session", actor.WithTags(conn.RemoteAddr().String()))
@@ -142,7 +142,10 @@ func (s *server) acceptLoop(c *actor.Context) {
 func main() {
 	listenAddr := flag.String("listenaddr", ":6000", "listen address of the TCP server")
 
-	e := actor.NewEngine()
+	e, err := actor.NewEngine()
+	if err != nil {
+		panic(err)
+	}
 	serverPID := e.Spawn(newServer(*listenAddr), "server")
 
 	sigch := make(chan os.Signal, 1)

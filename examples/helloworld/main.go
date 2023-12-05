@@ -2,8 +2,6 @@ package main
 
 import (
 	"fmt"
-	"sync"
-
 	"github.com/anthdm/hollywood/actor"
 )
 
@@ -29,12 +27,15 @@ func (f *foo) Receive(ctx *actor.Context) {
 }
 
 func main() {
-	engine := actor.NewEngine()
+
+	engine, err := actor.NewEngine()
+	if err != nil {
+		panic(err)
+	}
+
 	pid := engine.Spawn(newFoo, "my_actor")
 	for i := 0; i < 100; i++ {
 		engine.Send(pid, &message{data: "hello world!"})
 	}
-	wg := sync.WaitGroup{}
-	engine.Poison(pid, &wg)
-	wg.Wait()
+	engine.Poison(pid).Wait()
 }

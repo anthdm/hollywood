@@ -1,41 +1,81 @@
 package actor
 
 import (
-	sync "sync"
+	fmt "fmt"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func TestEventStream(t *testing.T) {
-	e := NewEngine()
+type CustomEvent struct {
+	msg string
+}
+
+func TestEventStreamLocal(t *testing.T) {
+	e, err := NewEngine()
+	assert.NoError(t, err)
 	wg := sync.WaitGroup{}
-	subs := []*EventSub{}
-	var mu sync.RWMutex
-
-	for i := 0; i < 10; i++ {
-		wg.Add(1)
-		go func(i int) {
-			sub := e.EventStream.Subscribe(func(event any) {
-				s, ok := event.(string)
-				assert.True(t, ok)
-				assert.Equal(t, "foo", s)
-			})
-
-			e.EventStream.Publish("foo")
-			mu.Lock()
-			subs = append(subs, sub)
-			mu.Unlock()
+	wg.Add(2)
+	e.SpawnFunc(func(c *Context) {
+		switch c.Message().(type) {
+		case Started:
+			c.Engine().Subscribe(c.PID())
+		case CustomEvent:
+			fmt.Println("actor a received event")
 			wg.Done()
-		}(i)
-	}
+		}
+	}, "actor_a")
+
+	e.SpawnFunc(func(c *Context) {
+		switch c.Message().(type) {
+		case Started:
+			c.Engine().Subscribe(c.PID())
+		case CustomEvent:
+			fmt.Println("actor b received event")
+			wg.Done()
+		}
+	}, "actor_b")
+	e.BroadcastEvent(CustomEvent{msg: "foo"})
+	// make sure both actors have received the event.
+	// If so, the test has passed.
+	wg.Wait()
+}
+
+func TestEventStreamActorStartedEvent(t *testing.T) {
+	e, _ := NewEngine()
+	wg := sync.WaitGroup{}
+
+	wg.Add(1)
+	pidb := e.SpawnFunc(func(c *Context) {
+		switch msg := c.Message().(type) {
+		case ActorStartedEvent:
+			assert.Equal(t, msg.PID.ID, "a")
+			wg.Done()
+		}
+	}, "b")
+	e.Subscribe(pidb)
+
+	e.SpawnFunc(func(c *Context) {}, "a")
+	wg.Wait()
+}
+
+func TestEventStreamActorStoppedEvent(t *testing.T) {
+	e, _ := NewEngine()
+	wg := sync.WaitGroup{}
+
+	wg.Add(1)
+	a := e.SpawnFunc(func(c *Context) {}, "a")
+	pidb := e.SpawnFunc(func(c *Context) {
+		switch msg := c.Message().(type) {
+		case ActorStoppedEvent:
+			assert.Equal(t, msg.PID.ID, "a")
+			wg.Done()
+		}
+	}, "b")
+
+	e.Subscribe(pidb)
+	e.Poison(a).Wait()
 
 	wg.Wait()
-	assert.Equal(t, 10, e.EventStream.Len())
-
-	for _, sub := range subs {
-		e.EventStream.Unsubscribe(sub)
-	}
-
-	assert.Equal(t, 0, e.EventStream.Len())
 }

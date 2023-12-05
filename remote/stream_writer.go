@@ -4,12 +4,12 @@ import (
 	"context"
 	"errors"
 	"io"
+	"log/slog"
 	"net"
 	"sync"
 	"time"
 
 	"github.com/anthdm/hollywood/actor"
-	"github.com/anthdm/hollywood/log"
 	"storj.io/drpc/drpcconn"
 )
 
@@ -70,7 +70,7 @@ func (s *streamWriter) Invoke(msgs []actor.Envelope) {
 
 		b, err := s.serializer.Serialize(stream.msg)
 		if err != nil {
-			log.Errorw("[STREAM WRITER]", log.M{"err": err})
+			slog.Error("serialize", "err", err)
 			continue
 		}
 
@@ -91,12 +91,12 @@ func (s *streamWriter) Invoke(msgs []actor.Envelope) {
 
 	if err := s.stream.Send(env); err != nil {
 		if errors.Is(err, io.EOF) {
-			s.conn.Close()
+			_ = s.conn.Close()
 			return
 		}
-		log.Errorw("[REMOTE] failed sending message", log.M{
-			"err": err,
-		})
+		slog.Error("failed sending message",
+			"err", err,
+		)
 	}
 	// refresh the connection deadline.
 	s.rawconn.SetDeadline(time.Now().Add(connIdleTimeout))
@@ -111,7 +111,7 @@ func (s *streamWriter) init() {
 	for {
 		rawconn, err = net.Dial("tcp", s.writeToAddr)
 		if err != nil {
-			log.Errorw("[STREAM WRITER]", log.M{"err": err})
+			slog.Error("net.Dial", "err", err, "remote", s.writeToAddr)
 			time.Sleep(delay)
 			continue
 		}
@@ -130,24 +130,21 @@ func (s *streamWriter) init() {
 
 	stream, err := client.Receive(context.Background())
 	if err != nil {
-		log.Errorw("[STREAM WRITER] receive error", log.M{
-			"err":         err,
-			"writeToAddr": s.writeToAddr,
-		})
+		slog.Error("receive", "err", err, "remote", s.writeToAddr)
 	}
 
 	s.stream = stream
 	s.conn = conn
 
-	log.Tracew("[STREAM WRITER] connected", log.M{
-		"remote": s.writeToAddr,
-	})
+	slog.Debug("connected",
+		"remote", s.writeToAddr,
+	)
 
 	go func() {
 		<-s.conn.Closed()
-		log.Tracew("[STREAM WRITER] lost connection", log.M{
-			"remote": s.writeToAddr,
-		})
+		slog.Debug("lost connection",
+			"remote", s.writeToAddr,
+		)
 		s.Shutdown(nil)
 	}()
 }

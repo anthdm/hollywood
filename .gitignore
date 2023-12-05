@@ -2,4 +2,6 @@ bin
 TODO.txt
 TODO
 _test
-.vscode
+/.vscode
+/.idea
+.DS_Store

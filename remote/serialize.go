@@ -25,6 +25,7 @@ type VTUnmarshaler interface {
 	UnmarshalVT([]byte) error
 }
 
+// Todo: delete this or state why it isn't deleted.
 // type DefaultSerializer struct{}
 
 // func (DefaultSerializer) Serialize(msg any) ([]byte, error) {

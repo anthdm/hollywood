@@ -10,16 +10,17 @@ type DeadLetterEvent struct {
 	Sender  *PID
 }
 
-// ActivationEvent is broadcasted over the EventStream each time
-// a Receiver is spawned and activated. This mean at the point of
-// receiving this event the Receiver is ready to process messages.
-type ActivationEvent struct {
+// ActorStartedEvent is broadcasted over the EventStream each time
+// a Receiver (Actor) is spawned and activated. This means, that at
+// the point of receiving this event the Receiver (Actor) is ready
+// to process messages.
+type ActorStartedEvent struct {
 	PID *PID
 }
 
-// TerminationEvent is broadcasted over the EventStream each time
+// ActorStoppedEvent is broadcasted over the EventStream each time
 // a process is terminated.
-type TerminationEvent struct {
+type ActorStoppedEvent struct {
 	PID *PID
 }
 
@@ -29,7 +30,8 @@ type InternalError struct {
 }
 
 type poisonPill struct {
-	wg *sync.WaitGroup
+	wg       *sync.WaitGroup
+	graceful bool
 }
 type Initialized struct{}
 type Started struct{}

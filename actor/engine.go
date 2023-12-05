@@ -1,16 +1,16 @@
 package actor
 
 import (
+	"log/slog"
+	reflect "reflect"
 	"sync"
 	"time"
-
-	"github.com/anthdm/hollywood/log"
 )
 
 type Remoter interface {
 	Address() string
 	Send(*PID, any, *PID)
-	Start()
+	Start(*Engine) error
 }
 
 // Producer is any function that can return a Receiver
@@ -21,43 +21,67 @@ type Receiver interface {
 	Receive(*Context)
 }
 
-// Config holds configuration for the actor Engine.
-type Config struct {
-	// PIDSeparator separates a process ID when printed out
-	// in a string representation. The default separator is "/".
-	// pid := NewPID("127.0.0.1:4000", "foo", "bar")
-	// 127.0.0.1:4000/foo/bar
-	PIDSeparator string
-}
-
 // Engine represents the actor engine.
 type Engine struct {
-	EventStream *EventStream
-	Registry    *Registry
+	Registry *Registry
 
-	address    string
-	remote     Remoter
-	deadLetter Processer
+	address     string
+	remote      Remoter
+	deadLetter  *PID
+	eventStream *PID
+	initErrors  []error
 }
 
 // NewEngine returns a new actor Engine.
-func NewEngine(cfg ...Config) *Engine {
-	e := &Engine{
-		EventStream: NewEventStream(),
-		address:     LocalLookupAddr,
+// You can pass configuration functions through the various functions starting with "EngineOpt"
+// These run after the engine is configured
+func NewEngine(opts ...func(*Engine)) (*Engine, error) {
+	e := &Engine{}
+	e.Registry = newRegistry(e) // need to init the registry in case we want a custom deadletter
+	e.address = LocalLookupAddr
+	e.initErrors = make([]error, 0)
+	for _, o := range opts {
+		o(e)
 	}
-	if len(cfg) == 1 {
-		e.configure(cfg[0])
+	if len(e.initErrors) > 0 {
+		return nil, ErrInitFailed{Errors: e.initErrors}
 	}
-	e.Registry = newRegistry(e)
-	e.deadLetter = newDeadLetter(e.EventStream)
-	e.Registry.add(e.deadLetter)
-	return e
+	if e.remote != nil {
+		e.address = e.remote.Address()
+	}
+
+	e.eventStream = e.Spawn(NewEventStream(), "eventstream")
+	// if no deadletter is registered, we will register the default deadletter from deadletter.go
+	if e.deadLetter == nil {
+		e.deadLetter = e.Spawn(newDeadLetter, "deadletter")
+	}
+	return e, nil
 }
 
-func (e *Engine) configure(cfg Config) {
-	if cfg.PIDSeparator != "" {
-		pidSeparator = cfg.PIDSeparator
+// TODO: Doc
+func EngineOptRemote(r Remoter) func(*Engine) {
+	return func(e *Engine) {
+		e.remote = r
+		e.address = r.Address()
+		// TODO: potential error not handled here
+		r.Start(e)
+	}
+}
+
+// TODO: Doc
+// Todo: make the pid separator a struct variable
+func EngineOptPidSeparator(sep string) func(*Engine) {
+	// This looks weird because the separator is a global variable.
+	return func(e *Engine) {
+		pidSeparator = sep
+	}
+}
+
+// EngineOptDeadletter takes an actor and configures the engine to use it for dead letter handling
+// This allows you to customize how deadletters are handled.
+func EngineOptDeadletter(d Producer) func(*Engine) {
+	return func(e *Engine) {
+		e.deadLetter = e.Spawn(d, "deadletter")
 	}
 }
 
@@ -66,7 +90,7 @@ func (e *Engine) configure(cfg Config) {
 func (e *Engine) WithRemote(r Remoter) {
 	e.remote = r
 	e.address = r.Address()
-	r.Start()
+	r.Start(e)
 }
 
 // Spawn spawns a process that will producer by the given Producer and
@@ -85,7 +109,7 @@ func (e *Engine) SpawnFunc(f func(*Context), id string, opts ...OptFunc) *PID {
 	return e.Spawn(newFuncReceiver(f), id, opts...)
 }
 
-// SpawnProc spawns the give Processer. This function is usefull when working
+// SpawnProc spawns the give Processer. This function is useful when working
 // with custom created Processes. Take a look at the streamWriter as an example.
 func (e *Engine) SpawnProc(p Processer) *PID {
 	e.Registry.add(p)
@@ -126,20 +150,32 @@ func (e *Engine) Send(pid *PID, msg any) {
 	e.send(pid, msg, nil)
 }
 
+// BroadcastEvent will broadcast the given message over the eventstream, notifying all
+// actors that are subscribed.
+func (e *Engine) BroadcastEvent(msg any) {
+	if e.eventStream != nil {
+		e.send(e.eventStream, msg, nil)
+	}
+}
+
 func (e *Engine) send(pid *PID, msg any, sender *PID) {
 	if e.isLocalMessage(pid) {
 		e.SendLocal(pid, msg, sender)
 		return
 	}
 	if e.remote == nil {
-		log.Errorw("[ENGINE] failed sending messsage", log.M{
-			"err": "engine has no remote configured",
-		})
+		slog.Error("failed sending messsage",
+			"err", "engine has no remote configured",
+			"to", pid,
+			"type", reflect.TypeOf(msg),
+			"msg", msg,
+		)
 		return
 	}
 	e.remote.Send(pid, msg, sender)
 }
 
+// TODO: documentation
 type SendRepeater struct {
 	engine   *Engine
 	self     *PID
@@ -184,26 +220,73 @@ func (e *Engine) SendRepeat(pid *PID, msg any, interval time.Duration) SendRepea
 	return sr
 }
 
-// Poison will send a poisonPill to the process that is associated with the given PID.
-// The process will shut down once it processed all its messages before the poisonPill
-// was received. If given a WaitGroup, you can wait till the process is completely shutdown.
-func (e *Engine) Poison(pid *PID, wg ...*sync.WaitGroup) {
+// Stop will send a non-graceful poisonPill message to the process that is associated with the given PID.
+// The process will shut down immediately, once it has processed the poisonPill messsage.
+// If given a WaitGroup, it blocks till the process is completely shutdown.
+func (e *Engine) Stop(pid *PID, wg ...*sync.WaitGroup) *sync.WaitGroup {
+	return e.sendPoisonPill(pid, false, wg...)
+}
+
+// Poison will send a graceful poisonPill message to the process that is associated with the given PID.
+// The process will shut down gracefully once it has processed all the messages in the inbox.
+// If given a WaitGroup, it blocks till the process is completely shutdown.
+func (e *Engine) Poison(pid *PID, wg ...*sync.WaitGroup) *sync.WaitGroup {
+	return e.sendPoisonPill(pid, true, wg...)
+}
+
+func (e *Engine) sendPoisonPill(pid *PID, graceful bool, wg ...*sync.WaitGroup) *sync.WaitGroup {
 	var _wg *sync.WaitGroup
 	if len(wg) > 0 {
 		_wg = wg[0]
-		_wg.Add(1)
+	} else {
+		_wg = &sync.WaitGroup{}
 	}
+	_wg.Add(1)
 	proc := e.Registry.get(pid)
-	if proc != nil {
-		e.SendLocal(pid, poisonPill{_wg}, nil)
+	// deadletter - if we didn't find a process, we will send a deadletter message
+	if proc == nil {
+		e.Send(e.deadLetter, &DeadLetterEvent{
+			Target:  pid,
+			Message: poisonPill{_wg, graceful},
+			Sender:  nil,
+		})
+		return _wg
 	}
+	pill := poisonPill{
+		wg:       _wg,
+		graceful: graceful,
+	}
+	if proc != nil {
+		e.SendLocal(pid, pill, nil)
+	}
+	return _wg
 }
 
+// SendLocal will send the given message to the given PID. If the recipient is not found in the
+// registry, the message will be sent to the DeadLetter process instead. If there is no deadletter
+// process registered, the function will panic.
 func (e *Engine) SendLocal(pid *PID, msg any, sender *PID) {
 	proc := e.Registry.get(pid)
-	if proc != nil {
-		proc.Send(pid, msg, sender)
+	if proc == nil {
+		// send a deadletter message
+		e.Send(e.deadLetter, &DeadLetterEvent{
+			Target:  pid,
+			Message: msg,
+			Sender:  sender,
+		})
+		return
 	}
+	proc.Send(pid, msg, sender)
+}
+
+// Subscribe will subscribe the given PID to the event stream.
+func (e *Engine) Subscribe(pid *PID) {
+	e.Send(e.eventStream, EventSub{pid: pid})
+}
+
+// Unsubscribe will un subscribe the given PID from the event stream.
+func (e *Engine) Unsubscribe(pid *PID) {
+	e.Send(e.eventStream, EventUnsub{pid: pid})
 }
 
 func (e *Engine) isLocalMessage(pid *PID) bool {
