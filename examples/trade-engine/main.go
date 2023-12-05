@@ -4,25 +4,20 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
-	"log/slog"
 	"os"
 	"time"
 
 	"github.com/anthdm/hollywood/actor"
 	"github.com/anthdm/hollywood/examples/trade-engine/actors/tradeEngine"
 	"github.com/anthdm/hollywood/examples/trade-engine/types"
-	"github.com/anthdm/hollywood/log"
 )
 
 func main() {
 	// example script showing the trade engine in action
 	// this script creates a trade order, gets the trade info and then cancels the order
 
-	// set up log handler
-	logHandler := log.NewHandler(os.Stdout, log.TextFormat, slog.LevelInfo)
-
 	// create the actor engine
-	e, err := actor.NewEngine(actor.EngineOptLogger(log.NewLogger("[engine]", logHandler)))
+	e, err := actor.NewEngine()
 	if err != nil {
 		fmt.Printf("failed to create actor engine: %v", err)
 		os.Exit(1)
