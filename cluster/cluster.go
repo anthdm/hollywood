@@ -15,6 +15,7 @@ type Config struct {
 	ID               string
 	ListenAddr       string
 	ProviderProducer Producer
+	Engine           *actor.Engine
 }
 
 type Cluster struct {
@@ -44,18 +45,19 @@ func New(cfg Config) *Cluster {
 		ID:               cfg.ID,
 		remote:           remote,
 		providerProducer: cfg.ProviderProducer,
+		engine:           cfg.Engine,
 	}
 }
 
-func (c *Cluster) Start(e *actor.Engine) error {
+func (c *Cluster) Start() error {
 	lh := log.NewHandler(os.Stdout, log.TextFormat, slog.LevelDebug)
 	l := log.NewLogger("s", lh)
-	c.engine = e
+	c.engine = c.engine
 
 	c.providerPID = c.engine.Spawn(c.providerProducer(c), c.ID, actor.WithTags("provider"))
 	c.agentPID = c.engine.Spawn(NewAgent, c.ID, actor.WithTags("agent"))
 
-	return c.remote.Start(e, l)
+	return c.remote.Start(c.engine, l)
 }
 
 type Member struct {

@@ -7,14 +7,21 @@ import (
 	"github.com/anthdm/hollywood/actor"
 )
 
-func TestClusterDev(t *testing.T) {
-	cfg := Config{
-		ListenAddr:       "127.0.0.1:4000",
-		ProviderProducer: NewSelfManagedProvider,
-		ID:               "mycluster",
-	}
-	c := New(cfg)
+func makeCluster(t *testing.T, addr string, id string) *Cluster {
 	e, _ := actor.NewEngine()
-	c.Start(e)
-	time.Sleep(time.Second * 2)
+	cfg := Config{
+		ListenAddr:       addr,
+		ProviderProducer: NewSelfManagedProvider,
+		ID:               id,
+		Engine:           e,
+	}
+	return New(cfg)
+}
+
+func TestClusterDev(t *testing.T) {
+	c1 := makeCluster(t, "localhost:3001", "A")
+	c2 := makeCluster(t, "localhost:3002", "B")
+	c1.Start()
+	c2.Start()
+	time.Sleep(time.Second)
 }
