@@ -3,12 +3,12 @@ package remote
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net"
 	"sync"
 	"sync/atomic"
 
 	"github.com/anthdm/hollywood/actor"
-	"github.com/anthdm/hollywood/log"
 	"storj.io/drpc/drpcmux"
 	"storj.io/drpc/drpcserver"
 )
@@ -24,7 +24,6 @@ type Remote struct {
 	config          Config
 	streamReader    *streamReader
 	streamRouterPID *actor.PID
-	logger          log.Logger
 	stopCh          chan struct{} // Stop closes this channel to signal the remote to stop listening.
 	stopWg          *sync.WaitGroup
 	state           atomic.Uint32
@@ -47,18 +46,17 @@ func New(cfg Config) *Remote {
 	return r
 }
 
-func (r *Remote) Start(e *actor.Engine, logger log.Logger) error {
+func (r *Remote) Start(e *actor.Engine) error {
 	if r.state.Load() != stateInitialized {
 		return fmt.Errorf("remote already started")
 	}
 	r.state.Store(stateRunning)
-	r.logger = logger
 	r.engine = e
 	ln, err := net.Listen("tcp", r.config.ListenAddr)
 	if err != nil {
 		panic("failed to listen: " + err.Error())
 	}
-	r.logger.Debugw("listening", "addr", r.config.ListenAddr)
+	slog.Debug("listening", "addr", r.config.ListenAddr)
 	mux := drpcmux.New()
 	err = DRPCRegisterRemote(mux, r.streamReader)
 	if err != nil {
@@ -66,8 +64,8 @@ func (r *Remote) Start(e *actor.Engine, logger log.Logger) error {
 	}
 	s := drpcserver.New(mux)
 
-	r.streamRouterPID = r.engine.Spawn(newStreamRouter(r.engine, r.logger), "router", actor.WithInboxSize(1024*1024))
-	r.logger.Infow("server started", "listenAddr", r.config.ListenAddr)
+	r.streamRouterPID = r.engine.Spawn(newStreamRouter(r.engine), "router", actor.WithInboxSize(1024*1024))
+	slog.Info("server started", "listenAddr", r.config.ListenAddr)
 	r.stopWg = &sync.WaitGroup{}
 	r.stopWg.Add(1)
 	r.stopCh = make(chan struct{})
@@ -76,15 +74,14 @@ func (r *Remote) Start(e *actor.Engine, logger log.Logger) error {
 		defer r.stopWg.Done()
 		err := s.Serve(ctx, ln)
 		if err != nil {
-			r.logger.Errorw("drpcserver", "err", err)
+			slog.Error("drpcserver", "err", err)
 		} else {
-			r.logger.Infow("drpcserver stopped")
+			slog.Debug("drpcserver stopped")
 		}
 	}()
 	// wait for stopCh to be closed
 	go func() {
 		<-r.stopCh
-		r.logger.Debugw("cancelling context")
 		cancel()
 	}()
 	return nil
@@ -93,13 +90,13 @@ func (r *Remote) Start(e *actor.Engine, logger log.Logger) error {
 // Stop will stop the remote from listening.
 func (r *Remote) Stop() *sync.WaitGroup {
 	if r.state.Load() != stateRunning {
-		r.logger.Warnw("remote already stopped but stop was called", "state", r.state.Load())
+		slog.Warn("remote already stopped but stop was called", "state", r.state.Load())
 		return &sync.WaitGroup{} // return empty waitgroup so the caller can still wait without panicking.
 	}
-	r.logger.Debugw("stopping remote")
+	slog.Debug("stopping remote")
 	r.state.Store(stateStopped)
 	r.stopCh <- struct{}{}
-	r.logger.Debugw("stop signal sent")
+	slog.Debug("stop signal sent")
 	return r.stopWg
 }
 

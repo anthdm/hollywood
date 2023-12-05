@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/anthdm/hollywood/actor"
 	"github.com/anthdm/hollywood/examples/chat/types"
-	"github.com/anthdm/hollywood/log"
 	"github.com/anthdm/hollywood/remote"
 	"log/slog"
 	"math/rand"
@@ -55,7 +54,7 @@ func main() {
 	rem := remote.New(remote.Config{
 		ListenAddr: *listenAt,
 	})
-	e, err := actor.NewEngine(actor.EngineOptLogger(log.Default()), actor.EngineOptRemote(rem))
+	e, err := actor.NewEngine(actor.EngineOptRemote(rem))
 	if err != nil {
 		slog.Error("failed to create engine", "err", err)
 		os.Exit(1)

@@ -2,11 +2,10 @@ package actor
 
 import (
 	"fmt"
+	"log/slog"
 	"runtime/debug"
 	"sync"
 	"time"
-
-	"github.com/anthdm/hollywood/log"
 )
 
 type Envelope struct {
@@ -32,7 +31,6 @@ type process struct {
 	restarts int32
 
 	mbuffer []Envelope
-	logger  log.Logger
 }
 
 func newProcess(e *Engine, opts Opts) *process {
@@ -44,7 +42,6 @@ func newProcess(e *Engine, opts Opts) *process {
 		Opts:    opts,
 		context: ctx,
 		mbuffer: nil,
-		logger:  e.logger.SubLogger(opts.Name),
 	}
 	p.inbox.Start(p)
 	return p
@@ -129,7 +126,7 @@ func (p *process) Start() {
 	p.context.message = Started{}
 	applyMiddleware(recv.Receive, p.Opts.Middleware...)(p.context)
 	p.context.engine.BroadcastEvent(ActorStartedEvent{PID: p.pid})
-	p.logger.Debugw("actor started", "pid", p.pid)
+	slog.Debug("actor started", "pid", p.pid)
 	// If we have messages in our buffer, invoke them.
 	if len(p.mbuffer) > 0 {
 		p.Invoke(p.mbuffer)
@@ -144,7 +141,7 @@ func (p *process) tryRestart(v any) {
 	// back up. NOTE: not sure if that is the best option. What if that
 	// node never comes back up again?
 	if msg, ok := v.(*InternalError); ok {
-		p.logger.Errorw(msg.From, "err", msg.Err)
+		slog.Error(msg.From, "err", msg.Err)
 		time.Sleep(p.Opts.RestartDelay)
 		p.Start()
 		return
@@ -154,7 +151,7 @@ func (p *process) tryRestart(v any) {
 	// If we reach the max restarts, we shutdown the inbox and clean
 	// everything up.
 	if p.restarts == p.MaxRestarts {
-		p.logger.Errorw("max restarts exceeded, shutting down...",
+		slog.Error("max restarts exceeded, shutting down...",
 			"pid", p.pid, "restarts", p.restarts)
 		p.cleanup(nil)
 		return
@@ -162,7 +159,7 @@ func (p *process) tryRestart(v any) {
 
 	p.restarts++
 	// Restart the process after its restartDelay
-	p.logger.Errorw("actor restarting",
+	slog.Error("actor restarting",
 		"n", p.restarts,
 		"maxRestarts", p.MaxRestarts,
 		"pid", p.pid,
@@ -196,7 +193,7 @@ func (p *process) cleanup(wg *sync.WaitGroup) {
 			proc.Shutdown(wg)
 		}
 	}
-	p.logger.Debugw("shutdown", "pid", p.pid)
+	slog.Debug("shutdown", "pid", p.pid)
 	p.context.engine.BroadcastEvent(ActorStoppedEvent{PID: p.pid})
 	if wg != nil {
 		wg.Done()

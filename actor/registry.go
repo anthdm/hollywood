@@ -1,9 +1,8 @@
 package actor
 
 import (
+	"log/slog"
 	"sync"
-
-	"github.com/anthdm/hollywood/log"
 )
 
 const LocalLookupAddr = "local"
@@ -12,14 +11,12 @@ type Registry struct {
 	mu     sync.RWMutex
 	lookup map[string]Processer
 	engine *Engine
-	logger log.Logger
 }
 
 func newRegistry(e *Engine) *Registry {
 	return &Registry{
 		lookup: make(map[string]Processer, 1024),
 		engine: e,
-		logger: e.logger.SubLogger("[registry]"),
 	}
 }
 
@@ -56,7 +53,7 @@ func (r *Registry) add(proc Processer) {
 	defer r.mu.Unlock()
 	id := proc.PID().ID
 	if _, ok := r.lookup[id]; ok {
-		r.logger.Warnw("process already registered",
+		slog.Warn("process already registered",
 			"pid", proc.PID(),
 		)
 		return

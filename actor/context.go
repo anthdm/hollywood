@@ -1,10 +1,10 @@
 package actor
 
 import (
+	"log/slog"
 	"strings"
 	"time"
 
-	"github.com/anthdm/hollywood/log"
 	"github.com/anthdm/hollywood/safemap"
 )
 
@@ -19,7 +19,6 @@ type Context struct {
 	// when the child dies.
 	parentCtx *Context
 	children  *safemap.SafeMap[string, *PID]
-	logger    log.Logger
 }
 
 func newContext(e *Engine, pid *PID) *Context {
@@ -27,7 +26,6 @@ func newContext(e *Engine, pid *PID) *Context {
 		engine:   e,
 		pid:      pid,
 		children: safemap.New[string, *PID](),
-		logger:   e.logger.SubLogger("[context]"),
 	}
 }
 
@@ -45,7 +43,7 @@ func (c *Context) Request(pid *PID, msg any, timeout time.Duration) *Response {
 // Respond will sent the given message to the sender of the current received message.
 func (c *Context) Respond(msg any) {
 	if c.sender == nil {
-		c.logger.Warnw("context got no sender", "func", "Respond", "pid", c.PID())
+		slog.Warn("context got no sender", "func", "Respond", "pid", c.PID())
 		return
 	}
 	c.engine.Send(c.sender, msg)
