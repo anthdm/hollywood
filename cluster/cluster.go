@@ -1,11 +1,7 @@
 package cluster
 
 import (
-	"log/slog"
-	"os"
-
 	"github.com/anthdm/hollywood/actor"
-	"github.com/anthdm/hollywood/log"
 	"github.com/anthdm/hollywood/remote"
 )
 
@@ -38,7 +34,7 @@ func New(cfg Config) *Cluster {
 		cfg.ID = "TODO SOMETHING RANDOM"
 	}
 	if cfg.ProviderProducer == nil {
-		cfg.ProviderProducer = NewSelfManagedProvider
+		cfg.ProviderProducer = NewSelfManagedProvider()
 	}
 
 	return &Cluster{
@@ -50,14 +46,10 @@ func New(cfg Config) *Cluster {
 }
 
 func (c *Cluster) Start() error {
-	lh := log.NewHandler(os.Stdout, log.TextFormat, slog.LevelDebug)
-	l := log.NewLogger("s", lh)
-	c.engine = c.engine
-
 	c.providerPID = c.engine.Spawn(c.providerProducer(c), c.ID, actor.WithTags("provider"))
 	c.agentPID = c.engine.Spawn(NewAgent, c.ID, actor.WithTags("agent"))
 
-	return c.remote.Start(c.engine, l)
+	return c.remote.Start(c.engine)
 }
 
 type Member struct {

@@ -7,11 +7,11 @@ import (
 	"github.com/anthdm/hollywood/actor"
 )
 
-func makeCluster(t *testing.T, addr string, id string) *Cluster {
+func makeCluster(t *testing.T, addr string, id string, bootstrapNodes ...string) *Cluster {
 	e, _ := actor.NewEngine()
 	cfg := Config{
 		ListenAddr:       addr,
-		ProviderProducer: NewSelfManagedProvider,
+		ProviderProducer: NewSelfManagedProvider(bootstrapNodes...),
 		ID:               id,
 		Engine:           e,
 	}

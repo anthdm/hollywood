@@ -7,13 +7,17 @@ import (
 )
 
 type SelfManagedProvider struct {
-	cluster *Cluster
+	cluster       *Cluster
+	boostrapNodes []string
 }
 
-func NewSelfManagedProvider(c *Cluster) actor.Producer {
-	return func() actor.Receiver {
-		return &SelfManagedProvider{
-			cluster: c,
+func NewSelfManagedProvider(bootstrapNodes ...string) Producer {
+	return func(c *Cluster) actor.Producer {
+		return func() actor.Receiver {
+			return &SelfManagedProvider{
+				cluster:       c,
+				boostrapNodes: bootstrapNodes,
+			}
 		}
 	}
 }
