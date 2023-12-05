@@ -2,7 +2,6 @@ package remote
 
 import (
 	"fmt"
-	"github.com/anthdm/hollywood/log"
 	"math/rand"
 	"net"
 	"sync"
@@ -158,11 +157,11 @@ func TestWeird(t *testing.T) {
 		}
 	}, "weirdactor")
 	// let's start the remote once more. this should do nothing.
-	err = ra.Start(a, log.Debug())
+	err = ra.Start(a)
 	assert.Error(t, err)
-	err = ra.Start(a, log.Debug())
+	err = ra.Start(a)
 	assert.Error(t, err)
-	err = ra.Start(a, log.Debug())
+	err = ra.Start(a)
 	assert.Error(t, err)
 	// Now stop it a few times to make sure it doesn't freeze or panic:
 	ra.Stop().Wait()
@@ -180,7 +179,7 @@ func makeRemoteEngine(listenAddr string) (*actor.Engine, *Remote, error) {
 	case false:
 		e, err = actor.NewEngine(actor.EngineOptRemote(r))
 	case true:
-		e, err = actor.NewEngine(actor.EngineOptLogger(log.Debug()), actor.EngineOptRemote(r))
+		e, err = actor.NewEngine(actor.EngineOptRemote(r))
 	}
 	if err != nil {
 		return nil, nil, fmt.Errorf("actor.NewEngine: %w", err)
