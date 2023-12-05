@@ -1,17 +1,14 @@
 package actor
 
 import (
-	fmt "fmt"
+	"log/slog"
 	"reflect"
-
-	"github.com/anthdm/hollywood/log"
 )
 
 //
 
 type deadLetter struct {
-	logger log.Logger
-	pid    *PID
+	pid *PID
 }
 
 func newDeadLetter() Receiver {
@@ -29,17 +26,15 @@ func (d *deadLetter) Receive(ctx *Context) {
 	switch msg := ctx.Message().(type) {
 	case Started:
 		// intialize logger on deadletter startup. is this a sane approach? I'm not sure how the get to the logger otherwise.
-		d.logger = ctx.Engine().logger.SubLogger("[deadletter]")
-		d.logger.Debugw("default deadletter actor started")
+		slog.Debug("default deadletter actor started")
 	case Stopped:
-		d.logger.Debugw("default deadletter actor stopped")
+		slog.Debug("default deadletter actor stopped")
 	case Initialized:
-		d.logger.Debugw("default deadletter actor initialized")
+		slog.Debug("default deadletter actor initialized")
 	case *DeadLetterEvent:
-		fmt.Println("received deadletter", msg)
-		d.logger.Warnw("deadletter arrived", "msg-type", reflect.TypeOf(msg),
+		slog.Warn("deadletter arrived", "msg-type", reflect.TypeOf(msg),
 			"sender", msg.Sender, "target", msg.Target, "msg", msg.Message)
 	default:
-		d.logger.Errorw("unknown message arrived", "msg", msg)
+		slog.Error("unknown message arrived at deadletter", "msg", msg)
 	}
 }

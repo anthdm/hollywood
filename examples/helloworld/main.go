@@ -2,10 +2,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/anthdm/hollywood/log"
-	"log/slog"
-	"os"
-
 	"github.com/anthdm/hollywood/actor"
 )
 
@@ -31,8 +27,8 @@ func (f *foo) Receive(ctx *actor.Context) {
 }
 
 func main() {
-	lh := log.NewHandler(os.Stdout, log.TextFormat, slog.LevelDebug)
-	engine, err := actor.NewEngine(actor.EngineOptLogger(log.NewLogger("[engine]", lh)))
+
+	engine, err := actor.NewEngine()
 	if err != nil {
 		panic(err)
 	}
