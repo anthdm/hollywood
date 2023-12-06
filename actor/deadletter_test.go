@@ -34,7 +34,7 @@ func TestDeadLetterCustom(t *testing.T) {
 	e.SpawnFunc(func(c *Context) {
 		switch c.Message().(type) {
 		case Initialized:
-			c.engine.BroadcastEvent(DeadletterSub{c.pid})
+			c.engine.BroadcastEvent(EventSub{c.pid})
 		case DeadLetterEvent:
 			wg.Done()
 		}

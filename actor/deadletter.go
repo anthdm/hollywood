@@ -28,9 +28,9 @@ func newDeadLetter() Receiver {
 func (d *deadLetter) Receive(ctx *Context) {
 	switch msg := ctx.Message().(type) {
 	case Started:
-		ctx.engine.BroadcastEvent(DeadletterSub{pid: d.pid})
+		ctx.engine.BroadcastEvent(EventSub{pid: d.pid})
 	case Stopped:
-		ctx.engine.BroadcastEvent(DeadletterUnSub{pid: d.pid})
+		ctx.engine.BroadcastEvent(EventUnsub{pid: d.pid})
 	case Initialized:
 	case DeadLetterEvent:
 		slog.Warn("deadletter arrived", "msg-type", reflect.TypeOf(msg),

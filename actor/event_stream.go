@@ -7,15 +7,13 @@ import (
 )
 
 type EventStream struct {
-	subs   map[*PID]bool
-	dlsubs map[*PID]bool
+	subs map[*PID]bool
 }
 
 func NewEventStream() Producer {
 	return func() Receiver {
 		return &EventStream{
-			subs:   make(map[*PID]bool),
-			dlsubs: make(map[*PID]bool),
+			subs: make(map[*PID]bool),
 		}
 	}
 }
@@ -31,10 +29,6 @@ func (e *EventStream) Receive(c *Context) {
 	case EventUnsub:
 		delete(e.subs, msg.pid)
 		fmt.Println("EventStream.Receive: EventUnsub")
-	case DeadletterSub:
-		e.dlsubs[msg.pid] = true
-	case DeadletterUnSub:
-		delete(e.subs, msg.pid)
 	case DeadLetterEvent:
 		// to avoid a loop, check that the message isn't a deadletter.
 		_, ok := msg.Message.(DeadLetterEvent)
@@ -42,12 +36,12 @@ func (e *EventStream) Receive(c *Context) {
 			c.engine.BroadcastEvent(DeadLetterLoopEvent{})
 			break
 		}
-		if len(e.dlsubs) == 0 {
-			slog.Warn("deadletter arrived, but no subscribers",
+		if len(e.subs) == 0 {
+			slog.Warn("deadletter arrived, but no subscribers to event stream",
 				"sender", msg.Sender, "target", msg.Target, "msg", msg.Message)
 			break
 		}
-		for sub := range e.dlsubs {
+		for sub := range e.subs {
 			c.Forward(sub)
 		}
 	default:

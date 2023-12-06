@@ -13,14 +13,6 @@ type eventLog interface {
 	log() (slog.Level, string, []any)
 }
 
-type DeadletterSub struct {
-	pid *PID
-}
-
-type DeadletterUnSub struct {
-	pid *PID
-}
-
 // EventSub is the message that will be send to subscribe to the event stream.
 type EventSub struct {
 	pid *PID
