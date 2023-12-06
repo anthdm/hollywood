@@ -23,7 +23,6 @@ func newStreamReader(r *Remote) *streamReader {
 }
 
 func (r *streamReader) Receive(stream DRPCRemote_ReceiveStream) error {
-
 	defer slog.Debug("streamreader terminated")
 
 	for {
@@ -39,6 +38,7 @@ func (r *streamReader) Receive(stream DRPCRemote_ReceiveStream) error {
 		for _, msg := range envelope.Messages {
 			tname := envelope.TypeNames[msg.TypeNameIndex]
 			payload, err := r.deserializer.Deserialize(msg.Data, tname)
+
 			if err != nil {
 				slog.Error("streamReader deserialize", "err", err)
 				return err

@@ -1,14 +1,16 @@
 package actor
 
 import (
-	"math"
 	"runtime"
 	"sync/atomic"
 
 	"github.com/anthdm/hollywood/ringbuffer"
 )
 
-const defaultThroughput = 300
+const (
+	defaultThroughput = 300
+	messageBatchSize  = 1024 * 4
+)
 
 const (
 	idle int32 = iota
@@ -80,7 +82,7 @@ func (in *Inbox) run() {
 		}
 		i++
 
-		if msgs, ok := in.rb.PopN(math.MaxInt); ok && len(msgs) > 0 {
+		if msgs, ok := in.rb.PopN(messageBatchSize); ok && len(msgs) > 0 {
 			in.proc.Invoke(msgs)
 		} else {
 			return
