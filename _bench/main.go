@@ -61,26 +61,6 @@ func benchmarkLocal() {
 }
 
 func main() {
-	// e1 := makeRemoteEngine(":3000")
-	// e2 := makeRemoteEngine(":3001")
-	// opts := []actor.OptFunc{
-	// 	actor.WithInboxSize(1024),
-	// 	actor.WithMaxRestarts(0),
-	// }
-	// n := 1000000
-	// pid := e2.SpawnFunc(func(c *actor.Context) {
-	// 	switch msg := c.Message().(type) {
-	// 	case *actor.PID:
-	// 		_ = msg
-	// 	}
-	// }, "bench", opts...)
-
-	// for i := 0; i < n; i++ {
-	// 	e1.Send(pid, actor.NewPID("a", fmt.Sprintf("%d", i)))
-	// }
-	// time.Sleep(time.Second * 10)
-
-	//return
 	if runtime.GOMAXPROCS(runtime.NumCPU()) == 1 {
 		slog.Error("GOMAXPROCS must be greater than 1")
 		os.Exit(1)

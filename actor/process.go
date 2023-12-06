@@ -125,8 +125,7 @@ func (p *process) Start() {
 
 	p.context.message = Started{}
 	applyMiddleware(recv.Receive, p.Opts.Middleware...)(p.context)
-	p.context.engine.BroadcastEvent(ActorStartedEvent{PID: p.pid})
-	slog.Debug("actor started", "pid", p.pid)
+	p.context.engine.BroadcastEvent(ActorStartedEvent{PID: p.pid, Timestamp: time.Now()})
 	// If we have messages in our buffer, invoke them.
 	if len(p.mbuffer) > 0 {
 		p.Invoke(p.mbuffer)
@@ -146,25 +145,28 @@ func (p *process) tryRestart(v any) {
 		p.Start()
 		return
 	}
-
-	fmt.Println(string(debug.Stack()))
+	stackTrace := debug.Stack()
+	fmt.Println(string(stackTrace))
 	// If we reach the max restarts, we shutdown the inbox and clean
 	// everything up.
 	if p.restarts == p.MaxRestarts {
-		slog.Error("max restarts exceeded, shutting down...",
-			"pid", p.pid, "restarts", p.restarts)
+		p.context.engine.BroadcastEvent(ActorMaxRestartsExceededEvent{
+			PID:       p.pid,
+			Timestamp: time.Now(),
+		})
 		p.cleanup(nil)
 		return
 	}
 
 	p.restarts++
 	// Restart the process after its restartDelay
-	slog.Error("actor restarting",
-		"n", p.restarts,
-		"maxRestarts", p.MaxRestarts,
-		"pid", p.pid,
-		"reason", v,
-	)
+	p.context.engine.BroadcastEvent(ActorRestartedEvent{
+		PID:        p.pid,
+		Timestamp:  time.Now(),
+		Stacktrace: stackTrace,
+		Reason:     v,
+		Restarts:   p.restarts,
+	})
 	time.Sleep(p.Opts.RestartDelay)
 	p.Start()
 }
@@ -193,8 +195,7 @@ func (p *process) cleanup(wg *sync.WaitGroup) {
 			proc.Shutdown(wg)
 		}
 	}
-	slog.Debug("shutdown", "pid", p.pid)
-	p.context.engine.BroadcastEvent(ActorStoppedEvent{PID: p.pid})
+	p.context.engine.BroadcastEvent(ActorStoppedEvent{PID: p.pid, Timestamp: time.Now()})
 	if wg != nil {
 		wg.Done()
 	}
