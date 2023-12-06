@@ -1,7 +1,6 @@
 package actor
 
 import (
-	"log/slog"
 	"sync"
 )
 
@@ -53,9 +52,7 @@ func (r *Registry) add(proc Processer) {
 	defer r.mu.Unlock()
 	id := proc.PID().ID
 	if _, ok := r.lookup[id]; ok {
-		slog.Warn("process already registered",
-			"pid", proc.PID(),
-		)
+		r.engine.BroadcastEvent(ActorDuplicateIdEvent{PID: proc.PID()})
 		return
 	}
 	r.lookup[id] = proc

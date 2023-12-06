@@ -1,8 +1,6 @@
 package actor
 
 import (
-	"log/slog"
-	reflect "reflect"
 	"sync"
 	"time"
 )
@@ -164,12 +162,7 @@ func (e *Engine) send(pid *PID, msg any, sender *PID) {
 		return
 	}
 	if e.remote == nil {
-		slog.Error("failed sending messsage",
-			"err", "engine has no remote configured",
-			"to", pid,
-			"type", reflect.TypeOf(msg),
-			"msg", msg,
-		)
+		e.BroadcastEvent(EngineRemoteMissingEvent{Target: pid, Sender: sender, Message: msg})
 		return
 	}
 	e.remote.Send(pid, msg, sender)
@@ -243,9 +236,9 @@ func (e *Engine) sendPoisonPill(pid *PID, graceful bool, wg ...*sync.WaitGroup) 
 	}
 	_wg.Add(1)
 	proc := e.Registry.get(pid)
-	// deadletter - if we didn't find a process, we will send a deadletter message
+	// deadletter - if we didn't find a process, we will broadcast a DeadletterEvent
 	if proc == nil {
-		e.Send(e.deadLetter, &DeadLetterEvent{
+		e.BroadcastEvent(DeadLetterEvent{
 			Target:  pid,
 			Message: poisonPill{_wg, graceful},
 			Sender:  nil,
@@ -268,8 +261,8 @@ func (e *Engine) sendPoisonPill(pid *PID, graceful bool, wg ...*sync.WaitGroup) 
 func (e *Engine) SendLocal(pid *PID, msg any, sender *PID) {
 	proc := e.Registry.get(pid)
 	if proc == nil {
-		// send a deadletter message
-		e.Send(e.deadLetter, &DeadLetterEvent{
+		// broadcast a deadLetter message
+		e.BroadcastEvent(DeadLetterEvent{
 			Target:  pid,
 			Message: msg,
 			Sender:  sender,
