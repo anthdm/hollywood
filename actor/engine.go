@@ -1,6 +1,7 @@
 package actor
 
 import (
+	"fmt"
 	"sync"
 	"time"
 )
@@ -153,6 +154,8 @@ func (e *Engine) Send(pid *PID, msg any) {
 func (e *Engine) BroadcastEvent(msg any) {
 	if e.eventStream != nil {
 		e.send(e.eventStream, msg, nil)
+	} else {
+		fmt.Println("Brain damage: event stream is nil")
 	}
 }
 
