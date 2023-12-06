@@ -1,8 +1,9 @@
 package remote
 
 import (
-	"github.com/anthdm/hollywood/actor"
 	"log/slog"
+
+	"github.com/anthdm/hollywood/actor"
 )
 
 type streamDeliver struct {

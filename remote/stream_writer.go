@@ -15,7 +15,7 @@ import (
 
 const (
 	connIdleTimeout       = time.Minute * 10
-	streamWriterBatchSize = 1024 * 32
+	streamWriterBatchSize = 1024
 )
 
 type streamWriter struct {
@@ -94,12 +94,15 @@ func (s *streamWriter) Invoke(msgs []actor.Envelope) {
 			_ = s.conn.Close()
 			return
 		}
-		slog.Error("failed sending message",
+		slog.Error("stream writer failed sending message",
 			"err", err,
 		)
 	}
 	// refresh the connection deadline.
-	s.rawconn.SetDeadline(time.Now().Add(connIdleTimeout))
+	err := s.rawconn.SetDeadline(time.Now().Add(connIdleTimeout))
+	if err != nil {
+		slog.Error("failed to set context deadline", "err", err)
+	}
 }
 
 func (s *streamWriter) init() {
@@ -123,7 +126,11 @@ func (s *streamWriter) init() {
 	}
 
 	s.rawconn = rawconn
-	rawconn.SetDeadline(time.Now().Add(connIdleTimeout))
+	err = rawconn.SetDeadline(time.Now().Add(connIdleTimeout))
+	if err != nil {
+		slog.Error("failed to set deadline on raw connection", "err", err)
+		return
+	}
 
 	conn := drpcconn.New(rawconn)
 	client := NewDRPCRemoteClient(conn)
@@ -131,6 +138,7 @@ func (s *streamWriter) init() {
 	stream, err := client.Receive(context.Background())
 	if err != nil {
 		slog.Error("receive", "err", err, "remote", s.writeToAddr)
+		return
 	}
 
 	s.stream = stream

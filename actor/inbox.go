@@ -1,7 +1,6 @@
 package actor
 
 import (
-	"math"
 	"runtime"
 	"sync/atomic"
 
@@ -80,7 +79,7 @@ func (in *Inbox) run() {
 		}
 		i++
 
-		if msgs, ok := in.rb.PopN(math.MaxInt); ok && len(msgs) > 0 {
+		if msgs, ok := in.rb.PopN(1024 * 4); ok && len(msgs) > 0 {
 			in.proc.Invoke(msgs)
 		} else {
 			return

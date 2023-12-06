@@ -2,10 +2,8 @@ package actor
 
 import (
 	"log/slog"
-	"reflect"
+	reflect "reflect"
 )
-
-//
 
 type deadLetter struct {
 	pid *PID
@@ -32,8 +30,7 @@ func (d *deadLetter) Receive(ctx *Context) {
 	case Initialized:
 		slog.Debug("default deadletter actor initialized")
 	case *DeadLetterEvent:
-		slog.Warn("deadletter arrived", "msg-type", reflect.TypeOf(msg),
-			"sender", msg.Sender, "target", msg.Target, "msg", msg.Message)
+		slog.Warn("[DEADLETTER]", "sender", msg.Sender, "target", msg.Target, "msg", reflect.TypeOf(msg.Message))
 	default:
 		slog.Error("unknown message arrived at deadletter", "msg", msg)
 	}
