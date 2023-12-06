@@ -1,7 +1,6 @@
 package actor
 
 import (
-	"fmt"
 	"sync"
 	"time"
 )
@@ -22,11 +21,9 @@ type Receiver interface {
 
 // Engine represents the actor engine.
 type Engine struct {
-	Registry *Registry
-
+	Registry    *Registry
 	address     string
 	remote      Remoter
-	deadLetter  *PID
 	eventStream *PID
 	initErrors  []error
 }
@@ -48,12 +45,7 @@ func NewEngine(opts ...func(*Engine)) (*Engine, error) {
 	if e.remote != nil {
 		e.address = e.remote.Address()
 	}
-
 	e.eventStream = e.Spawn(NewEventStream(), "eventstream")
-	// if no deadletter is registered, we will register the default deadletter from deadletter.go
-	if e.deadLetter == nil {
-		e.deadLetter = e.Spawn(newDeadLetter, "deadletter")
-	}
 	return e, nil
 }
 
@@ -65,31 +57,6 @@ func EngineOptRemote(r Remoter) func(*Engine) {
 		// TODO: potential error not handled here
 		r.Start(e)
 	}
-}
-
-// TODO: Doc
-// Todo: make the pid separator a struct variable
-func EngineOptPidSeparator(sep string) func(*Engine) {
-	// This looks weird because the separator is a global variable.
-	return func(e *Engine) {
-		pidSeparator = sep
-	}
-}
-
-// EngineOptDeadletter takes an actor and configures the engine to use it for dead letter handling
-// This allows you to customize how deadletters are handled.
-func EngineOptDeadletter(d Producer) func(*Engine) {
-	return func(e *Engine) {
-		e.deadLetter = e.Spawn(d, "deadletter")
-	}
-}
-
-// WithRemote returns a new actor Engine with the given Remoter,
-// and will call its Start function
-func (e *Engine) WithRemote(r Remoter) {
-	e.remote = r
-	e.address = r.Address()
-	r.Start(e)
 }
 
 // Spawn spawns a process that will producer by the given Producer and
@@ -154,8 +121,6 @@ func (e *Engine) Send(pid *PID, msg any) {
 func (e *Engine) BroadcastEvent(msg any) {
 	if e.eventStream != nil {
 		e.send(e.eventStream, msg, nil)
-	} else {
-		fmt.Println("Brain damage: event stream is nil")
 	}
 }
 

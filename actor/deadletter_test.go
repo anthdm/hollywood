@@ -14,8 +14,8 @@ import (
 )
 
 // TestDeadLetterDefault tests the default deadletter handling.
-// It will spawn a new actor, kill it, send a message to it and then check if the deadletter
-// received the message.
+// It will spawn a new actor, kill it, send a message to it and then check if there is a message
+// logged to the default logger
 func TestDeadLetterDefault(t *testing.T) {
 	logBuffer := SafeBuffer{}
 	logger := slog.New(slog.NewTextHandler(&logBuffer, &slog.HandlerOptions{Level: slog.LevelDebug}))
@@ -25,8 +25,6 @@ func TestDeadLetterDefault(t *testing.T) {
 	time.Sleep(10 * time.Millisecond)
 	a1 := e.Spawn(newTestActor, "a1")
 	assert.NotNil(t, a1)
-	dl := e.Registry.getByID("deadletter")
-	assert.NotNil(t, dl)               // should be registered by default
 	e.Poison(a1).Wait()                // poison the a1 actor
 	e.Send(a1, testMessage{"bar"})     // should end up the deadletter queue
 	time.Sleep(time.Millisecond * 100) // a flush would be nice here
@@ -45,14 +43,12 @@ func TestDeadLetterDefault(t *testing.T) {
 func TestDeadLetterCustom(t *testing.T) {
 	debuglogger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
 	slog.SetDefault(debuglogger)
-	e, err := NewEngine(
-		EngineOptDeadletter(newCustomDeadLetter))
+	e, err := NewEngine()
 	assert.NoError(t, err)
-	time.Sleep(10 * time.Millisecond)
+	dl := e.Spawn(newCustomDeadLetter, "deadletter")
+	assert.NotNil(t, dl)
 	a1 := e.Spawn(newTestActor, "a1")
 	assert.NotNil(t, a1)
-	dl := e.Registry.getByID("deadletter")
-	assert.NotNil(t, dl)
 	es := e.Registry.getByID("eventstream")
 	assert.NotNil(t, es)
 
@@ -61,13 +57,15 @@ func TestDeadLetterCustom(t *testing.T) {
 	fmt.Println("==== sending message via a1 to deadletter ====")
 	e.Send(a1, testMessage{"bar"})
 	time.Sleep(time.Millisecond * 100) // a flush would be nice here :-)
-	resp, err := e.Request(dl.PID(), customDeadLetterFetch{flush: true}, time.Millisecond*10).Result()
+	resp, err := e.Request(dl, customDeadLetterFetch{flush: true}, time.Millisecond*10).Result()
 	assert.Nil(t, err)     // no error from the request
 	assert.NotNil(t, resp) // we should get a response to our request
 	respDeadLetters, ok := resp.([]DeadLetterEvent)
 	assert.True(t, ok) // got a slice of deadletter events
-	return
-	assert.Equal(t, 1, len(respDeadLetters)) // one deadletter event
+	// stop the tests if we don't have any deadletters
+	if len(respDeadLetters) != 1 {
+		t.Fatal("expected 1 deadletters, got", len(respDeadLetters))
+	}
 	ev, ok := respDeadLetters[0].Message.(testMessage)
 	assert.True(t, ok) // should be our test message
 	assert.Equal(t, "bar", ev.data)
@@ -103,12 +101,12 @@ func newCustomDeadLetter() Receiver {
 func (c *customDeadLetter) Receive(ctx *Context) {
 	es := ctx.engine.Registry.getByID("eventstream")
 	if es == nil {
-		slog.Error("custom deadletter; no eventstream found")
+		fmt.Println("custom deadletter; no eventstream found")
 	}
 	switch ctx.Message().(type) {
 	case Started:
 		slog.Debug("custom deadletter starting", "action", "subscribing")
-		ctx.Engine().BroadcastEvent(DeadletterSub{pid: ctx.pid})
+		ctx.engine.BroadcastEvent(DeadletterSub{pid: ctx.pid})
 		time.Sleep(time.Millisecond * 10)
 	case Stopped:
 		slog.Debug("custom deadletter stopping", "action", "unsubscribing")

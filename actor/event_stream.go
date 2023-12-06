@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"reflect"
 )
 
 type EventStream struct {
@@ -25,7 +24,6 @@ func NewEventStream() Producer {
 // Some events are specially handled, such as EventSub, EventUnSub (for subscribing to events),
 // DeadletterSub, DeadletterUnSub, for subscribing to DeadLetterEvent
 func (e *EventStream) Receive(c *Context) {
-	fmt.Printf("EventStream.Receive: %v\n", reflect.TypeOf(c.Message()))
 	switch msg := c.Message().(type) {
 	case EventSub:
 		e.subs[msg.pid] = true
@@ -42,6 +40,11 @@ func (e *EventStream) Receive(c *Context) {
 		_, ok := msg.Message.(DeadLetterEvent)
 		if ok {
 			c.engine.BroadcastEvent(DeadLetterLoopEvent{})
+			break
+		}
+		if len(e.dlsubs) == 0 {
+			slog.Warn("deadletter arrived, but no subscribers",
+				"sender", msg.Sender, "target", msg.Target, "msg", msg.Message)
 			break
 		}
 		for sub := range e.dlsubs {
