@@ -2,9 +2,10 @@ package actor
 
 import (
 	"bytes"
-	"github.com/stretchr/testify/assert"
 	"sync"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 // TestDeadLetterCustom tests the custom deadletter handling.

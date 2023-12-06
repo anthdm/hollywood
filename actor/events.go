@@ -7,20 +7,10 @@ import (
 
 // Here the events are defined.
 
-// eventLog is an interface that the various Events can choose to implement. If they do, the event stream
+// EventLogger is an interface that the various Events can choose to implement. If they do, the event stream
 // will log these events to slog.
-type eventLog interface {
-	log() (slog.Level, string, []any)
-}
-
-// EventSub is the message that will be send to subscribe to the event stream.
-type EventSub struct {
-	pid *PID
-}
-
-// EventUnSub is the message that will be send to unsubscribe from the event stream.
-type EventUnsub struct {
-	pid *PID
+type EventLogger interface {
+	Log() (slog.Level, string, []any)
 }
 
 // ActorStartedEvent is broadcasted over the EventStream each time
@@ -32,7 +22,7 @@ type ActorStartedEvent struct {
 	Timestamp time.Time
 }
 
-func (e ActorStartedEvent) log() (slog.Level, string, []any) {
+func (e ActorStartedEvent) Log() (slog.Level, string, []any) {
 	return slog.LevelInfo, "Actor started", []any{"pid", e.PID.GetID()}
 }
 
@@ -43,7 +33,7 @@ type ActorStoppedEvent struct {
 	Timestamp time.Time
 }
 
-func (e ActorStoppedEvent) log() (slog.Level, string, []any) {
+func (e ActorStoppedEvent) Log() (slog.Level, string, []any) {
 	return slog.LevelInfo, "Actor stopped", []any{"pid", e.PID.GetID()}
 }
 
@@ -56,7 +46,7 @@ type ActorRestartedEvent struct {
 	Restarts   int32
 }
 
-func (e ActorRestartedEvent) log() (slog.Level, string, []any) {
+func (e ActorRestartedEvent) Log() (slog.Level, string, []any) {
 	return slog.LevelError, "Actor crashed and restarted",
 		[]any{"pid", e.PID.GetID(), "stack", string(e.Stacktrace),
 			"reason", e.Reason, "restarts", e.Restarts}
@@ -68,7 +58,7 @@ type ActorMaxRestartsExceededEvent struct {
 	Timestamp time.Time
 }
 
-func (e ActorMaxRestartsExceededEvent) log() (slog.Level, string, []any) {
+func (e ActorMaxRestartsExceededEvent) Log() (slog.Level, string, []any) {
 	return slog.LevelError, "Actor crashed too many times", []any{"pid", e.PID.GetID()}
 }
 
@@ -78,22 +68,25 @@ type ActorDuplicateIdEvent struct {
 	PID *PID
 }
 
-func (e ActorDuplicateIdEvent) log() (slog.Level, string, []any) {
+func (e ActorDuplicateIdEvent) Log() (slog.Level, string, []any) {
 	return slog.LevelError, "Actor name already claimed", []any{"pid", e.PID.GetID()}
 }
 
+// TODO: Not sure if this event is super usefull. Cause most DeadLetter actors
+// we be subscribed to late to the event stream.
 type EngineRemoteMissingEvent struct {
 	Target  *PID
 	Sender  *PID
 	Message any
 }
 
-func (e EngineRemoteMissingEvent) log() (slog.Level, string, []any) {
+func (e EngineRemoteMissingEvent) Log() (slog.Level, string, []any) {
 	return slog.LevelError, "Engine has no remote", []any{"sender", e.Target.GetID()}
 }
 
-type DeadLetterLoopEvent struct{}
-
-func (e DeadLetterLoopEvent) log() (slog.Level, string, []any) {
-	return slog.LevelError, "Deadletter loop detected", []any{}
+// DeadLetterEvent is delivered to the deadletter actor when a message can't be delivered to it's recipient
+type DeadLetterEvent struct {
+	Target  *PID
+	Message any
+	Sender  *PID
 }
