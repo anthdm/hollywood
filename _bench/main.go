@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"log/slog"
 	"os"
 	"runtime"
@@ -13,7 +14,10 @@ import (
 
 func makeRemoteEngine(addr string) *actor.Engine {
 	r := remote.New(remote.Config{ListenAddr: addr})
-	e := actor.NewEngine(actor.EngineOptRemote(r))
+	e, err := actor.NewEngine(actor.EngineOptRemote(r))
+	if err != nil {
+		log.Fatal(err)
+	}
 	return e
 }
 
@@ -37,7 +41,10 @@ func benchmarkRemote() {
 }
 
 func benchmarkLocal() {
-	e := actor.NewEngine()
+	e, err := actor.NewEngine()
+	if err != nil {
+		log.Fatal(err)
+	}
 	pid := e.SpawnFunc(func(c *actor.Context) {}, "bench", actor.WithInboxSize(1024*8), actor.WithMaxRestarts(0))
 	its := []int{
 		1_000_000,
@@ -58,6 +65,10 @@ func main() {
 		slog.Error("GOMAXPROCS must be greater than 1")
 		os.Exit(1)
 	}
+	lh := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+		Level: slog.LevelError,
+	}))
+	slog.SetDefault(lh)
 	benchmarkLocal()
 	benchmarkRemote()
 }
