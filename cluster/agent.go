@@ -7,6 +7,7 @@ import (
 )
 
 type Agent struct {
+	members map[*actor.PID]*Member
 }
 
 func NewAgent() actor.Receiver {
