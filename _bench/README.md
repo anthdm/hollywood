@@ -16,6 +16,28 @@ make bench-profile
 ```
 
 This will run the benchmark and generate a CPU and a memory profile. We can then use the `pprof` tool to analyze the
-profiles. For example, to analyze the CPU profile, we can run:
+profiles. 
 
+
+## Analyzing the profiles
+
+### For CPU profile, basic view
+```
+go tool pprof cpu.prof
+> web
+```
+
+### For Memory profile, basic view
+```
+go tool pprof mem.prof
+> web
+```
+
+### Fancy web interface
+```
+go tool pprof -http=:8080 cpu.prof
+```
+and 
+```
+go tool pprof -http=:8080 mem.prof
 ```
