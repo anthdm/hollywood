@@ -35,7 +35,7 @@ func main() {
 	time.Sleep(time.Second)
 
 	member := c1.Member()
-	c2 := makeCluster("localhost:3002", "B", &member)
+	c2 := makeCluster("localhost:3002", "B", member)
 	c2.Start()
 	time.Sleep(time.Second * 500)
 }

@@ -1,9 +1,5 @@
 package cluster
 
-import (
-	"log/slog"
-)
-
 type SelfManaged struct {
 	cluster         *Cluster
 	bootstrapMember *Member
@@ -26,10 +22,13 @@ func (s *SelfManaged) Start(c *Cluster) error {
 		return nil
 	}
 
-	// Send our member info to one of the known members
 	ourMember := s.cluster.Member()
-	slog.Info("sending member info", "member", ourMember.ID, "topid", s.bootstrapMember.PID)
-	s.cluster.engine.Send(s.bootstrapMember.PID, &MemberJoin{Member: &ourMember})
+	msg := &MembersJoin{
+		Members: []*Member{
+			ourMember,
+		},
+	}
+	s.cluster.engine.Send(MemberToPID(s.bootstrapMember), msg)
 
 	return nil
 }

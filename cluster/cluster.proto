@@ -3,39 +3,35 @@ package cluster;
 option go_package = "github.com/anthdm/hollywood/cluster";
 import "actor.proto";
 
-service Remote {
-	rpc Receive(stream Envelope) returns (stream Envelope) {}
-} 
-
 message CID {
 	string ID = 1;
-	actor.PID pid = 2;
+	string kind = 2;
 }
 
 message Member {
 	string ID = 1;
-	actor.PID PID = 2;
+	string host = 2;
+	repeated string kinds = 3;
 }
 
-message MemberJoin {
-	Member member = 1;
+message MembersJoin {
+	repeated Member members = 1;
+} 
+ 
+message Topology {
+	uint64 hash = 1;
+	repeated Member members = 2;
+	repeated Member left = 3;
+	repeated Member joined = 4;
+	repeated Member blocked = 5;
 }
 
-message Envelope {
-	repeated string typeNames = 1;
-	repeated actor.PID targets = 2;
-	repeated actor.PID senders = 3;
-	repeated Message messages = 4;
-	// TODO: serializer id
+message Activation {
+	actor.PID PID = 1;
+	CID CID = 2;
 }
 
-message Message {
-	bytes data = 1;
-	int32 targetIndex = 2;
-	int32 senderIndex = 3;
-	int32 typeNameIndex = 4;
-}
-
-message TestMessage { 
-	bytes data = 1;
+message Deactivation {
+	actor.PID PID = 1;
+	CID CID = 2;
 }
