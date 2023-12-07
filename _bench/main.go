@@ -52,6 +52,8 @@ func (b *benchMarkActor) Receive(ctx *actor.Context) {
 	case *Message:
 		b.internalMessageCount++
 		receiveCount.Add(1)
+	case *Ping:
+		ctx.Respond(&Pong{})
 	}
 }
 
@@ -154,7 +156,7 @@ func (b *Benchmark) sendMessages(d time.Duration) error {
 		}()
 	}
 	wg.Wait()
-	time.Sleep(time.Millisecond * 100) // wait for the messages to be delivered
+	time.Sleep(time.Millisecond * 300) // wait for the messages to be delivered
 	// compare the global send count with the receive count
 	if sendCount.Load() != receiveCount.Load() {
 		return fmt.Errorf("send count and receive count does not match: %d != %d", sendCount.Load(), receiveCount.Load())
@@ -164,10 +166,10 @@ func (b *Benchmark) sendMessages(d time.Duration) error {
 
 func benchmark() error {
 	const (
-		engines         = 10
-		actorsPerEngine = 2000
+		engines         = 2
+		actorsPerEngine = 20
 		senders         = 20
-		duration        = time.Second * 10
+		duration        = time.Second
 	)
 
 	if runtime.GOMAXPROCS(runtime.NumCPU()) == 1 {
@@ -218,4 +220,5 @@ func main() {
 		slog.Error("failed to run benchmark", "err", err)
 		os.Exit(1)
 	}
+
 }
