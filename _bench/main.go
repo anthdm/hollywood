@@ -2,140 +2,216 @@ package main
 
 import (
 	"fmt"
-	"log"
+	"github.com/anthdm/hollywood/actor"
+	"github.com/anthdm/hollywood/remote"
 	"log/slog"
 	"math/rand"
 	"os"
 	"runtime"
-	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
-
-	"github.com/anthdm/hollywood/actor"
-	"github.com/anthdm/hollywood/remote"
 )
 
-type Message struct{}
+//go:generate protoc --proto_path=. --go_out=. --go_opt=paths=source_relative message.proto
 
-/*
-func MeasureFunctionPerformance(function interface{}, args ...interface{}) (duration time.Duration, memoryAllocated uint64, results []interface{}) {
-	// Convert the function to a reflect.Value
-	funcValue := reflect.ValueOf(function)
-	if funcValue.Kind() != reflect.Func {
-		panic("MeasureFunctionPerformance requires a function as the first argument")
-	}
-	// Convert the arguments to reflect.Values
-	in := make([]reflect.Value, len(args))
-	for i, arg := range args {
-		in[i] = reflect.ValueOf(arg)
-	}
-
-	// Force a garbage collection for a clean memory state
-	runtime.GC()
-
-	// Get memory stats before execution
-	var m1 runtime.MemStats
-	runtime.ReadMemStats(&m1)
-	startMem := m1.Alloc
-
-	// Note the start time
-	startTime := time.Now()
-
-	// Call the function using reflection
-	out := funcValue.Call(in)
-
-	// Note the end time
-	endTime := time.Now()
-
-	// Get memory stats after execution
-	var m2 runtime.MemStats
-	runtime.ReadMemStats(&m2)
-	endMem := m2.Alloc
-
-	// Calculate time and memory consumed
-	duration = endTime.Sub(startTime)
-	memoryAllocated = endMem - startMem
-
-	// Convert the return values to a slice of interfaces
-	results = make([]interface{}, len(out))
-	for i, r := range out {
-		results[i] = r.Interface()
-	}
-	return
+type monitor struct {
 }
-*/
 
-func makeEngines(noOfEngines int) []*actor.Engine {
-	engines := make([]*actor.Engine, noOfEngines)
+func (m *monitor) Receive(ctx *actor.Context) {
+	switch ctx.Message().(type) {
+	case actor.Initialized:
+		ctx.Engine().BroadcastEvent(&actor.EventSub{})
+	case actor.DeadLetterEvent:
+		deadLetters.Add(1)
+	}
+}
+func newMonitor() actor.Receiver {
+	return &monitor{}
+}
 
-	for i := 0; i < noOfEngines; i++ {
-		r := remote.New(remote.Config{ListenAddr: fmt.Sprintf("localhost:%d", 3000+i)})
+type benchMarkActor struct {
+	internalMessageCount int64
+}
+
+var (
+	receiveCount *atomic.Int64
+	sendCount    *atomic.Int64
+	deadLetters  *atomic.Int64
+)
+
+func init() {
+	receiveCount = &atomic.Int64{}
+	sendCount = &atomic.Int64{}
+	deadLetters = &atomic.Int64{}
+}
+
+func (b *benchMarkActor) Receive(ctx *actor.Context) {
+	switch ctx.Message().(type) {
+	case *Message:
+		b.internalMessageCount++
+		receiveCount.Add(1)
+	}
+}
+
+func newActor() actor.Receiver {
+	return &benchMarkActor{}
+}
+
+type Benchmark struct {
+	engineCount     int
+	actorsPerEngine int
+	senders         int
+	engines         []*Engine
+}
+
+func (b *Benchmark) randomEngine() *Engine {
+	return b.engines[rand.Intn(len(b.engines))]
+}
+
+type Engine struct {
+	engineID      int
+	actors        []*actor.PID
+	engine        *actor.Engine
+	targetEngines []*Engine
+	monitor       *actor.PID
+}
+
+func (e *Engine) randomActor() *actor.PID {
+	return e.actors[rand.Intn(len(e.actors))]
+}
+func (e *Engine) randomTargetEngine() *Engine {
+	return e.targetEngines[rand.Intn(len(e.targetEngines))]
+}
+
+func newBenchmark(engineCount, actorsPerEngine, senders int) *Benchmark {
+	b := &Benchmark{
+		engineCount:     engineCount,
+		actorsPerEngine: actorsPerEngine,
+		engines:         make([]*Engine, engineCount),
+		senders:         senders,
+	}
+	return b
+}
+func (b *Benchmark) spawnEngines() error {
+	for i := 0; i < b.engineCount; i++ {
+		r := remote.New(remote.Config{ListenAddr: fmt.Sprintf("localhost:%d", 4000+i)})
 		e, err := actor.NewEngine(actor.EngineOptRemote(r))
 		if err != nil {
-			log.Fatal(err)
+			return fmt.Errorf("failed to create engine: %w", err)
 		}
-		engines[i] = e
+		// spawn the monitor
+		b.engines[i] = &Engine{
+			engineID: i,
+			actors:   make([]*actor.PID, b.actorsPerEngine),
+			engine:   e,
+			monitor:  e.Spawn(newMonitor, "monitor"),
+		}
+
 	}
-	return engines
+	// now set up the target engines. These are pointers to all the other engines, except the current one.
+	for i := 0; i < b.engineCount; i++ {
+		for j := 0; j < b.engineCount; j++ {
+			if i == j {
+				continue
+			}
+			b.engines[i].targetEngines = append(b.engines[i].targetEngines, b.engines[j])
+		}
+	}
+	fmt.Printf("spawned %d engines\n", b.engineCount)
+	return nil
 }
 
-func makeActors(engines []*actor.Engine, actorsPerEngine int, counter *atomic.Int64) [][]*actor.PID {
-	actors := make([][]*actor.PID, actorsPerEngine)
-	for i := 0; i < len(engines); i++ {
-		actors[i] = make([]*actor.PID, actorsPerEngine)
-		for j := 0; j < actorsPerEngine; j++ {
-			actors[i][j] = engines[i].SpawnFunc(func(c *actor.Context) {
-				switch c.Message().(type) {
-				case string:
-					counter.Add(1)
-				}
-			}, strconv.Itoa(j))
+func (b *Benchmark) spawnActors() error {
+	for i := 0; i < b.engineCount; i++ {
+		for j := 0; j < b.actorsPerEngine; j++ {
+			id := fmt.Sprintf("engine-%d-actor-%d", i, j)
+			b.engines[i].actors[j] = b.engines[i].engine.Spawn(newActor, id)
 		}
 	}
-	return actors
+	fmt.Printf("spawned %d actors per engine\n", b.actorsPerEngine)
+	return nil
 }
-
-// sendMessages will take a list of actors and send messages to them
-// it'll spin up 10 goroutines that will send messages to the actors.
-// each goroutine will send messages to a random actor from another engine
-// this will simulate a real world scenario where actors are distributed
-// across multiple engines. Once the duration has passed, the function will
-// return
-func sendMessages(actorList [][]*actor.PID, engineList []*actor.Engine, d time.Duration, maxActor int) int64 {
-	msgCount := &atomic.Int64{}
-	wg := &sync.WaitGroup{}
-
+func (b *Benchmark) sendMessages(d time.Duration) error {
+	wg := sync.WaitGroup{}
+	wg.Add(b.senders)
 	deadline := time.Now().Add(d)
-	for i, list := range actorList {
-		wg.Add(1)
-		go func(i int, list []*actor.PID) {
+	for i := 0; i < b.senders; i++ {
+		go func() {
 			defer wg.Done()
 			for time.Now().Before(deadline) {
-				// Select a random engine, different from the current one
-				engineIdx := notQuiteRandom(int32(len(engineList)), int32(i))
-				engine := engineList[engineIdx]
-				// Select a random actor from the list
-				targetIdx := rand.Intn(maxActor)
-				target := list[targetIdx]
-				// Send a message to the actor
-				engine.Send(target, &Message{})
+				// pick a random engine to send from
+				engine := b.randomEngine()
+				// pick a random target engine:
+				targetEngine := engine.randomTargetEngine()
+				// pick a random target actor from the engine
+				targetActor := targetEngine.randomActor()
+				// send the message
+				engine.engine.Send(targetActor, &Message{})
+				sendCount.Add(1)
 			}
-		}(i, list)
+		}()
 	}
-
 	wg.Wait()
-	fmt.Printf("Total messages sent: %d\n", msgCount.Load())
-	return msgCount.Load()
+	time.Sleep(time.Second * 2)
+	return nil
 }
+
+/*
+   func MeasureFunctionPerformance(function interface{}, args ...interface{}) (duration time.Duration, memoryAllocated uint64, results []interface{}) {
+   	// Convert the function to a reflect.Value
+   	funcValue := reflect.ValueOf(function)
+   	if funcValue.Kind() != reflect.Func {
+   		panic("MeasureFunctionPerformance requires a function as the first argument")
+   	}
+   	// Convert the arguments to reflect.Values
+   	in := make([]reflect.Value, len(args))
+   	for i, arg := range args {
+   		in[i] = reflect.ValueOf(arg)
+   	}
+
+   	// Force a garbage collection for a clean memory state
+   	runtime.GC()
+
+   	// Get memory stats before execution
+   	var m1 runtime.MemStats
+   	runtime.ReadMemStats(&m1)
+   	startMem := m1.Alloc
+
+   	// Note the start time
+   	startTime := time.Now()
+
+   	// Call the function using reflection
+   	out := funcValue.Call(in)
+
+   	// Note the end time
+   	endTime := time.Now()
+
+   	// Get memory stats after execution
+   	var m2 runtime.MemStats
+   	runtime.ReadMemStats(&m2)
+   	endMem := m2.Alloc
+
+   	// Calculate time and memory consumed
+   	duration = endTime.Sub(startTime)
+   	memoryAllocated = endMem - startMem
+
+   	// Convert the return values to a slice of interfaces
+   	results = make([]interface{}, len(out))
+   	for i, r := range out {
+   		results[i] = r.Interface()
+   	}
+   	return
+   }
+*/
 
 func main() {
 	const (
-		actorsPerEngine   = 10
-		engines           = 10
-		messagesPerEngine = 10_000
+		engines         = 10
+		actorsPerEngine = 2000
+		senders         = 20
+		duration        = time.Second * 10
 	)
-	counter := &atomic.Int64{}
 
 	if runtime.GOMAXPROCS(runtime.NumCPU()) == 1 {
 		slog.Error("GOMAXPROCS must be greater than 1")
@@ -145,21 +221,24 @@ func main() {
 		Level: slog.LevelError,
 	}))
 	slog.SetDefault(lh)
-	fmt.Println("spawning engines")
-	engineList := makeEngines(engines)
-	actorList := makeActors(engineList, actorsPerEngine, counter)
-	sendMessages(actorList, engineList, time.Second*10, actorsPerEngine)
 
-	// now send messages. We will send 10_000 messages to each actor
-}
-
-// notQuiteRandom will generate a random number between 0 and n
-// but it will avoid the number avoid
-func notQuiteRandom(n, avoid int32) int32 {
-	for {
-		r := rand.Int31n(n)
-		if r != avoid {
-			return r
-		}
+	benchmark := newBenchmark(engines, actorsPerEngine, senders)
+	err := benchmark.spawnEngines()
+	if err != nil {
+		slog.Error("failed to spawn engines", "err", err)
+		os.Exit(1)
 	}
+	err = benchmark.spawnActors()
+	if err != nil {
+		slog.Error("failed to spawn actors", "err", err)
+		os.Exit(1)
+	}
+	err = benchmark.sendMessages(duration)
+	if err != nil {
+		slog.Error("failed to send messages", "err", err)
+		os.Exit(1)
+	}
+	fmt.Printf("Concurrent senders: %d messages sent %d, messages received %d - duration: %v\n", senders, sendCount.Load(), receiveCount.Load(), duration)
+	fmt.Printf("messages per second: %d\n", receiveCount.Load()/int64(duration.Seconds()))
+	fmt.Printf("deadletters: %d\n", deadLetters.Load())
 }
