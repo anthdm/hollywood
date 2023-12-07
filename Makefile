@@ -20,5 +20,6 @@ bench:
 	go run _bench/main.go
 
 bench-profile:
-	go test -bench=. -cpuprofile cpu.prof -memprofile mem.prof ./_bench
+	go test -bench='^BenchmarkHollywood$$' -run=NONE -cpuprofile cpu.prof -memprofile mem.prof ./_bench
+
 .PHONY: proto

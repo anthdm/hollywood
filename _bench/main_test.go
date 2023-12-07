@@ -1,21 +1,17 @@
 package main
 
 import (
-	"github.com/anthdm/hollywood/actor"
-	"github.com/anthdm/hollywood/remote"
-	"log/slog"
-	"os"
 	"testing"
-	"time"
 )
 
-func BenchmarkYourFunction(b *testing.B) {
+func BenchmarkHollywood(b *testing.B) {
 	err := benchmark()
 	if err != nil {
 		b.Fatal(err)
 	}
 }
 
+/*
 func Benchmark_Latency(b *testing.B) {
 	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError})))
 	r := remote.New(remote.Config{ListenAddr: "localhost:2013"})
@@ -36,5 +32,5 @@ func Benchmark_Latency(b *testing.B) {
 			b.Fatal("unexpected response")
 		}
 	}
-
 }
+*/

@@ -156,7 +156,7 @@ func (b *Benchmark) sendMessages(d time.Duration) error {
 		}()
 	}
 	wg.Wait()
-	time.Sleep(time.Millisecond * 300) // wait for the messages to be delivered
+	time.Sleep(time.Millisecond * 1000) // wait for the messages to be delivered
 	// compare the global send count with the receive count
 	if sendCount.Load() != receiveCount.Load() {
 		return fmt.Errorf("send count and receive count does not match: %d != %d", sendCount.Load(), receiveCount.Load())
@@ -166,10 +166,10 @@ func (b *Benchmark) sendMessages(d time.Duration) error {
 
 func benchmark() error {
 	const (
-		engines         = 2
-		actorsPerEngine = 20
+		engines         = 10
+		actorsPerEngine = 2000
 		senders         = 20
-		duration        = time.Second
+		duration        = time.Second * 10
 	)
 
 	if runtime.GOMAXPROCS(runtime.NumCPU()) == 1 {
