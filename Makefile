@@ -19,4 +19,6 @@ build:
 bench:
 	go run _bench/main.go
 
+bench-profile:
+	go test -bench=. -cpuprofile cpu.prof -memprofile mem.prof ./_bench
 .PHONY: proto

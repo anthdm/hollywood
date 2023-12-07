@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"github.com/anthdm/hollywood/actor"
 	"github.com/anthdm/hollywood/remote"
@@ -153,59 +154,15 @@ func (b *Benchmark) sendMessages(d time.Duration) error {
 		}()
 	}
 	wg.Wait()
-	time.Sleep(time.Second * 2)
+	time.Sleep(time.Millisecond * 100) // wait for the messages to be delivered
+	// compare the global send count with the receive count
+	if sendCount.Load() != receiveCount.Load() {
+		return fmt.Errorf("send count and receive count does not match: %d != %d", sendCount.Load(), receiveCount.Load())
+	}
 	return nil
 }
 
-/*
-   func MeasureFunctionPerformance(function interface{}, args ...interface{}) (duration time.Duration, memoryAllocated uint64, results []interface{}) {
-   	// Convert the function to a reflect.Value
-   	funcValue := reflect.ValueOf(function)
-   	if funcValue.Kind() != reflect.Func {
-   		panic("MeasureFunctionPerformance requires a function as the first argument")
-   	}
-   	// Convert the arguments to reflect.Values
-   	in := make([]reflect.Value, len(args))
-   	for i, arg := range args {
-   		in[i] = reflect.ValueOf(arg)
-   	}
-
-   	// Force a garbage collection for a clean memory state
-   	runtime.GC()
-
-   	// Get memory stats before execution
-   	var m1 runtime.MemStats
-   	runtime.ReadMemStats(&m1)
-   	startMem := m1.Alloc
-
-   	// Note the start time
-   	startTime := time.Now()
-
-   	// Call the function using reflection
-   	out := funcValue.Call(in)
-
-   	// Note the end time
-   	endTime := time.Now()
-
-   	// Get memory stats after execution
-   	var m2 runtime.MemStats
-   	runtime.ReadMemStats(&m2)
-   	endMem := m2.Alloc
-
-   	// Calculate time and memory consumed
-   	duration = endTime.Sub(startTime)
-   	memoryAllocated = endMem - startMem
-
-   	// Convert the return values to a slice of interfaces
-   	results = make([]interface{}, len(out))
-   	for i, r := range out {
-   		results[i] = r.Interface()
-   	}
-   	return
-   }
-*/
-
-func main() {
+func benchmark() error {
 	const (
 		engines         = 10
 		actorsPerEngine = 2000
@@ -214,8 +171,7 @@ func main() {
 	)
 
 	if runtime.GOMAXPROCS(runtime.NumCPU()) == 1 {
-		slog.Error("GOMAXPROCS must be greater than 1")
-		os.Exit(1)
+		return errors.New("GOMAXPROCS must be greater than 1")
 	}
 	lh := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
 		Level: slog.LevelError,
@@ -225,20 +181,41 @@ func main() {
 	benchmark := newBenchmark(engines, actorsPerEngine, senders)
 	err := benchmark.spawnEngines()
 	if err != nil {
-		slog.Error("failed to spawn engines", "err", err)
-		os.Exit(1)
+		return fmt.Errorf("failed to spawn engines: %w", err)
 	}
 	err = benchmark.spawnActors()
 	if err != nil {
-		slog.Error("failed to spawn actors", "err", err)
-		os.Exit(1)
+		return fmt.Errorf("failed to spawn actors: %w", err)
 	}
+	repCh := make(chan struct{})
+	go func() {
+		lastSendCount := sendCount.Load()
+		for {
+			select {
+			case <-repCh:
+				return
+			case <-time.After(time.Second):
+				fmt.Printf("Messages sent per second %d\n", sendCount.Load()-lastSendCount)
+				lastSendCount = sendCount.Load()
+			}
+		}
+	}()
+	fmt.Printf("Send storm starting, will send for %v using %d workers\n", duration, senders)
 	err = benchmark.sendMessages(duration)
 	if err != nil {
-		slog.Error("failed to send messages", "err", err)
-		os.Exit(1)
+		return fmt.Errorf("failed to send messages: %w", err)
 	}
+	close(repCh)
 	fmt.Printf("Concurrent senders: %d messages sent %d, messages received %d - duration: %v\n", senders, sendCount.Load(), receiveCount.Load(), duration)
 	fmt.Printf("messages per second: %d\n", receiveCount.Load()/int64(duration.Seconds()))
 	fmt.Printf("deadletters: %d\n", deadLetters.Load())
+	return nil
+}
+
+func main() {
+	err := benchmark()
+	if err != nil {
+		slog.Error("failed to run benchmark", "err", err)
+		os.Exit(1)
+	}
 }
