@@ -29,11 +29,11 @@ large number of concurrent users and complex interactions.
 ## Features
 
 - guaranteed message delivery on receiver failure (buffer mechanism)
-- fire&forget or request&response messaging, or both.
-- dRPC as the transport layer
+- fire & forget or request & response messaging, or both.
+- High performance dRPC as the transport layer
 - Optimized proto buffers without reflection
 - lightweight and highly customizable
-- cluster support [coming soon...]
+- cluster support [wip]
 
 # Benchmarks
 
@@ -55,38 +55,86 @@ go get github.com/anthdm/hollywood/...
 
 # Quickstart
 
-> The **[examples](https://github.com/anthdm/hollywood/tree/master/examples)** folder is the best place to learn and
-> explore Hollywood.
+We recommend you start out by writing a few examples that run locally. Running locally is a bit simpler as the compiler
+is able to figure out the types used. When running remotely, you'll need to provide protobuffer definitions for the
+compiler.
+
+## Hello world.
+
+Let's go through a Hello world message. The complete example is available in the 
+***[hello world](https://github.com/anthdm/hollywood/tree/master/examples/helloworld)*** folder. Let's start in main:
+```go
+	engine, err := actor.NewEngine()
+```
+This creates a new engine. The engine is the core of Hollywood. It's responsible for spawning actors, sending messages
+and handling the lifecycle of actors. If Hollywood fails to create the engine it'll return an error. 
+
+Next we'll need to create an actor. These are some times referred to as Receivers after the interface they must 
+implement. Let's create a new actor that will print a message when it receives a message. 
 
 ```go
-type message struct {
-	data string
-}
-
-type foo struct{}
-
-func newFoo() actor.Receiver {
-	return &foo{}
-}
-
-func (f *foo) Receive(ctx *actor.Context) {
-	switch msg := ctx.Message().(type) {
-	case actor.Started:
-		fmt.Println("foo has started")
-	case *message:
-		fmt.Println("foo has received", msg.data)
-	}
-}
-
-func main() {
-	engine := actor.NewEngine()
-	pid := engine.Spawn(newFoo, "foo")
-	engine.Send(pid, &message{data: "hello world!"})
-
-	// Stop the actor, but let it process its messages first.
-	engine.Poison(pid).Wait()
-}
+	pid := engine.Spawn(newHelloer, "hello")
 ```
+This will cause the engine to spawn an actor with the ID "hello". The actor will be created by the provided 
+function `newHelloer`. Ids must be unique. It will return a pointer to a PID. A PID is a process identifier. It's a unique identifier for the actor. Most of
+the time you'll use the PID to send messages to the actor. Against remote systems you'll use the ID to send messages, 
+but on local systems you'll mostly use the PID.
+
+Let's look at the `newHelloer` function and the actor it returns. 
+
+```go
+	type helloer struct{}
+	
+	func newHelloer() actor.Receiver {
+		return &helloer{}
+	}
+```
+
+Simple enough. The `newHelloer` function returns a new actor. The actor is a struct that implements the actor.Receiver.
+Lets look at the `Receive` method.
+
+```go
+
+    type message struct {}
+
+	func (h *helloer) Receive(ctx *actor.Context) {
+		switch msg := ctx.Message().(type) {
+		case actor.Initialized:
+			fmt.Println("helloer has initialized")
+		case actor.Started:
+			fmt.Println("helloer has started")
+		case actor.Stopped:
+			fmt.Println("helloer has stopped")
+		case *message:
+			fmt.Println("hello world", msg.data)
+		}
+	}
+```
+
+You can see we define a message struct. This is the message we'll send to the actor later. The Receive method
+also handles a few other messages. These lifecycle messages are sent by the engine to the actor, you'll use these to 
+initialize your actor
+
+The engine passes an actor.Context to the `Receive` method. This context contains the message, the PID of the sender and
+some other dependencies that you can use.
+
+Now, lets send a message to the actor. We'll send a `message`, but you can send any type of message you want. The only
+requirement is that the actor must be able to handle the message. For messages to be able to cross the wire 
+they must be serializable. For protobuf to be able to serialize the message it must be a pointer. 
+Local messages can be of any type.
+
+Finally, lets send a message to the actor.
+
+```go
+	engine.Send(pid, "hello world!")
+```
+
+This will send a message to the actor. Hollywood will route the message to the correct actor. The actor will then print
+a message to the console.
+
+The **[examples](https://github.com/anthdm/hollywood/tree/master/examples)** folder is the best place to learn and
+explore Hollywood further.
+
 
 ## Spawning receivers (actors) 
 
@@ -117,105 +165,61 @@ e.SpawnFunc(func(c *actor.Context) {
 ```
 
 ## Remote actors
-Actors can communicate with eachother over the network with the Remote package. This works the same as local actors but "over the wire". Hollywood supports serialization with Protobuffer or JSON.
+Actors can communicate with each other over the network with the Remote package. 
+This works the same as local actors but "over the wire". Hollywood supports serialization with protobuf.
 
 ***[Remote actor examples](https://github.com/anthdm/hollywood/tree/master/examples/remote)***
 
 ## Eventstream
-The Eventstream is a powerfull tool that allows you to build flexible and plugable systems without dependencies. 
+
+The Eventstream is a powerful abstraction that allows you to build flexible and pluggable systems without dependencies. 
 
 1. Subscribe any actor to a various list of system events
 2. Broadcast your custom events to all subscribers 
 
+Note that events that are not handled by any actor will be dropped. You should have an actor subscribed to the event 
+stream in order to receive events. As a bare minimum, you'll want  to handle `DeadLetterEvent`. If Hollywood fails to 
+deliver a message to an actor it will send a `DeadLetterEvent` to the event stream. 
+
+Any event that fulfills the `actor.LogEvent` interface will be logged to the default logger, with the severity level, 
+message and the attributes of the event set by the `actor.LogEvent` `log()` method.
+
 You can find more in-depth information on how to use the Eventstream in your application in the Eventstream ***[examples](https://github.com/anthdm/hollywood/tree/master/examples/eventstream)***
 
 ### List of internal system events 
-* `ActorStartedEvent`
-* `ActorStoppedEvent`
+* `ActorStartedEvent`, an actor has started
+* `ActorStoppedEvent`, an actor has stopped
+* `DeadLetterEvent`, a message was not delivered to an actor
+* `ActorRestartedEvent`, an actor has restarted after a crash/panic.
 
-> TODO add and document more events
+Have a look at the `actor/events.go` file for more information on the events.
 
 ## Customizing the Engine
 
 We're using the function option pattern. All function options are in the actor package and start their name with
-"EngineOpt". So, setting a custom PID separator for the output looks like this:
+"EngineOpt". Currently, the only option is to provide a remote. This is done by
 
 ```go
-	e := actor.NewEngine(actor.EngineOptPidSeparator("→"))
+	r := remote.New(remote.Config{ListenAddr: addr})
+	engine, err := actor.NewEngine(actor.EngineOptRemote(r))
 ```
-
-After configuring the Engine with a custom PID Separator the string representation of PIDS will look like this:
-
-```go
-    pid := actor.NewPID("127.0.0.1:3000", "foo", "bar", "baz", "1")
-    // 127.0.0.1:3000->foo->bar->baz->1
-```
-
-You can provide your own actor to do deadletter handling. This is useful if you want to forward deadletters to a
-monitoring service or log them somewhere. The default deadletter handler will, if you have enabled logging, 
-log the deadletter to the logs, using WARN as the log level. For details on how to set up a custom deadletter handler,
-please see the `actor/deadletter_test.go` file, where a custom deadletter handler is set up for testing purposes.
-
-Note that you can also provide a custom logger to the engine. See the Logging section for more details.
+addr is a string with the format "host:port".
 
 ## Middleware
 
-You can add custom middleware to your Receivers. This can be usefull for storing metrics, saving and loading data for
+You can add custom middleware to your Receivers. This can be useful for storing metrics, saving and loading data for
 your Receivers on `actor.Started` and `actor.Stopped`.
 
 For examples on how to implement custom middleware, check out the middleware folder in the ***[examples](https://github.com/anthdm/hollywood/tree/master/examples/middleware)***
 
 ## Logging
 
-The default for Hollywood is, as any good library, not to log anything, but rather to rely on the application to
-configure logging as it sees fit. However, as a convenience, Hollywood provides a simple logging package that
-you can use to gain some insight into what is going on inside the library.
+Hollywood has some built in logging. It will use the default logger from the `log/slog` package. You can configure the
+logger to your liking by setting the default logger using `slog.SetDefaultLogger()`. This will allow you to customize 
+the log level, format and output. Please see the `slog` package for more information.
 
-When you create a Hollywood engine, you can pass some configuration options. This gives you the opportunity to
-have the log package create a suitable logger. The logger is based on the standard library's `log/slog` package.
-
-If you want Hollywood to log with its defaults, it will provide structured logging with the loglevel being `ÌNFO`.
-You'll then initialize the engine as such:
-
-```go
-    engine := actor.NewEngine(actor.EngineOptLogger(log.Default()))
-```
-
-If you want more control, say by having the loglevel be DEBUG and the output format be JSON, you can do so by
-
-```go
-	lh := log.NewHandler(os.Stdout, log.JsonFormat, slog.LevelDebug)
-    engine := actor.NewEngine(actor.EngineOptLogger(log.NewLogger("[engine]", lh)))
-```
-
-This will have the engine itself log with the field "log", prepopulated with the value "[engine]" for the engine itself.
-The various subsystems will change the log field to reflect their own name.
-
-### Log levels
-
-The log levels are, in order of severity:
-
-* `slog.LevelDebug`
-* `slog.LevelInfo`
-* `slog.LevelWarn`
-* `slog.LevelError`
-
-### Log components.
-
-The log field "log" will be populated with the name of the subsystem that is logging. The subsystems are:
-
-* `[engine]`
-* `[context`
-* `[deadLetter]`
-* `[eventStream]`
-* `[registry]`
-* `[stream_reader]`
-* `[stream_writer]`
-* `[stream_router]`
-
-In addition, the logger will log with log=$ACTOR_NAME for any actor that has a name.
-
-See the log package for more details about the implementation.
+Note that some events might be logged to the default logger, such as `DeadLetterEvent` and `ActorStartedEvent` as these
+events fulfill the `actor.LogEvent` interface. See the Eventstream section above for more information.
 
 # Test
 
@@ -229,8 +233,6 @@ Join our Discord community with over 2000 members for questions and a nice chat.
 <a href="https://discord.gg/gdwXmXYNTh">
 	<img src="https://discordapp.com/api/guilds/1025692014903316490/widget.png?style=banner2" alt="Discord Banner"/>
 </a>
-
-
 
 # Used in Production By
 
