@@ -29,8 +29,26 @@ func makeCluster(addr string, id string, members ...*cluster.Member) *cluster.Cl
 	return c
 }
 
+type Inventory struct{}
+
+func NewInventory() actor.Receiver {
+	return &Inventory{}
+}
+
+func (i *Inventory) Receive(c *actor.Context) {}
+
+type Player struct{}
+
+func NewPlayer() actor.Receiver {
+	return &Player{}
+}
+
+func (p *Player) Receive(c *actor.Context) {}
+
 func main() {
 	c1 := makeCluster("localhost:3001", "A")
+	c1.RegisterKind("inventory", NewInventory, cluster.KindOpts{})
+	c1.RegisterKind("player", NewPlayer, cluster.KindOpts{})
 	c1.Start()
 	time.Sleep(time.Second)
 

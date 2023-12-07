@@ -53,6 +53,10 @@ func (c *Cluster) Start() error {
 	return nil
 }
 
+func (c *Cluster) RegisterKind(name string, producer actor.Producer, opts KindOpts) {
+	c.kinds[name] = NewKind(name, producer, opts)
+}
+
 // PID returns the reachable actor process id.
 func (c *Cluster) PID() *actor.PID {
 	return nil
