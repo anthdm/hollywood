@@ -295,22 +295,35 @@ func TestPoison(t *testing.T) {
 }
 
 func TestRequestResponse(t *testing.T) {
+	type responseEvent struct {
+		d time.Duration
+	}
 	e, err := NewEngine()
-	require.NoError(t, err)
-	pid := e.Spawn(NewTestProducer(t, func(t *testing.T, ctx *Context) {
-		if msg, ok := ctx.Message().(string); ok {
-			assert.Equal(t, "foo", msg)
-			ctx.Respond("bar")
+	assert.NoError(t, err)
+	a := e.SpawnFunc(func(c *Context) {
+		switch c.Message().(type) {
+		case responseEvent:
+			d := c.Message().(responseEvent).d
+			time.Sleep(d)
+			c.Respond("foo")
 		}
-	}), "dummy")
-	resp := e.Request(pid, "foo", time.Millisecond)
-	res, err := resp.Result()
-	assert.Nil(t, err)
-	assert.Equal(t, "bar", res)
-	// Response PID should be nil here. This is because
-	// the actual response process that will handle this RPC
-	// is deregistered. Test that it is actually cleaned up.
-	assert.Nil(t, e.Registry.get(resp.pid))
+	}, "actor_a")
+	t.Run("should timeout", func(t *testing.T) {
+		resp := e.Request(a, responseEvent{d: time.Millisecond * 2}, 1*time.Millisecond)
+		_, err := resp.Result()
+		assert.Error(t, err)
+		assert.Nil(t, e.Registry.get(resp.pid))
+
+	})
+	t.Run("should not timeout", func(t *testing.T) {
+		for i := 0; i < 200; i++ {
+			resp := e.Request(a, responseEvent{d: time.Microsecond * 1}, time.Millisecond*100)
+			res, err := resp.Result()
+			assert.NoError(t, err)
+			assert.Equal(t, "foo", res)
+			assert.Nil(t, e.Registry.get(resp.pid))
+		}
+	})
 }
 
 // 56 ns/op
