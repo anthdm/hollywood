@@ -47,7 +47,7 @@ func (s *SelfManaged) Receive(c *actor.Context) {
 // add the new one.
 func (s *SelfManaged) addMember(member *Member) {
 	s.members.Add(member)
-	slog.Info("got new member", "id", member.ID, "host", member.Host, "kinds", member.Kinds)
+	slog.Info("got new member", "we", s.cluster.id, "id", member.ID, "host", member.Host, "kinds", member.Kinds)
 }
 
 func (s *SelfManaged) start(c *actor.Context) error {
@@ -55,6 +55,7 @@ func (s *SelfManaged) start(c *actor.Context) error {
 		Members: s.members.ToSlice(),
 	}
 	for _, m := range s.bootstrapMembers {
+		// s.cluster.engine.Send(memberToProviderPID(m), members)
 		resp, err := s.cluster.engine.Request(memberToProviderPID(m), members, time.Millisecond*100).Result()
 		if err != nil {
 			slog.Error("provider failed to request members from node", "err", err)

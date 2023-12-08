@@ -59,5 +59,12 @@ func main() {
 	c2.RegisterKind("player", NewPlayer, cluster.KindOpts{})
 
 	c2.Start()
-	time.Sleep(time.Second * 500)
+	time.Sleep(time.Second)
+
+	c3 := makeCluster("localhost:3003", "C", member)
+	c3.RegisterKind("inventory", NewInventory, cluster.KindOpts{})
+	c3.RegisterKind("player", NewPlayer, cluster.KindOpts{})
+	c3.Start()
+
+	time.Sleep(time.Second * 10000)
 }
