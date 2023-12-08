@@ -14,7 +14,7 @@ message Member {
 	repeated string kinds = 3;
 }
 
-message MembersJoin {
+message Members {
 	repeated Member members = 1;
 } 
  

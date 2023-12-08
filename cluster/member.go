@@ -1,12 +1,5 @@
 package cluster
 
-import "github.com/anthdm/hollywood/actor"
-
-// MemberToPID creates a new PID from the member info.
-func MemberToPID(m *Member) *actor.PID {
-	return actor.NewPID(m.Host, "cluster/"+m.ID)
-}
-
 type Map[K comparable, V any] struct {
 	data map[K]V
 }

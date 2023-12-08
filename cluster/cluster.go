@@ -4,8 +4,14 @@ import (
 	"github.com/anthdm/hollywood/actor"
 )
 
-const ClusterAgentID = "agent"
+const (
+	ClusterAgentID = "agent"
+	ProviderID     = "provider"
+)
 
+// Producer is a function that can produce an actor.Producer.
+// Pretty simple, but yet powerfull tool to construct receivers
+// depending on Cluster.
 type Producer func(c *Cluster) actor.Producer
 
 type Provider interface {
@@ -14,19 +20,20 @@ type Provider interface {
 }
 
 type Config struct {
-	ClusterName string
-	ID          string
-	Engine      *actor.Engine
-	Provider    Provider
+	ClusterName     string
+	ID              string
+	Engine          *actor.Engine
+	ClusterProvider Producer
 }
 
 type Cluster struct {
 	name string
 	id   string
 
-	provider Provider
-	engine   *actor.Engine
-	agentPID *actor.PID
+	provider    Producer
+	engine      *actor.Engine
+	agentPID    *actor.PID
+	providerPID *actor.PID
 
 	kinds map[string]*Kind
 }
@@ -41,15 +48,15 @@ func New(cfg Config) (*Cluster, error) {
 	return &Cluster{
 		id:       cfg.ID,
 		name:     cfg.ClusterName,
-		provider: cfg.Provider,
+		provider: cfg.ClusterProvider,
 		engine:   cfg.Engine,
 		kinds:    make(map[string]*Kind),
 	}, nil
 }
 
 func (c *Cluster) Start() error {
-	c.agentPID = c.engine.Spawn(NewAgent, "cluster/"+c.id)
-	c.provider.Start(c)
+	c.agentPID = c.engine.Spawn(NewAgent(c), "cluster/"+c.id)
+	c.providerPID = c.engine.Spawn(c.provider(c), "cluster/"+c.id+"/provider")
 	return nil
 }
 

@@ -1,69 +1,69 @@
 package cluster
 
+import (
+	"log/slog"
+	"time"
+
+	"github.com/anthdm/hollywood/actor"
+	mapset "github.com/deckarep/golang-set/v2"
+)
+
 type SelfManaged struct {
-	cluster         *Cluster
-	bootstrapMember *Member
+	cluster          *Cluster
+	bootstrapMembers []*Member
+	members          mapset.Set[*Member]
 }
 
-func NewSelfManagedProvider(member ...*Member) *SelfManaged {
-	var m *Member
-	if len(member) > 0 {
-		m = member[0]
-	}
-	return &SelfManaged{
-		bootstrapMember: m,
+func NewSelfManagedProvider(members ...*Member) Producer {
+	return func(c *Cluster) actor.Producer {
+		return func() actor.Receiver {
+			return &SelfManaged{
+				cluster:          c,
+				bootstrapMembers: members,
+				members:          mapset.NewSet[*Member](),
+			}
+		}
 	}
 }
 
-func (s *SelfManaged) Start(c *Cluster) error {
-	s.cluster = c
-
-	if s.bootstrapMember == nil {
-		return nil
+func (s *SelfManaged) Receive(c *actor.Context) {
+	switch msg := c.Message().(type) {
+	case actor.Started:
+		s.members.Add(s.cluster.Member())
+		s.start(c)
+	case *Members:
+		ourMembers := &Members{
+			Members: s.members.ToSlice(),
+		}
+		c.Respond(ourMembers)
+		for _, member := range msg.Members {
+			s.addMember(member)
+		}
 	}
+}
 
-	ourMember := s.cluster.Member()
-	msg := &MembersJoin{
-		Members: []*Member{
-			ourMember,
-		},
+// If we receive members from another node in the cluster
+// we respond with all the members we know of and, ofcourse
+// add the new one.
+func (s *SelfManaged) addMember(member *Member) {
+	s.members.Add(member)
+	slog.Info("got new member", "id", member.ID, "host", member.Host, "kinds", member.Kinds)
+}
+
+func (s *SelfManaged) start(c *actor.Context) error {
+	members := &Members{
+		Members: s.members.ToSlice(),
 	}
-	s.cluster.engine.Send(MemberToPID(s.bootstrapMember), msg)
-
+	for _, m := range s.bootstrapMembers {
+		resp, err := s.cluster.engine.Request(memberToProviderPID(m), members, time.Millisecond*100).Result()
+		if err != nil {
+			slog.Error("provider failed to request members from node", "err", err)
+			continue
+		}
+		members := resp.(*Members)
+		for _, member := range members.Members {
+			s.addMember(member)
+		}
+	}
 	return nil
 }
-
-func (s *SelfManaged) Stop() error { return nil }
-
-// func NewSelfManaged(members ...Member) Producer {
-// 	return func(c *Cluster) actor.Producer {
-// 		return func() actor.Receiver {
-// 			return &SelfManaged{
-// 				cluster:         c,
-// 				boostrapMembers: members,
-// 			}
-// 		}
-// 	}
-// }
-
-// func (p *SelfManaged) Receive(c *actor.Context) {
-// 	switch msg := c.Message().(type) {
-// 	case actor.Started:
-// 		if len(p.boostrapMembers) > 0 {
-// 			for _, member := range p.boostrapMembers {
-// 				var (
-// 					addr = fmt.Sprintf("%s:%d", member.Host, member.Port)
-// 					// TODO: We need access to the configured PIDSeperator
-// 					id  = fmt.Sprintf("clusterr/%s/agent", member.ID)
-// 					pid = actor.NewPID(addr, id)
-// 				)
-// 				fmt.Println(pid)
-// 				p.cluster.engine.Send(pid, &MemberJoin{})
-// 				slog.Debug("attempting bootstrap with", "member", member)
-// 			}
-// 		}
-
-// 	case *MemberJoin:
-// 		slog.Info("new member joined the cluster", "id", msg.ID, "host", msg.Host, "port", msg.Port)
-// 	}
-// }

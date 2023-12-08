@@ -63,11 +63,11 @@ func (m *Member) CloneMessageVT() proto.Message {
 	return m.CloneVT()
 }
 
-func (m *MembersJoin) CloneVT() *MembersJoin {
+func (m *Members) CloneVT() *Members {
 	if m == nil {
-		return (*MembersJoin)(nil)
+		return (*Members)(nil)
 	}
-	r := &MembersJoin{}
+	r := &Members{}
 	if rhs := m.Members; rhs != nil {
 		tmpContainer := make([]*Member, len(rhs))
 		for k, v := range rhs {
@@ -82,7 +82,7 @@ func (m *MembersJoin) CloneVT() *MembersJoin {
 	return r
 }
 
-func (m *MembersJoin) CloneMessageVT() proto.Message {
+func (m *Members) CloneMessageVT() proto.Message {
 	return m.CloneVT()
 }
 
@@ -235,7 +235,7 @@ func (this *Member) EqualMessageVT(thatMsg proto.Message) bool {
 	}
 	return this.EqualVT(that)
 }
-func (this *MembersJoin) EqualVT(that *MembersJoin) bool {
+func (this *Members) EqualVT(that *Members) bool {
 	if this == that {
 		return true
 	} else if this == nil || that == nil {
@@ -261,8 +261,8 @@ func (this *MembersJoin) EqualVT(that *MembersJoin) bool {
 	return string(this.unknownFields) == string(that.unknownFields)
 }
 
-func (this *MembersJoin) EqualMessageVT(thatMsg proto.Message) bool {
-	that, ok := thatMsg.(*MembersJoin)
+func (this *Members) EqualMessageVT(thatMsg proto.Message) bool {
+	that, ok := thatMsg.(*Members)
 	if !ok {
 		return false
 	}
@@ -510,7 +510,7 @@ func (m *Member) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *MembersJoin) MarshalVT() (dAtA []byte, err error) {
+func (m *Members) MarshalVT() (dAtA []byte, err error) {
 	if m == nil {
 		return nil, nil
 	}
@@ -523,12 +523,12 @@ func (m *MembersJoin) MarshalVT() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *MembersJoin) MarshalToVT(dAtA []byte) (int, error) {
+func (m *Members) MarshalToVT(dAtA []byte) (int, error) {
 	size := m.SizeVT()
 	return m.MarshalToSizedBufferVT(dAtA[:size])
 }
 
-func (m *MembersJoin) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
+func (m *Members) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 	if m == nil {
 		return 0, nil
 	}
@@ -885,7 +885,7 @@ func (m *Member) MarshalToSizedBufferVTStrict(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *MembersJoin) MarshalVTStrict() (dAtA []byte, err error) {
+func (m *Members) MarshalVTStrict() (dAtA []byte, err error) {
 	if m == nil {
 		return nil, nil
 	}
@@ -898,12 +898,12 @@ func (m *MembersJoin) MarshalVTStrict() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *MembersJoin) MarshalToVTStrict(dAtA []byte) (int, error) {
+func (m *Members) MarshalToVTStrict(dAtA []byte) (int, error) {
 	size := m.SizeVT()
 	return m.MarshalToSizedBufferVTStrict(dAtA[:size])
 }
 
-func (m *MembersJoin) MarshalToSizedBufferVTStrict(dAtA []byte) (int, error) {
+func (m *Members) MarshalToSizedBufferVTStrict(dAtA []byte) (int, error) {
 	if m == nil {
 		return 0, nil
 	}
@@ -1188,7 +1188,7 @@ func (m *Member) SizeVT() (n int) {
 	return n
 }
 
-func (m *MembersJoin) SizeVT() (n int) {
+func (m *Members) SizeVT() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -1557,7 +1557,7 @@ func (m *Member) UnmarshalVT(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *MembersJoin) UnmarshalVT(dAtA []byte) error {
+func (m *Members) UnmarshalVT(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -1580,10 +1580,10 @@ func (m *MembersJoin) UnmarshalVT(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: MembersJoin: wiretype end group for non-group")
+			return fmt.Errorf("proto: Members: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: MembersJoin: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: Members: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:

@@ -18,9 +18,10 @@ func makeCluster(addr string, id string, members ...*cluster.Member) *cluster.Cl
 		log.Fatal(err)
 	}
 	cfg := cluster.Config{
-		Provider: cluster.NewSelfManagedProvider(members...),
-		ID:       id,
-		Engine:   e,
+		ClusterName:     "My Cluster",
+		ClusterProvider: cluster.NewSelfManagedProvider(members...),
+		ID:              id,
+		Engine:          e,
 	}
 	c, err := cluster.New(cfg)
 	if err != nil {
@@ -54,6 +55,9 @@ func main() {
 
 	member := c1.Member()
 	c2 := makeCluster("localhost:3002", "B", member)
+	c2.RegisterKind("inventory", NewInventory, cluster.KindOpts{})
+	c2.RegisterKind("player", NewPlayer, cluster.KindOpts{})
+
 	c2.Start()
 	time.Sleep(time.Second * 500)
 }
