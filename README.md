@@ -14,8 +14,9 @@ advertising brokers, trading engines, etc... It can handle **10 million messages
 The Actor Model is a computational model used to build highly concurrent and distributed systems. It was introduced by
 Carl Hewitt in 1973 as a way to handle complex systems in a more scalable and fault-tolerant manner.
 
-In the Actor Model, the basic building block is an actor, called receiver in Hollywood, which is an independent unit of
-computation that communicates with other actors by exchanging messages. Each actor has its own state and behavior, and
+In the Actor Model, the basic building block is an actor, sometimes referred to as a receiver in Hollywood, 
+which is an independent unit of computation that communicates with other actors by exchanging messages. 
+Each actor has its own state and behavior, and
 can only communicate with other actors by sending messages. This message-passing paradigm allows for a highly
 decentralized and fault-tolerant system, as actors can continue to operate independently even if other actors fail or
 become unavailable.
@@ -28,7 +29,7 @@ large number of concurrent users and complex interactions.
 
 ## Features
 
-- guaranteed message delivery on receiver failure (buffer mechanism)
+- guaranteed message delivery on actor failure (buffer mechanism)
 - fire & forget or request & response messaging, or both.
 - High performance dRPC as the transport layer
 - Optimized proto buffers without reflection
@@ -62,14 +63,14 @@ compiler.
 ## Hello world.
 
 Let's go through a Hello world message. The complete example is available in the 
-***[hello world](https://github.com/anthdm/hollywood/tree/master/examples/helloworld)*** folder. Let's start in main:
+[hello world](examples/helloworld) folder. Let's start in main:
 ```go
 	engine, err := actor.NewEngine()
 ```
 This creates a new engine. The engine is the core of Hollywood. It's responsible for spawning actors, sending messages
 and handling the lifecycle of actors. If Hollywood fails to create the engine it'll return an error. 
 
-Next we'll need to create an actor. These are some times referred to as Receivers after the interface they must 
+Next we'll need to create an actor. These are some times referred to as `Receivers` after the interface they must 
 implement. Let's create a new actor that will print a message when it receives a message. 
 
 ```go
@@ -132,11 +133,14 @@ Finally, lets send a message to the actor.
 This will send a message to the actor. Hollywood will route the message to the correct actor. The actor will then print
 a message to the console.
 
-The **[examples](https://github.com/anthdm/hollywood/tree/master/examples)** folder is the best place to learn and
+The [examples](https://github.com/anthdm/hollywood/tree/master/examples) folder is the best place to learn and
 explore Hollywood further.
 
 
-## Spawning receivers (actors) 
+## Spawning actors
+
+When you spawn an actor you'll need to provide a function that returns a new actor. As the actor is spawn there are a few
+tunable options you can provide.
 
 ### With default configuration
 ```go
@@ -168,9 +172,13 @@ e.SpawnFunc(func(c *actor.Context) {
 Actors can communicate with each other over the network with the Remote package. 
 This works the same as local actors but "over the wire". Hollywood supports serialization with protobuf.
 
-***[Remote actor examples](https://github.com/anthdm/hollywood/tree/master/examples/remote)***
+Look at the [Remote actor examples](examples/remote) and the [Chat client & Server](examples/chat) for more information.
 
 ## Eventstream
+
+In a production system thing will eventually go wrong. Actors will crash, machines will fail, messages will end up in
+the deadletter queue. You can build software that can handle these events in a graceful and predictable way by using
+the event stream.
 
 The Eventstream is a powerful abstraction that allows you to build flexible and pluggable systems without dependencies. 
 
@@ -184,15 +192,21 @@ deliver a message to an actor it will send a `DeadLetterEvent` to the event stre
 Any event that fulfills the `actor.LogEvent` interface will be logged to the default logger, with the severity level, 
 message and the attributes of the event set by the `actor.LogEvent` `log()` method.
 
-You can find more in-depth information on how to use the Eventstream in your application in the Eventstream ***[examples](https://github.com/anthdm/hollywood/tree/master/examples/eventstream)***
-
 ### List of internal system events 
 * `ActorStartedEvent`, an actor has started
 * `ActorStoppedEvent`, an actor has stopped
 * `DeadLetterEvent`, a message was not delivered to an actor
 * `ActorRestartedEvent`, an actor has restarted after a crash/panic.
 
-Have a look at the `actor/events.go` file for more information on the events.
+### Eventstream example
+
+There is a [eventstream monitoring example](examples/eventstream-monitor) which shows you how to use the event stream.
+It features two actors, one is unstable and will crash every second. The other actor is subscribed to the event stream
+and maintains a few counters for different events such as crashes, etc. 
+
+The application will run for a few seconds and the poison the unstable actor. It'll then query the monitor with a 
+request. As actors are floating around inside the engine, this is the way you interact with them. main will then print
+the result of the query and the application will exit.
 
 ## Customizing the Engine
 
