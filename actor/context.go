@@ -1,10 +1,10 @@
 package actor
 
 import (
+	"log/slog"
 	"strings"
 	"time"
 
-	"github.com/anthdm/hollywood/log"
 	"github.com/anthdm/hollywood/safemap"
 )
 
@@ -43,9 +43,7 @@ func (c *Context) Request(pid *PID, msg any, timeout time.Duration) *Response {
 // Respond will sent the given message to the sender of the current received message.
 func (c *Context) Respond(msg any) {
 	if c.sender == nil {
-		log.Warnw("[RESPOND] context got no sender", log.M{
-			"pid": c.PID(),
-		})
+		slog.Warn("context got no sender", "func", "Respond", "pid", c.PID())
 		return
 	}
 	c.engine.Send(c.sender, msg)
@@ -81,6 +79,21 @@ func (c *Context) SpawnChildFunc(f func(*Context), name string, opts ...OptFunc)
 // the PID of the process that sent this message.
 func (c *Context) Send(pid *PID, msg any) {
 	c.engine.SendWithSender(pid, msg, c.pid)
+}
+
+// SendRepeat will send the given message to the given PID each given interval.
+// It will return a SendRepeater struct that can stop the repeating message by calling Stop().
+func (c *Context) SendRepeat(pid *PID, msg any, interval time.Duration) SendRepeater {
+	sr := SendRepeater{
+		engine:   c.engine,
+		self:     c.pid,
+		target:   pid.CloneVT(),
+		interval: interval,
+		msg:      msg,
+		cancelch: make(chan struct{}, 1),
+	}
+	sr.start()
+	return sr
 }
 
 // Forward will forward the current received message to the given PID.

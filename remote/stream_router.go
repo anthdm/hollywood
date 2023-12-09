@@ -1,8 +1,9 @@
 package remote
 
 import (
+	"log/slog"
+
 	"github.com/anthdm/hollywood/actor"
-	"github.com/anthdm/hollywood/log"
 )
 
 type streamDeliver struct {
@@ -45,10 +46,10 @@ func (s *streamRouter) Receive(ctx *actor.Context) {
 func (s *streamRouter) handleTerminateStream(msg terminateStream) {
 	streamWriterPID := s.streams[msg.address]
 	delete(s.streams, msg.address)
-	log.Tracew("[STREAM ROUTER] terminating stream", log.M{
-		"remote": msg.address,
-		"pid":    streamWriterPID,
-	})
+	slog.Debug("terminating stream",
+		"remote", msg.address,
+		"pid", streamWriterPID,
+	)
 }
 
 func (s *streamRouter) deliverStream(msg *streamDeliver) {
@@ -62,9 +63,6 @@ func (s *streamRouter) deliverStream(msg *streamDeliver) {
 	if !ok {
 		swpid = s.engine.SpawnProc(newStreamWriter(s.engine, s.pid, address))
 		s.streams[address] = swpid
-		log.Tracew("[STREAM ROUTER] new stream route", log.M{
-			"pid": swpid,
-		})
 	}
 	s.engine.Send(swpid, msg)
 }

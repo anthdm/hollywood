@@ -1,69 +1,50 @@
 package actor
 
 import (
-	"math"
-	"math/rand"
-	"sync"
-
-	"github.com/anthdm/hollywood/log"
+	"context"
+	"log/slog"
 )
 
+// EventSub is the message that will be send to subscribe to the event stream.
 type EventSub struct {
-	id uint32
+	pid *PID
 }
 
-type EventStreamFunc func(event any)
+// EventUnSub is the message that will be send to unsubscribe from the event stream.
+type EventUnsub struct {
+	pid *PID
+}
 
 type EventStream struct {
-	mu   sync.RWMutex
-	subs map[*EventSub]EventStreamFunc
+	subs map[*PID]bool
 }
 
-func NewEventStream() *EventStream {
-	return &EventStream{
-		subs: make(map[*EventSub]EventStreamFunc),
+func NewEventStream() Producer {
+	return func() Receiver {
+		return &EventStream{
+			subs: make(map[*PID]bool),
+		}
 	}
 }
 
-func (e *EventStream) Unsubscribe(sub *EventSub) {
-	e.mu.Lock()
-	defer e.mu.Unlock()
-
-	delete(e.subs, sub)
-
-	log.Tracew("[EVENTSTREAM] unsubscribe", log.M{
-		"subs": len(e.subs),
-		"id":   sub.id,
-	})
-}
-
-func (e *EventStream) Subscribe(f EventStreamFunc) *EventSub {
-	e.mu.Lock()
-	defer e.mu.Unlock()
-
-	sub := &EventSub{
-		id: uint32(rand.Intn(math.MaxUint32)),
+// Receive for the event stream. All system-wide events are sent here.
+// Some events are specially handled, such as EventSub, EventUnSub (for subscribing to events),
+// DeadletterSub, DeadletterUnSub, for subscribing to DeadLetterEvent
+func (e *EventStream) Receive(c *Context) {
+	switch msg := c.Message().(type) {
+	case EventSub:
+		e.subs[msg.pid] = true
+	case EventUnsub:
+		delete(e.subs, msg.pid)
+	default:
+		// check if we should log the event, if so, log it with the relevant level, message and attributes
+		logMsg, ok := c.Message().(EventLogger)
+		if ok {
+			level, msg, attr := logMsg.Log()
+			slog.Log(context.Background(), level, msg, attr...)
+		}
+		for sub := range e.subs {
+			c.Forward(sub)
+		}
 	}
-	e.subs[sub] = f
-
-	log.Tracew("[EVENTSTREAM] subscribe", log.M{
-		"subs": len(e.subs),
-		"id":   sub.id,
-	})
-
-	return sub
-}
-
-func (e *EventStream) Publish(msg any) {
-	e.mu.RLock()
-	defer e.mu.RUnlock()
-	for _, f := range e.subs {
-		go f(msg)
-	}
-}
-
-func (e *EventStream) Len() int {
-	e.mu.RLock()
-	defer e.mu.RUnlock()
-	return len(e.subs)
 }

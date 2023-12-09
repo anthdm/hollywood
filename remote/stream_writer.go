@@ -4,18 +4,18 @@ import (
 	"context"
 	"errors"
 	"io"
+	"log/slog"
 	"net"
 	"sync"
 	"time"
 
 	"github.com/anthdm/hollywood/actor"
-	"github.com/anthdm/hollywood/log"
 	"storj.io/drpc/drpcconn"
 )
 
 const (
 	connIdleTimeout       = time.Minute * 10
-	streamWriterBatchSize = 1024 * 32
+	streamWriterBatchSize = 1024
 )
 
 type streamWriter struct {
@@ -70,7 +70,7 @@ func (s *streamWriter) Invoke(msgs []actor.Envelope) {
 
 		b, err := s.serializer.Serialize(stream.msg)
 		if err != nil {
-			log.Errorw("[STREAM WRITER]", log.M{"err": err})
+			slog.Error("serialize", "err", err)
 			continue
 		}
 
@@ -91,15 +91,18 @@ func (s *streamWriter) Invoke(msgs []actor.Envelope) {
 
 	if err := s.stream.Send(env); err != nil {
 		if errors.Is(err, io.EOF) {
-			s.conn.Close()
+			_ = s.conn.Close()
 			return
 		}
-		log.Errorw("[REMOTE] failed sending message", log.M{
-			"err": err,
-		})
+		slog.Error("stream writer failed sending message",
+			"err", err,
+		)
 	}
 	// refresh the connection deadline.
-	s.rawconn.SetDeadline(time.Now().Add(connIdleTimeout))
+	err := s.rawconn.SetDeadline(time.Now().Add(connIdleTimeout))
+	if err != nil {
+		slog.Error("failed to set context deadline", "err", err)
+	}
 }
 
 func (s *streamWriter) init() {
@@ -111,7 +114,7 @@ func (s *streamWriter) init() {
 	for {
 		rawconn, err = net.Dial("tcp", s.writeToAddr)
 		if err != nil {
-			log.Errorw("[STREAM WRITER]", log.M{"err": err})
+			slog.Error("net.Dial", "err", err, "remote", s.writeToAddr)
 			time.Sleep(delay)
 			continue
 		}
@@ -123,31 +126,33 @@ func (s *streamWriter) init() {
 	}
 
 	s.rawconn = rawconn
-	rawconn.SetDeadline(time.Now().Add(connIdleTimeout))
+	err = rawconn.SetDeadline(time.Now().Add(connIdleTimeout))
+	if err != nil {
+		slog.Error("failed to set deadline on raw connection", "err", err)
+		return
+	}
 
 	conn := drpcconn.New(rawconn)
 	client := NewDRPCRemoteClient(conn)
 
 	stream, err := client.Receive(context.Background())
 	if err != nil {
-		log.Errorw("[STREAM WRITER] receive error", log.M{
-			"err":         err,
-			"writeToAddr": s.writeToAddr,
-		})
+		slog.Error("receive", "err", err, "remote", s.writeToAddr)
+		return
 	}
 
 	s.stream = stream
 	s.conn = conn
 
-	log.Tracew("[STREAM WRITER] connected", log.M{
-		"remote": s.writeToAddr,
-	})
+	slog.Debug("connected",
+		"remote", s.writeToAddr,
+	)
 
 	go func() {
 		<-s.conn.Closed()
-		log.Tracew("[STREAM WRITER] lost connection", log.M{
-			"remote": s.writeToAddr,
-		})
+		slog.Debug("lost connection",
+			"remote", s.writeToAddr,
+		)
 		s.Shutdown(nil)
 	}()
 }

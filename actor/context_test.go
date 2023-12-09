@@ -3,20 +3,48 @@ package actor
 import (
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
+func TestContextSendRepeat(t *testing.T) {
+	var (
+		wg = &sync.WaitGroup{}
+		mu sync.Mutex
+		sr SendRepeater
+	)
+	e, err := NewEngine()
+	require.NoError(t, err)
+	wg.Add(1)
+
+	e.SpawnFunc(func(c *Context) {
+		switch c.Message().(type) {
+		case Started:
+			mu.Lock()
+			sr = c.SendRepeat(c.PID(), "foo", time.Millisecond*10)
+			mu.Unlock()
+		case string:
+			mu.Lock()
+			sr.Stop()
+			mu.Unlock()
+			assert.Equal(t, c.Sender(), c.PID())
+			wg.Done()
+		}
+	}, "test")
+	wg.Wait()
+}
+
 func TestSpawnChildPID(t *testing.T) {
 	pidSeparator = ">"
 	var (
-		e           = NewEngine()
 		wg          = sync.WaitGroup{}
 		childfn     = func(c *Context) {}
 		expectedPID = NewPID(LocalLookupAddr, "parent", "child")
 	)
-
+	e, err := NewEngine()
+	require.NoError(t, err)
 	wg.Add(1)
 	e.SpawnFunc(func(c *Context) {
 		switch c.Message().(type) {
@@ -34,9 +62,10 @@ func TestSpawnChildPID(t *testing.T) {
 
 func TestChild(t *testing.T) {
 	var (
-		e  = NewEngine()
 		wg = sync.WaitGroup{}
 	)
+	e, err := NewEngine()
+	require.NoError(t, err)
 	wg.Add(1)
 	e.SpawnFunc(func(c *Context) {
 		switch c.Message().(type) {
@@ -54,10 +83,11 @@ func TestChild(t *testing.T) {
 
 func TestParent(t *testing.T) {
 	var (
-		e      = NewEngine()
 		wg     = sync.WaitGroup{}
 		parent = NewPID(LocalLookupAddr, "foo", "bar", "baz")
 	)
+	e, err := NewEngine()
+	require.NoError(t, err)
 	wg.Add(1)
 
 	childfn := func(c *Context) {
@@ -80,7 +110,8 @@ func TestParent(t *testing.T) {
 }
 
 func TestGetPID(t *testing.T) {
-	e := NewEngine()
+	e, err := NewEngine()
+	require.NoError(t, err)
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 	e.SpawnFunc(func(c *Context) {
@@ -96,10 +127,10 @@ func TestGetPID(t *testing.T) {
 
 func TestSpawnChild(t *testing.T) {
 	var (
-		e  = NewEngine()
 		wg = sync.WaitGroup{}
 	)
-
+	e, err := NewEngine()
+	require.NoError(t, err)
 	wg.Add(1)
 	childFunc := func(c *Context) {
 		switch c.Message().(type) {
@@ -120,6 +151,6 @@ func TestSpawnChild(t *testing.T) {
 	e.Poison(pid, stopwg)
 	stopwg.Wait()
 
-	assert.Equal(t, e.deadLetter, e.Registry.get(NewPID("local", "child")))
-	assert.Equal(t, e.deadLetter, e.Registry.get(pid))
+	assert.Nil(t, e.Registry.get(NewPID("local", "child")))
+	assert.Nil(t, e.Registry.get(pid))
 }

@@ -12,41 +12,75 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestRestarts(t *testing.T) {
-	e := NewEngine()
-	wg := sync.WaitGroup{}
+type tick struct{}
+type tickReceiver struct {
+	ticks int
+	wg    *sync.WaitGroup
+}
+
+func (r *tickReceiver) Receive(c *Context) {
+	switch c.Message().(type) {
+	case tick:
+		r.ticks++
+		if r.ticks == 10 {
+			r.wg.Done()
+		}
+	}
+}
+
+func newTickReceiver(wg *sync.WaitGroup) Producer {
+	return func() Receiver {
+		return &tickReceiver{
+			wg: wg,
+		}
+	}
+}
+
+func TestSendRepeat(t *testing.T) {
+	var (
+		wg = &sync.WaitGroup{}
+	)
+	e, err := NewEngine()
+	require.NoError(t, err)
+	wg.Add(1)
+	pid := e.Spawn(newTickReceiver(wg), "test")
+	repeater := e.SendRepeat(pid, tick{}, time.Millisecond*2)
+	wg.Wait()
+	repeater.Stop()
+}
+
+func TestRestartsMaxRestarts(t *testing.T) {
+	e, err := NewEngine()
+	require.NoError(t, err)
+	restarts := 2
 	type payload struct {
 		data int
 	}
-
-	wg.Add(1)
 	pid := e.SpawnFunc(func(c *Context) {
 		switch msg := c.Message().(type) {
 		case Started:
 		case Stopped:
-			fmt.Println("stopped!")
 		case payload:
 			if msg.data != 10 {
 				panic("I failed to process this message")
 			} else {
-				fmt.Println("finally processed all my messsages after borking.", msg.data)
-				wg.Done()
+				fmt.Println("finally processed all my messages after borking.", msg.data)
 			}
 		}
-	}, "foo")
+	}, "foo", WithMaxRestarts(restarts))
 
-	e.Send(pid, payload{1})
-	e.Send(pid, payload{2})
-	e.Send(pid, payload{10})
-	wg.Wait()
+	for i := 0; i < 11; i++ {
+		e.Send(pid, payload{i})
+	}
 }
 
 func TestProcessInitStartOrder(t *testing.T) {
 	var (
-		e             = NewEngine()
 		wg            = sync.WaitGroup{}
 		started, init bool
 	)
+	e, err := NewEngine()
+	require.NoError(t, err)
 	pid := e.SpawnFunc(func(c *Context) {
 		switch c.Message().(type) {
 		case Initialized:
@@ -67,12 +101,43 @@ func TestProcessInitStartOrder(t *testing.T) {
 	wg.Wait()
 }
 
+func TestRestarts(t *testing.T) {
+	e, err := NewEngine()
+	require.NoError(t, err)
+	wg := sync.WaitGroup{}
+	type payload struct {
+		data int
+	}
+
+	wg.Add(1)
+	pid := e.SpawnFunc(func(c *Context) {
+		switch msg := c.Message().(type) {
+		case Started:
+		case Stopped:
+			fmt.Println("stopped!")
+		case payload:
+			if msg.data != 10 {
+				panic("I failed to process this message")
+			} else {
+				fmt.Println("finally processed all my messsages after borking.", msg.data)
+				wg.Done()
+			}
+		}
+	}, "foo", WithRestartDelay(time.Millisecond*10))
+
+	e.Send(pid, payload{1})
+	e.Send(pid, payload{2})
+	e.Send(pid, payload{10})
+	wg.Wait()
+}
+
 func TestSendWithSender(t *testing.T) {
 	var (
-		e      = NewEngine()
 		sender = NewPID("local", "sender")
 		wg     = sync.WaitGroup{}
 	)
+	e, err := NewEngine()
+	require.NoError(t, err)
 	wg.Add(1)
 
 	pid := e.SpawnFunc(func(c *Context) {
@@ -87,7 +152,8 @@ func TestSendWithSender(t *testing.T) {
 }
 
 func TestSendMsgRaceCon(t *testing.T) {
-	e := NewEngine()
+	e, err := NewEngine()
+	require.NoError(t, err)
 	wg := sync.WaitGroup{}
 
 	pid := e.SpawnFunc(func(c *Context) {
@@ -99,16 +165,15 @@ func TestSendMsgRaceCon(t *testing.T) {
 
 	for i := 0; i < 100; i++ {
 		wg.Add(1)
-		go func() {
-			e.Send(pid, []byte("f"))
-			wg.Done()
-		}()
+		e.Send(pid, []byte("f"))
+		wg.Done()
 	}
 	wg.Wait()
 }
 
 func TestSpawn(t *testing.T) {
-	e := NewEngine()
+	e, err := NewEngine()
+	require.NoError(t, err)
 	wg := sync.WaitGroup{}
 
 	for i := 0; i < 10; i++ {
@@ -124,12 +189,65 @@ func TestSpawn(t *testing.T) {
 	wg.Wait()
 }
 
-func TestPoisonWaitGroup(t *testing.T) {
+func TestStopWaitGroup(t *testing.T) {
 	var (
-		e  = NewEngine()
 		wg = sync.WaitGroup{}
 		x  = int32(0)
 	)
+	e, err := NewEngine()
+	require.NoError(t, err)
+	wg.Add(1)
+
+	pid := e.SpawnFunc(func(c *Context) {
+		switch c.Message().(type) {
+		case Started:
+			wg.Done()
+		case Stopped:
+			atomic.AddInt32(&x, 1)
+		}
+	}, "foo")
+	wg.Wait()
+
+	pwg := &sync.WaitGroup{}
+	e.Stop(pid, pwg)
+	pwg.Wait()
+	assert.Equal(t, int32(1), atomic.LoadInt32(&x))
+}
+
+func TestStop(t *testing.T) {
+	var (
+		wg = sync.WaitGroup{}
+	)
+	e, err := NewEngine()
+	require.NoError(t, err)
+	for i := 0; i < 4; i++ {
+		wg.Add(1)
+		tag := strconv.Itoa(i)
+		pid := e.SpawnFunc(func(c *Context) {
+			switch c.Message().(type) {
+			case Started:
+				wg.Done()
+			case Stopped:
+			}
+		}, "foo", WithTags(tag))
+
+		wg.Wait()
+		stopwg := &sync.WaitGroup{}
+		e.Stop(pid, stopwg)
+		stopwg.Wait()
+		// When a process is poisoned it should be removed from the registry.
+		// Hence, we should get nil when looking it up in the registry.
+		assert.Nil(t, e.Registry.get(pid))
+	}
+}
+
+func TestPoisonWaitGroup(t *testing.T) {
+	var (
+		wg = sync.WaitGroup{}
+		x  = int32(0)
+	)
+	e, err := NewEngine()
+	require.NoError(t, err)
 	wg.Add(1)
 
 	pid := e.SpawnFunc(func(c *Context) {
@@ -150,9 +268,10 @@ func TestPoisonWaitGroup(t *testing.T) {
 
 func TestPoison(t *testing.T) {
 	var (
-		e  = NewEngine()
 		wg = sync.WaitGroup{}
 	)
+	e, err := NewEngine()
+	require.NoError(t, err)
 	for i := 0; i < 4; i++ {
 		wg.Add(1)
 		tag := strconv.Itoa(i)
@@ -169,13 +288,15 @@ func TestPoison(t *testing.T) {
 		e.Poison(pid, stopwg)
 		stopwg.Wait()
 		// When a process is poisoned it should be removed from the registry.
-		// Hence, we should get the dead letter process here.
-		assert.Equal(t, e.deadLetter, e.Registry.get(pid))
+		// Hence, we should get NIL when we try to get it.
+		assert.Nil(t, e.Registry.get(pid))
+
 	}
 }
 
 func TestRequestResponse(t *testing.T) {
-	e := NewEngine()
+	e, err := NewEngine()
+	require.NoError(t, err)
 	pid := e.Spawn(NewTestProducer(t, func(t *testing.T, ctx *Context) {
 		if msg, ok := ctx.Message().(string); ok {
 			assert.Equal(t, "foo", msg)
@@ -186,17 +307,17 @@ func TestRequestResponse(t *testing.T) {
 	res, err := resp.Result()
 	assert.Nil(t, err)
 	assert.Equal(t, "bar", res)
-	// Response PID should be the dead letter PID. This is because
+	// Response PID should be nil here. This is because
 	// the actual response process that will handle this RPC
-	// is deregistered. Test that its actually cleaned up.
-	assert.Equal(t, e.deadLetter, e.Registry.get(resp.pid))
+	// is deregistered. Test that it is actually cleaned up.
+	assert.Nil(t, e.Registry.get(resp.pid))
 }
 
 // 56 ns/op
 func BenchmarkSendMessageLocal(b *testing.B) {
-	e := NewEngine()
-	p := NewTestProducer(nil, func(_ *testing.T, _ *Context) {})
-	pid := e.Spawn(p, "bench", WithInboxSize(1024*8))
+	e, err := NewEngine()
+	require.NoError(b, err)
+	pid := e.SpawnFunc(func(_ *Context) {}, "bench", WithInboxSize(128))
 
 	b.ResetTimer()
 	b.Run("send_message_local", func(b *testing.B) {
@@ -207,11 +328,32 @@ func BenchmarkSendMessageLocal(b *testing.B) {
 }
 
 func BenchmarkSendWithSenderMessageLocal(b *testing.B) {
-	e := NewEngine()
+	e, err := NewEngine()
+	require.NoError(b, err)
 	p := NewTestProducer(nil, func(_ *testing.T, _ *Context) {})
 	pid := e.Spawn(p, "bench", WithInboxSize(1024*8))
-
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		e.SendWithSender(pid, pid, pid)
 	}
+}
+
+type TestReceiveFunc func(*testing.T, *Context)
+
+type TestReceiver struct {
+	OnReceive TestReceiveFunc
+	t         *testing.T
+}
+
+func NewTestProducer(t *testing.T, f TestReceiveFunc) Producer {
+	return func() Receiver {
+		return &TestReceiver{
+			OnReceive: f,
+			t:         t,
+		}
+	}
+}
+
+func (r *TestReceiver) Receive(ctx *Context) {
+	r.OnReceive(r.t, ctx)
 }

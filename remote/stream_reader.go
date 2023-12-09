@@ -3,9 +3,9 @@ package remote
 import (
 	"context"
 	"errors"
+	"log/slog"
 
 	"github.com/anthdm/hollywood/actor"
-	"github.com/anthdm/hollywood/log"
 )
 
 type streamReader struct {
@@ -23,9 +23,7 @@ func newStreamReader(r *Remote) *streamReader {
 }
 
 func (r *streamReader) Receive(stream DRPCRemote_ReceiveStream) error {
-	defer func() {
-		log.Tracew("[STREAM READER] terminated", log.M{})
-	}()
+	defer slog.Debug("streamreader terminated")
 
 	for {
 		envelope, err := stream.Recv()
@@ -33,15 +31,16 @@ func (r *streamReader) Receive(stream DRPCRemote_ReceiveStream) error {
 			if errors.Is(err, context.Canceled) {
 				break
 			}
-			log.Errorw("[STREAM READER] receive", log.M{"err": err})
+			slog.Error("streamReader receive", "err", err)
 			return err
 		}
 
 		for _, msg := range envelope.Messages {
 			tname := envelope.TypeNames[msg.TypeNameIndex]
 			payload, err := r.deserializer.Deserialize(msg.Data, tname)
+
 			if err != nil {
-				log.Errorw("[STREAM READER] deserialize error", log.M{"err": err})
+				slog.Error("streamReader deserialize", "err", err)
 				return err
 			}
 			target := envelope.Targets[msg.TargetIndex]
