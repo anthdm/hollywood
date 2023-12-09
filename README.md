@@ -255,7 +255,7 @@ addr is a string with the format "host:port".
 You can add custom middleware to your Receivers. This can be useful for storing metrics, saving and loading data for
 your Receivers on `actor.Started` and `actor.Stopped`.
 
-For examples on how to implement custom middleware, check out the middleware folder in the ***[examples](https://gexamples/middleware)***
+For examples on how to implement custom middleware, check out the middleware folder in the ***[examples](examples/middleware)***
 
 ## Logging
 
