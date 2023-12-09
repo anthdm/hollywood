@@ -62,7 +62,7 @@ compiler.
 ## Hello world.
 
 Let's go through a Hello world message. The complete example is available in the 
-***[hello world](https://github.com/anthdm/hollywood/tree/master/examples/helloworld)*** folder. Let's start in main:
+***[hello world](examples/helloworld)*** folder. Let's start in main:
 ```go
 	engine, err := actor.NewEngine()
 ```
@@ -132,7 +132,7 @@ Finally, lets send a message to the actor.
 This will send a message to the actor. Hollywood will route the message to the correct actor. The actor will then print
 a message to the console.
 
-The **[examples](https://github.com/anthdm/hollywood/tree/master/examples)** folder is the best place to learn and
+The **[examples](https://examples)** folder is the best place to learn and
 explore Hollywood further.
 
 
@@ -142,6 +142,36 @@ explore Hollywood further.
 ```go
     e.Spawn(newFoo, "myactorname")
 ```
+The options should be pretty self explanatory. You can set the maximum number of restarts, which tells the engine
+how many times the given actor should be restarted in case of panic, the size of the inbox, which sets a limit on how
+and unprocessed messages the inbox can hold before it will start to block, and finally you can set a list of tags.
+Tags are used to filter actors when you want to send a message to a group of actors.
+
+### Passing arguments to the constructor
+
+Sometimes you'll want to pass arguments to the actor constructor. This can be done by using a closure. There is
+an example of this in the [request example](examples/request). Let's look at the code.
+
+The default constructor will look something like this:
+```go
+func newNameResponder() actor.Receiver {
+	return &nameResponder{name: "noname"}
+}
+```
+To build a new actor with a name you can do the following:
+```go
+func newCustomNameResponder(name string) actor.Producer {
+	return func() actor.Receiver {
+		return &nameResponder{name}
+	}
+}
+```
+You can then spawn the actor with the following code:
+```go
+pid := engine.Spawn(newCustomNameResponder("anthony"), "name-responder")
+```
+
+
 
 ### With custom configuration
 ```go
@@ -168,7 +198,7 @@ e.SpawnFunc(func(c *actor.Context) {
 Actors can communicate with each other over the network with the Remote package. 
 This works the same as local actors but "over the wire". Hollywood supports serialization with protobuf.
 
-***[Remote actor examples](https://github.com/anthdm/hollywood/tree/master/examples/remote)***
+***[Remote actor examples](examples/remote)***
 
 ## Eventstream
 
@@ -184,7 +214,7 @@ deliver a message to an actor it will send a `DeadLetterEvent` to the event stre
 Any event that fulfills the `actor.LogEvent` interface will be logged to the default logger, with the severity level, 
 message and the attributes of the event set by the `actor.LogEvent` `log()` method.
 
-You can find more in-depth information on how to use the Eventstream in your application in the Eventstream ***[examples](https://github.com/anthdm/hollywood/tree/master/examples/eventstream)***
+You can find more in-depth information on how to use the Eventstream in your application in the Eventstream ***[examples](examples/eventstream)***
 
 ### List of internal system events 
 * `ActorStartedEvent`, an actor has started
@@ -210,7 +240,7 @@ addr is a string with the format "host:port".
 You can add custom middleware to your Receivers. This can be useful for storing metrics, saving and loading data for
 your Receivers on `actor.Started` and `actor.Stopped`.
 
-For examples on how to implement custom middleware, check out the middleware folder in the ***[examples](https://github.com/anthdm/hollywood/tree/master/examples/middleware)***
+For examples on how to implement custom middleware, check out the middleware folder in the ***[examples](https://gexamples/middleware)***
 
 ## Logging
 
