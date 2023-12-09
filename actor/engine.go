@@ -242,12 +242,12 @@ func (e *Engine) SendLocal(pid *PID, msg any, sender *PID) {
 
 // Subscribe will subscribe the given PID to the event stream.
 func (e *Engine) Subscribe(pid *PID) {
-	e.Send(e.eventStream, EventSub{pid: pid})
+	e.Send(e.eventStream, eventSub{pid: pid})
 }
 
 // Unsubscribe will un subscribe the given PID from the event stream.
 func (e *Engine) Unsubscribe(pid *PID) {
-	e.Send(e.eventStream, EventUnsub{pid: pid})
+	e.Send(e.eventStream, eventUnsub{pid: pid})
 }
 
 func (e *Engine) isLocalMessage(pid *PID) bool {
