@@ -17,6 +17,10 @@ message Member {
 message Members {
 	repeated Member members = 1;
 } 
+
+message MembersJoin {
+	repeated Member members = 1;
+}
  
 message Topology {
 	uint64 hash = 1;

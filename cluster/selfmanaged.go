@@ -2,7 +2,6 @@ package cluster
 
 import (
 	"log/slog"
-	"time"
 
 	"github.com/anthdm/hollywood/actor"
 	mapset "github.com/deckarep/golang-set/v2"
@@ -31,11 +30,18 @@ func (s *SelfManaged) Receive(c *actor.Context) {
 	case actor.Started:
 		s.members.Add(s.cluster.Member())
 		s.start(c)
-	case *Members:
+	case *MembersJoin:
+		for _, member := range msg.Members {
+			s.addMember(member)
+		}
 		ourMembers := &Members{
 			Members: s.members.ToSlice(),
 		}
-		c.Respond(ourMembers)
+		for _, member := range s.members.ToSlice() {
+			s.cluster.engine.Send(memberToProviderPID(member), ourMembers)
+		}
+
+	case *Members:
 		for _, member := range msg.Members {
 			s.addMember(member)
 		}
@@ -46,25 +52,27 @@ func (s *SelfManaged) Receive(c *actor.Context) {
 // we respond with all the members we know of and, ofcourse
 // add the new one.
 func (s *SelfManaged) addMember(member *Member) {
-	s.members.Add(member)
-	slog.Info("got new member", "we", s.cluster.id, "id", member.ID, "host", member.Host, "kinds", member.Kinds)
+	if !s.containsMember(member) {
+		s.members.Add(member)
+		slog.Info("got new member", "we", s.cluster.id, "id", member.ID, "host", member.Host, "kinds", member.Kinds)
+	}
+}
+
+func (s *SelfManaged) containsMember(m *Member) bool {
+	for _, member := range s.members.ToSlice() {
+		if member.ID == m.ID {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *SelfManaged) start(c *actor.Context) error {
-	members := &Members{
+	members := &MembersJoin{
 		Members: s.members.ToSlice(),
 	}
 	for _, m := range s.bootstrapMembers {
-		// s.cluster.engine.Send(memberToProviderPID(m), members)
-		resp, err := s.cluster.engine.Request(memberToProviderPID(m), members, time.Millisecond*100).Result()
-		if err != nil {
-			slog.Error("provider failed to request members from node", "err", err)
-			continue
-		}
-		members := resp.(*Members)
-		for _, member := range members.Members {
-			s.addMember(member)
-		}
+		s.cluster.engine.Send(memberToProviderPID(m), members)
 	}
 	return nil
 }
