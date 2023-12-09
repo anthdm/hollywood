@@ -54,4 +54,4 @@ func (m MockProcesser) Send(*PID, any, *PID) {}
 func (m MockProcesser) Invoke(envelopes []Envelope) {
 	m.processFunc(envelopes)
 }
-func (m MockProcesser) Shutdown(group *sync.WaitGroup) {}
+func (m MockProcesser) Shutdown(_ *sync.WaitGroup) {}
