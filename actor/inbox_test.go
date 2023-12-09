@@ -1,6 +1,7 @@
 package actor
 
 import (
+	"runtime"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -10,13 +11,10 @@ import (
 func TestScheduler(t *testing.T) {
 	var executed atomic.Bool
 	scheduler := NewScheduler(10)
-
 	scheduler.Schedule(func() {
 		executed.Store(true)
 	})
-
-	time.Sleep(time.Millisecond) // wait for the scheduled function to execute
-
+	runtime.Gosched()
 	if !executed.Load() {
 		t.Errorf("Expected the function to be executed")
 	}
@@ -24,7 +22,6 @@ func TestScheduler(t *testing.T) {
 
 func TestInboxSendAndProcess(t *testing.T) {
 	inbox := NewInbox(10)
-
 	processedMessages := make(chan Envelope, 10)
 	mockProc := MockProcesser{
 		processFunc: func(envelopes []Envelope) {
@@ -33,17 +30,12 @@ func TestInboxSendAndProcess(t *testing.T) {
 			}
 		},
 	}
-
 	inbox.Start(mockProc)
-
-	// Sending a message
-	msg := Envelope{ /* initialize your message here */ }
+	msg := Envelope{}
 	inbox.Send(msg)
-
 	select {
-	case <-processedMessages:
-		// Message processed
-	case <-time.After(100 * time.Millisecond):
+	case <-processedMessages: // Message processed
+	case <-time.After(time.Millisecond):
 		t.Errorf("Message was not processed in time")
 	}
 
