@@ -13,10 +13,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const (
-	debugLog = false // if you want a lot of noise when debugging the tests set this to true.
-)
-
 func init() {
 	// Needed for now when having the VTProtoserializer
 	RegisterType(&TestMessage{})
@@ -175,12 +171,7 @@ func makeRemoteEngine(listenAddr string) (*actor.Engine, *Remote, error) {
 	var e *actor.Engine
 	r := New(Config{ListenAddr: listenAddr})
 	var err error
-	switch debugLog {
-	case false:
-		e, err = actor.NewEngine(actor.EngineOptRemote(r))
-	case true:
-		e, err = actor.NewEngine(actor.EngineOptRemote(r))
-	}
+	e, err = actor.NewEngine(actor.EngineOptRemote(r))
 	if err != nil {
 		return nil, nil, fmt.Errorf("actor.NewEngine: %w", err)
 	}

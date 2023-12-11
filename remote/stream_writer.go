@@ -126,6 +126,7 @@ func (s *streamWriter) init() {
 				continue
 			}
 		default:
+			slog.Debug("remote using TLS for writing")
 			rawconn, err = tls.Dial("tcp", s.writeToAddr, s.tlsConfig)
 			if err != nil {
 				slog.Error("tls.Dial", "err", err, "remote", s.writeToAddr)

@@ -60,6 +60,7 @@ func (r *Remote) Start(e *actor.Engine) error {
 	case nil:
 		ln, err = net.Listen("tcp", r.config.ListenAddr)
 	default:
+		slog.Debug("remote using TLS for listening")
 		ln, err = tls.Listen("tcp", r.config.ListenAddr, r.config.TlsConfig)
 	}
 	if err != nil {
