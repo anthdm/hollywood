@@ -17,6 +17,9 @@ build:
 	go build -o bin/chatclient examples/chat/client/main.go
 
 bench:
-	go run _bench/main.go
+	go run ./_bench/.
+
+bench-profile:
+	go test -bench='^BenchmarkHollywood$$' -run=NONE -cpuprofile cpu.prof -memprofile mem.prof ./_bench
 
 .PHONY: proto

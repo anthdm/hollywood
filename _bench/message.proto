@@ -1,0 +1,15 @@
+syntax = "proto3";
+package main;
+option go_package = "github.com/anthdm/hollywood/_bench/main";
+
+message Message {
+	string data = 1;
+}
+
+message Ping {
+	string data = 1;
+}
+
+message Pong {
+	string data = 1;
+}
