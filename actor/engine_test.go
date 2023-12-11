@@ -189,6 +189,17 @@ func TestSpawn(t *testing.T) {
 	wg.Wait()
 }
 
+func TestSpawnDuplicateId(t *testing.T) {
+	e, err := NewEngine()
+	require.NoError(t, err)
+	wg := sync.WaitGroup{}
+	pid1 := e.Spawn(NewTestProducer(t, func(t *testing.T, ctx *Context) {}), "dummy")
+	e.Send(pid1, 1)
+	pid2 := e.Spawn(NewTestProducer(t, func(t *testing.T, ctx *Context) {}), "dummy")
+	e.Send(pid2, 2)
+	wg.Wait()
+}
+
 func TestStopWaitGroup(t *testing.T) {
 	var (
 		wg = sync.WaitGroup{}
