@@ -49,11 +49,13 @@ func (r *Registry) getByID(id string) Processer {
 // decide?
 func (r *Registry) add(proc Processer) {
 	r.mu.Lock()
-	defer r.mu.Unlock()
+
 	id := proc.PID().ID
 	if _, ok := r.lookup[id]; ok {
+		r.mu.Unlock()
 		r.engine.BroadcastEvent(ActorDuplicateIdEvent{PID: proc.PID()})
 		return
 	}
 	r.lookup[id] = proc
+	r.mu.Unlock()
 }
