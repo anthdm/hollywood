@@ -2,6 +2,7 @@ package remote
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"log/slog"
 	"net"
@@ -16,6 +17,7 @@ import (
 // Config holds the remote configuration.
 type Config struct {
 	ListenAddr string
+	TlsConfig  *tls.Config
 	Wg         *sync.WaitGroup
 }
 
@@ -52,9 +54,16 @@ func (r *Remote) Start(e *actor.Engine) error {
 	}
 	r.state.Store(stateRunning)
 	r.engine = e
-	ln, err := net.Listen("tcp", r.config.ListenAddr)
+	var ln net.Listener
+	var err error
+	switch r.config.TlsConfig {
+	case nil:
+		ln, err = net.Listen("tcp", r.config.ListenAddr)
+	default:
+		ln, err = tls.Listen("tcp", r.config.ListenAddr, r.config.TlsConfig)
+	}
 	if err != nil {
-		panic("failed to listen: " + err.Error())
+		return fmt.Errorf("remote failed to listen: %w", err)
 	}
 	slog.Debug("listening", "addr", r.config.ListenAddr)
 	mux := drpcmux.New()
@@ -64,7 +73,7 @@ func (r *Remote) Start(e *actor.Engine) error {
 	}
 	s := drpcserver.New(mux)
 
-	r.streamRouterPID = r.engine.Spawn(newStreamRouter(r.engine), "router", actor.WithInboxSize(1024*1024))
+	r.streamRouterPID = r.engine.Spawn(newStreamRouter(r.engine, r.config.TlsConfig), "router", actor.WithInboxSize(1024*1024))
 	slog.Info("server started", "listenAddr", r.config.ListenAddr)
 	r.stopWg = &sync.WaitGroup{}
 	r.stopWg.Add(1)
