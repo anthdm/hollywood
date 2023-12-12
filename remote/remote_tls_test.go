@@ -11,10 +11,8 @@ import (
 	"fmt"
 	"github.com/anthdm/hollywood/actor"
 	"github.com/stretchr/testify/assert"
-	"log/slog"
 	"math/big"
 	"net"
-	"os"
 	"sync"
 	"testing"
 	"time"
@@ -25,24 +23,11 @@ type sharedConfig struct {
 	peer2Config *tls.Config
 }
 
-var tlsTestConfig *sharedConfig
-
-func TestMain(m *testing.M) {
-	// Usage
-	var err error
-	tlsTestConfig, err = generateTLSConfig()
-	if err != nil {
-		panic(err)
-	}
-	// set log/slog to debug:
-	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug})))
-
-	ret := m.Run()
-	os.Exit(ret)
-}
-
+// TestSend_TLS tests sending messages between two remote engines using TLS on the loopback interface.
 func TestSend_TLS(t *testing.T) {
 	const msgs = 10
+	tlsTestConfig, err := generateTLSConfig()
+	assert.NoError(t, err)
 	aAddr := getRandomLocalhostAddr()
 	a, ra, err := makeRemoteEngineTls(aAddr, tlsTestConfig.peer1Config)
 	assert.NoError(t, err)
@@ -52,20 +37,33 @@ func TestSend_TLS(t *testing.T) {
 	wg := &sync.WaitGroup{}
 
 	wg.Add(msgs) // send msgs messages
-	pid := a.SpawnFunc(func(c *actor.Context) {
+	pida := a.SpawnFunc(func(c *actor.Context) {
 		switch msg := c.Message().(type) {
 		case *TestMessage:
 			assert.Equal(t, msg.Data, []byte("foo"))
 			wg.Done()
 		}
-	}, "dfoo")
+	}, "actor on a")
 
 	for i := 0; i < msgs; i++ {
-		b.Send(pid, &TestMessage{Data: []byte("foo")})
+		b.Send(pida, &TestMessage{Data: []byte("foo")})
+	}
+	wg.Add(msgs) // send msgs more messages
+	pidb := b.SpawnFunc(func(c *actor.Context) {
+		switch msg := c.Message().(type) {
+		case *TestMessage:
+			assert.Equal(t, msg.Data, []byte("foo"))
+			wg.Done()
+		}
+	}, "actor on b")
+	for i := 0; i < msgs; i++ {
+		a.Send(pidb, &TestMessage{Data: []byte("foo")})
 	}
 	wg.Wait()        // wait for messages to be received by the actor.
 	ra.Stop().Wait() // shutdown the remotes
 	rb.Stop().Wait()
+	a.Poison(pida).Wait()
+	b.Poison(pidb).Wait()
 }
 
 func generateTLSConfig() (*sharedConfig, error) {
