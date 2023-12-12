@@ -77,13 +77,14 @@ func generateTLSConfig() (*sharedConfig, error) {
 
 	// Create a CA certificate
 	ca := &x509.Certificate{
-		SerialNumber: big.NewInt(1),
+		SerialNumber: big.NewInt(2023),
 		Subject: pkix.Name{
 			Organization: []string{"Hollywood Testing CA"},
 		},
 		NotBefore:             time.Now(),
 		NotAfter:              time.Now().AddDate(0, 0, 1),
 		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
 		BasicConstraintsValid: true,
 		IsCA:                  true,
 	}
@@ -139,11 +140,11 @@ func generateCert(ca *x509.Certificate, caKey *ecdsa.PrivateKey) (*tls.Certifica
 			CommonName: "localhost",
 		},
 		DNSNames:    []string{"localhost"},
-		IPAddresses: []net.IP{net.ParseIP("127.0.0.1")},
+		IPAddresses: []net.IP{net.IPv4(127, 0, 0, 1), net.IPv6loopback},
 		NotBefore:   time.Now(),
-		NotAfter:    time.Now().AddDate(1, 0, 0),
-		KeyUsage:    x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
-		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		NotAfter:    time.Now().AddDate(0, 0, 1),
+		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
+		KeyUsage:    x509.KeyUsageDigitalSignature,
 	}
 	certBytes, err := x509.CreateCertificate(rand.Reader, certificate, ca, &key.PublicKey, caKey)
 	if err != nil {
