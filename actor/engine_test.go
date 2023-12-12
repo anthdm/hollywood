@@ -320,7 +320,8 @@ func TestRequestResponse(t *testing.T) {
 		}
 	}, "actor_a")
 	t.Run("should timeout", func(t *testing.T) {
-		resp := e.Request(a, responseEvent{d: time.Millisecond * 2}, 1*time.Millisecond)
+		// a task with a 1us timeout which takes 20ms to complete, should always time out.
+		resp := e.Request(a, responseEvent{d: time.Millisecond * 20}, 1*time.Microsecond)
 		_, err := resp.Result()
 		assert.Error(t, err)
 		assert.Nil(t, e.Registry.get(resp.pid))
@@ -328,7 +329,8 @@ func TestRequestResponse(t *testing.T) {
 	})
 	t.Run("should not timeout", func(t *testing.T) {
 		for i := 0; i < 200; i++ {
-			resp := e.Request(a, responseEvent{d: time.Microsecond * 1}, time.Millisecond*100)
+			// a task with a 20ms timeout which takes 1us to complete, should always complete.
+			resp := e.Request(a, responseEvent{d: time.Microsecond * 1}, time.Millisecond*20)
 			res, err := resp.Result()
 			assert.NoError(t, err)
 			assert.Equal(t, "foo", res)
