@@ -1,20 +1,21 @@
 package cluster
 
 import (
+	fmt "fmt"
 	"log/slog"
 
 	"github.com/anthdm/hollywood/actor"
 )
 
 type Agent struct {
-	members *Map[string, *Member]
+	members *MemberSet
 	cluster *Cluster
 }
 
 func NewAgent(c *Cluster) actor.Producer {
 	return func() actor.Receiver {
 		return &Agent{
-			members: NewMap[string, *Member](),
+			members: NewMemberSet(),
 			cluster: c,
 		}
 	}
@@ -23,20 +24,33 @@ func NewAgent(c *Cluster) actor.Producer {
 func (a *Agent) Receive(c *actor.Context) {
 	switch msg := c.Message().(type) {
 	case actor.Started:
-		slog.Info("cluster agent started", "pid", c.PID())
 	case *Members:
-		a.handleMembersJoin(msg.Members)
+		a.handleMembers(msg.Members)
 	}
 }
 
-func (a *Agent) handleMembersJoin(members []*Member) {
-	// TODO: Do topology stuff right here.
-	for _, member := range members {
+func (a *Agent) handleMembers(members []*Member) {
+	joined := NewMemberSet(members...).Except(a.members.Slice())
+	left := a.members.Except(members)
+
+	fmt.Println("joined", joined)
+	fmt.Println("left", left)
+
+	for _, member := range joined {
 		a.memberJoin(member)
+	}
+	for _, member := range left {
+		a.memberLeave(member)
 	}
 }
 
 func (a *Agent) memberJoin(member *Member) {
 	slog.Info("member joined", "we", a.cluster.id, "id", member.ID, "host", member.Host, "kinds", member.Kinds)
-	a.members.Add(member.ID, member)
+	a.members.Add(member)
+	// Send our ActorTopology to this member
+}
+
+func (a *Agent) memberLeave(member *Member) {
+	slog.Info("member left", "we", a.cluster.id, "id", member.ID, "host", member.Host, "kinds", member.Kinds)
+	a.members.Remove(member)
 }

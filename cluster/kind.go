@@ -21,3 +21,12 @@ func NewKind(name string, p actor.Producer, opts KindOpts) *Kind {
 		producer: p,
 	}
 }
+
+type ActivatedKind struct {
+	// pid of the activated kind
+	pid *actor.PID
+	// cid of the activated kind
+	cid *CID
+	// Wether the actor is activated on this cluster or not.
+	isLocal bool
+}

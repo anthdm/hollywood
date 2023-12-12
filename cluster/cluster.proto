@@ -21,6 +21,10 @@ message Members {
 message MembersJoin {
 	repeated Member members = 1;
 }
+
+message MembersLeave {
+	repeated Member members = 1;
+}
  
 message Topology {
 	uint64 hash = 1;
@@ -28,6 +32,15 @@ message Topology {
 	repeated Member left = 3;
 	repeated Member joined = 4;
 	repeated Member blocked = 5;
+}
+
+message ActorInfo {
+	actor.PID PID = 1;
+	CID CID = 2;
+}
+
+message ActorTopology {
+	repeated ActorInfo actors = 1; 
 }
 
 message Activation {

@@ -64,9 +64,9 @@ func (c *Cluster) RegisterKind(name string, producer actor.Producer, opts KindOp
 	c.kinds[name] = NewKind(name, producer, opts)
 }
 
-// PID returns the reachable actor process id.
+// PID returns the reachable actor process id, which is the Agent actor.
 func (c *Cluster) PID() *actor.PID {
-	return nil
+	return c.agentPID
 }
 
 // Member return the member info of this cluster.
