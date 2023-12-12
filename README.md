@@ -203,6 +203,30 @@ e.SpawnFunc(func(c *actor.Context) {
 Actors can communicate with each other over the network with the Remote package. 
 This works the same as local actors but "over the wire". Hollywood supports serialization with protobuf.
 
+### Configuration
+
+remote.New() takes a remote.Config struct. This struct contains the following fields:
+- ListenAddr string
+- TlsConfig *tls.Config
+
+You'll instantiate a new remote with the following code:
+```go
+	var engine *actor.Engine
+	remote := remote.New(
+		remote.Config{
+			ListenAddr: "0.0.0.0:2222", 
+			TlsConfig: &tls.Config{
+				Certificates: []tls.Certificate{cert},
+			}
+		}		
+	})
+	var err error
+	engine, err = actor.NewEngine(actor.EngineOptRemote(remote))
+
+```
+
+
+
 Look at the [Remote actor examples](examples/remote) and the [Chat client & Server](examples/chat) for more information.
 
 ## Eventstream
