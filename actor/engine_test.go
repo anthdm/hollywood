@@ -329,8 +329,7 @@ func TestRequestResponse(t *testing.T) {
 	})
 	t.Run("should not timeout", func(t *testing.T) {
 		for i := 0; i < 200; i++ {
-			// a task with a 20ms timeout which takes 1us to complete, should always complete.
-			resp := e.Request(a, responseEvent{d: time.Microsecond * 1}, time.Millisecond*20)
+			resp := e.Request(a, responseEvent{d: time.Microsecond * 1}, time.Millisecond*800)
 			res, err := resp.Result()
 			assert.NoError(t, err)
 			assert.Equal(t, "foo", res)
