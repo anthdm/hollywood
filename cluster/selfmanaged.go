@@ -1,7 +1,6 @@
 package cluster
 
 import (
-	fmt "fmt"
 	"log/slog"
 	"time"
 
@@ -63,25 +62,25 @@ func (s *SelfManaged) Receive(c *actor.Context) {
 			s.cluster.engine.Send(s.cluster.PID(), members)
 		}
 	case memberPing:
-		fmt.Println("pinging all the members", s.members.Len())
+		// fmt.Println("pinging all the members", s.members.Len())
 		s.members.ForEach(func(member *Member) bool {
 			ping := &actor.Ping{
 				From: c.PID(),
 			}
-			_, err := c.Request(memberToProviderPID(member), ping, time.Millisecond*100).Result()
+			pong, err := c.Request(memberToProviderPID(member), ping, time.Millisecond*1000).Result()
 			if err != nil {
 				slog.Error("member ping failed", "err", err, "memberID", member.ID)
 				s.removeMember(member)
 			}
 			// TODO: Something is not quite right here!
-			// if _, ok := pong.(*actor.Pong); !ok {
-			// 	slog.Error("member ping failed", "err", err, "memberID", member.ID)
-			// 	s.removeMember(member)
-			// }
+			if _, ok := pong.(*actor.Pong); !ok {
+				slog.Error("member ping failed", "err", err, "memberID", member.ID)
+				s.removeMember(member)
+			}
 			return true
 		})
 	case *actor.Ping:
-		// c.Respond(&actor.Pong{From: c.PID()})
+		c.Respond(&actor.Pong{From: c.PID()})
 	}
 }
 

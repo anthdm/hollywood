@@ -1,7 +1,6 @@
 package cluster
 
 import (
-	fmt "fmt"
 	"log/slog"
 
 	"github.com/anthdm/hollywood/actor"
@@ -32,9 +31,6 @@ func (a *Agent) Receive(c *actor.Context) {
 func (a *Agent) handleMembers(members []*Member) {
 	joined := NewMemberSet(members...).Except(a.members.Slice())
 	left := a.members.Except(members)
-
-	fmt.Println("joined", joined)
-	fmt.Println("left", left)
 
 	for _, member := range joined {
 		a.memberJoin(member)

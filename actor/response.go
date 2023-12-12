@@ -2,6 +2,7 @@ package actor
 
 import (
 	"context"
+	"math"
 	"math/rand"
 	"strconv"
 	"sync"
@@ -20,7 +21,7 @@ func NewResponse(e *Engine, timeout time.Duration) *Response {
 		engine:  e,
 		result:  make(chan any, 1),
 		timeout: timeout,
-		pid:     NewPID(e.address, "response", strconv.Itoa(rand.Intn(100000))),
+		pid:     NewPID(e.address, "response", strconv.Itoa(rand.Intn(math.MaxInt))),
 	}
 }
 

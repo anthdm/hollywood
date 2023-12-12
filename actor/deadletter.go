@@ -32,7 +32,7 @@ func (d *deadLetter) Receive(ctx *Context) {
 	case Initialized:
 		slog.Debug("default deadletter actor initialized")
 	case *DeadLetterEvent:
-		slog.Warn("deadletter arrived", "msg-type", reflect.TypeOf(msg),
+		slog.Warn("[DEADLETTER]", "msg", reflect.TypeOf(msg.Message),
 			"sender", msg.Sender, "target", msg.Target, "msg", msg.Message)
 	default:
 		slog.Error("unknown message arrived at deadletter", "msg", msg)
