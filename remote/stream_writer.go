@@ -2,6 +2,7 @@ package remote
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"io"
 	"log/slog"
@@ -28,9 +29,10 @@ type streamWriter struct {
 	pid         *actor.PID
 	inbox       actor.Inboxer
 	serializer  Serializer
+	tlsConfig   *tls.Config
 }
 
-func newStreamWriter(e *actor.Engine, rpid *actor.PID, address string) actor.Processer {
+func newStreamWriter(e *actor.Engine, rpid *actor.PID, address string, tlsConfig *tls.Config) actor.Processer {
 	return &streamWriter{
 		writeToAddr: address,
 		engine:      e,
@@ -38,6 +40,7 @@ func newStreamWriter(e *actor.Engine, rpid *actor.PID, address string) actor.Pro
 		inbox:       actor.NewInbox(streamWriterBatchSize),
 		pid:         actor.NewPID(e.Address(), "stream", address),
 		serializer:  ProtoSerializer{},
+		tlsConfig:   tlsConfig,
 	}
 }
 
@@ -112,11 +115,24 @@ func (s *streamWriter) init() {
 		delay   time.Duration = time.Millisecond * 500
 	)
 	for {
-		rawconn, err = net.Dial("tcp", s.writeToAddr)
-		if err != nil {
-			slog.Error("net.Dial", "err", err, "remote", s.writeToAddr)
-			time.Sleep(delay)
-			continue
+		// Here we try to connect to the remote address.
+		// Todo: can we make an Event here in case of failure?
+		switch s.tlsConfig {
+		case nil:
+			rawconn, err = net.Dial("tcp", s.writeToAddr)
+			if err != nil {
+				slog.Error("net.Dial", "err", err, "remote", s.writeToAddr)
+				time.Sleep(delay)
+				continue
+			}
+		default:
+			slog.Debug("remote using TLS for writing")
+			rawconn, err = tls.Dial("tcp", s.writeToAddr, s.tlsConfig)
+			if err != nil {
+				slog.Error("tls.Dial", "err", err, "remote", s.writeToAddr)
+				time.Sleep(delay)
+				continue
+			}
 		}
 		break
 	}
