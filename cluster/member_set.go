@@ -64,3 +64,13 @@ func (s *MemberSet) Except(members []*Member) []*Member {
 	}
 	return except
 }
+
+func (s *MemberSet) FilterByKind(kind string) []*Member {
+	members := []*Member{}
+	for _, member := range s.members {
+		if member.HasKind(kind) {
+			members = append(members, member)
+		}
+	}
+	return members
+}

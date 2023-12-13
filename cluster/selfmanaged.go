@@ -1,7 +1,7 @@
 package cluster
 
 import (
-	"log/slog"
+	fmt "fmt"
 	"time"
 
 	"github.com/anthdm/hollywood/actor"
@@ -16,6 +16,8 @@ type SelfManaged struct {
 	bootstrapMembers []*Member
 	members          *MemberSet
 	memberPinger     actor.SendRepeater
+
+	membersAlive *MemberSet
 }
 
 func NewSelfManagedProvider(members ...*Member) Producer {
@@ -25,6 +27,7 @@ func NewSelfManagedProvider(members ...*Member) Producer {
 				cluster:          c,
 				bootstrapMembers: members,
 				members:          NewMemberSet(),
+				membersAlive:     NewMemberSet(),
 			}
 		}
 	}
@@ -63,24 +66,33 @@ func (s *SelfManaged) Receive(c *actor.Context) {
 		}
 	case memberPing:
 		// fmt.Println("pinging all the members", s.members.Len())
-		s.members.ForEach(func(member *Member) bool {
-			ping := &actor.Ping{
-				From: c.PID(),
-			}
-			pong, err := c.Request(memberToProviderPID(member), ping, time.Millisecond*1000).Result()
-			if err != nil {
-				slog.Error("member ping failed", "err", err, "memberID", member.ID)
-				s.removeMember(member)
-			}
-			// TODO: Something is not quite right here!
-			if _, ok := pong.(*actor.Pong); !ok {
-				slog.Error("member ping failed", "err", err, "memberID", member.ID)
-				s.removeMember(member)
-			}
-			return true
-		})
-	case *actor.Ping:
-		c.Respond(&actor.Pong{From: c.PID()})
+		// s.members.ForEach(func(member *Member) bool {
+		// 	ping := &actor.Ping{
+		// 		From: c.PID(),
+		// 	}
+		// 	c.Send(memberToProviderPID(member), ping)
+		// 	return true
+		// })
+		// 	pong, err := c.Request(memberToProviderPID(member), ping, time.Millisecond*1000).Result()
+		// 	if err != nil {
+		// 		slog.Error("member ping failed", "err", err, "memberID", member.ID)
+		// 		s.removeMember(member)
+		// 	}
+		// 	// TODO: Something is not quite right here!
+		// 	if _, ok := pong.(*actor.Pong); !ok {
+		// 		slog.Error("member ping failed", "err", err, "memberID", member.ID)
+		// 		s.removeMember(member)
+		// 	}
+		// 	return true
+		// })
+		// case *actor.Ping:
+		// 	pong := &actor.Pong{
+		// 		From: c.PID(),
+		// 	}
+		// 	c.Respond(pong)
+		// case *actor.Pong:
+		// 	id := msg.From.ID
+		// 	fmt.Println("got pong id", id)
 	}
 }
 
@@ -108,6 +120,15 @@ func (s *SelfManaged) updateCluster() {
 }
 
 func (s *SelfManaged) start(c *actor.Context) error {
+	eventSubPID := c.SpawnChildFunc(func(ctx *actor.Context) {
+		switch msg := ctx.Message().(type) {
+		case actor.DeadLetterEvent:
+			fmt.Println("got deadletter", msg)
+		}
+	}, "event")
+
+	s.cluster.engine.Subscribe(eventSubPID)
+
 	members := &MembersJoin{
 		Members: s.members.Slice(),
 	}

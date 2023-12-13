@@ -571,6 +571,124 @@ func (x *Deactivation) GetCID() *CID {
 	return nil
 }
 
+type ActivationRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	CID          *CID   `protobuf:"bytes,1,opt,name=CID,proto3" json:"CID,omitempty"`
+	TopologyHash uint64 `protobuf:"varint,3,opt,name=topologyHash,proto3" json:"topologyHash,omitempty"`
+}
+
+func (x *ActivationRequest) Reset() {
+	*x = ActivationRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_cluster_proto_msgTypes[10]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *ActivationRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ActivationRequest) ProtoMessage() {}
+
+func (x *ActivationRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_cluster_proto_msgTypes[10]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ActivationRequest.ProtoReflect.Descriptor instead.
+func (*ActivationRequest) Descriptor() ([]byte, []int) {
+	return file_cluster_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *ActivationRequest) GetCID() *CID {
+	if x != nil {
+		return x.CID
+	}
+	return nil
+}
+
+func (x *ActivationRequest) GetTopologyHash() uint64 {
+	if x != nil {
+		return x.TopologyHash
+	}
+	return 0
+}
+
+type ActivationResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	PID          *actor.PID `protobuf:"bytes,1,opt,name=PID,proto3" json:"PID,omitempty"`
+	Success      bool       `protobuf:"varint,2,opt,name=success,proto3" json:"success,omitempty"`
+	TopologyHash uint64     `protobuf:"varint,3,opt,name=topologyHash,proto3" json:"topologyHash,omitempty"`
+}
+
+func (x *ActivationResponse) Reset() {
+	*x = ActivationResponse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_cluster_proto_msgTypes[11]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *ActivationResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ActivationResponse) ProtoMessage() {}
+
+func (x *ActivationResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_cluster_proto_msgTypes[11]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ActivationResponse.ProtoReflect.Descriptor instead.
+func (*ActivationResponse) Descriptor() ([]byte, []int) {
+	return file_cluster_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *ActivationResponse) GetPID() *actor.PID {
+	if x != nil {
+		return x.PID
+	}
+	return nil
+}
+
+func (x *ActivationResponse) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+func (x *ActivationResponse) GetTopologyHash() uint64 {
+	if x != nil {
+		return x.TopologyHash
+	}
+	return 0
+}
+
 var File_cluster_proto protoreflect.FileDescriptor
 
 var file_cluster_proto_rawDesc = []byte{
@@ -624,10 +742,22 @@ var file_cluster_proto_rawDesc = []byte{
 	0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x0a, 0x2e, 0x61, 0x63, 0x74, 0x6f, 0x72, 0x2e, 0x50, 0x49,
 	0x44, 0x52, 0x03, 0x50, 0x49, 0x44, 0x12, 0x1e, 0x0a, 0x03, 0x43, 0x49, 0x44, 0x18, 0x02, 0x20,
 	0x01, 0x28, 0x0b, 0x32, 0x0c, 0x2e, 0x63, 0x6c, 0x75, 0x73, 0x74, 0x65, 0x72, 0x2e, 0x43, 0x49,
-	0x44, 0x52, 0x03, 0x43, 0x49, 0x44, 0x42, 0x25, 0x5a, 0x23, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62,
-	0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x61, 0x6e, 0x74, 0x68, 0x64, 0x6d, 0x2f, 0x68, 0x6f, 0x6c, 0x6c,
-	0x79, 0x77, 0x6f, 0x6f, 0x64, 0x2f, 0x63, 0x6c, 0x75, 0x73, 0x74, 0x65, 0x72, 0x62, 0x06, 0x70,
-	0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x44, 0x52, 0x03, 0x43, 0x49, 0x44, 0x22, 0x57, 0x0a, 0x11, 0x41, 0x63, 0x74, 0x69, 0x76, 0x61,
+	0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x1e, 0x0a, 0x03, 0x43,
+	0x49, 0x44, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x0c, 0x2e, 0x63, 0x6c, 0x75, 0x73, 0x74,
+	0x65, 0x72, 0x2e, 0x43, 0x49, 0x44, 0x52, 0x03, 0x43, 0x49, 0x44, 0x12, 0x22, 0x0a, 0x0c, 0x74,
+	0x6f, 0x70, 0x6f, 0x6c, 0x6f, 0x67, 0x79, 0x48, 0x61, 0x73, 0x68, 0x18, 0x03, 0x20, 0x01, 0x28,
+	0x04, 0x52, 0x0c, 0x74, 0x6f, 0x70, 0x6f, 0x6c, 0x6f, 0x67, 0x79, 0x48, 0x61, 0x73, 0x68, 0x22,
+	0x70, 0x0a, 0x12, 0x41, 0x63, 0x74, 0x69, 0x76, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x73,
+	0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x1c, 0x0a, 0x03, 0x50, 0x49, 0x44, 0x18, 0x01, 0x20, 0x01,
+	0x28, 0x0b, 0x32, 0x0a, 0x2e, 0x61, 0x63, 0x74, 0x6f, 0x72, 0x2e, 0x50, 0x49, 0x44, 0x52, 0x03,
+	0x50, 0x49, 0x44, 0x12, 0x18, 0x0a, 0x07, 0x73, 0x75, 0x63, 0x63, 0x65, 0x73, 0x73, 0x18, 0x02,
+	0x20, 0x01, 0x28, 0x08, 0x52, 0x07, 0x73, 0x75, 0x63, 0x63, 0x65, 0x73, 0x73, 0x12, 0x22, 0x0a,
+	0x0c, 0x74, 0x6f, 0x70, 0x6f, 0x6c, 0x6f, 0x67, 0x79, 0x48, 0x61, 0x73, 0x68, 0x18, 0x03, 0x20,
+	0x01, 0x28, 0x04, 0x52, 0x0c, 0x74, 0x6f, 0x70, 0x6f, 0x6c, 0x6f, 0x67, 0x79, 0x48, 0x61, 0x73,
+	0x68, 0x42, 0x25, 0x5a, 0x23, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f,
+	0x61, 0x6e, 0x74, 0x68, 0x64, 0x6d, 0x2f, 0x68, 0x6f, 0x6c, 0x6c, 0x79, 0x77, 0x6f, 0x6f, 0x64,
+	0x2f, 0x63, 0x6c, 0x75, 0x73, 0x74, 0x65, 0x72, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -642,19 +772,21 @@ func file_cluster_proto_rawDescGZIP() []byte {
 	return file_cluster_proto_rawDescData
 }
 
-var file_cluster_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
+var file_cluster_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
 var file_cluster_proto_goTypes = []interface{}{
-	(*CID)(nil),           // 0: cluster.CID
-	(*Member)(nil),        // 1: cluster.Member
-	(*Members)(nil),       // 2: cluster.Members
-	(*MembersJoin)(nil),   // 3: cluster.MembersJoin
-	(*MembersLeave)(nil),  // 4: cluster.MembersLeave
-	(*Topology)(nil),      // 5: cluster.Topology
-	(*ActorInfo)(nil),     // 6: cluster.ActorInfo
-	(*ActorTopology)(nil), // 7: cluster.ActorTopology
-	(*Activation)(nil),    // 8: cluster.Activation
-	(*Deactivation)(nil),  // 9: cluster.Deactivation
-	(*actor.PID)(nil),     // 10: actor.PID
+	(*CID)(nil),                // 0: cluster.CID
+	(*Member)(nil),             // 1: cluster.Member
+	(*Members)(nil),            // 2: cluster.Members
+	(*MembersJoin)(nil),        // 3: cluster.MembersJoin
+	(*MembersLeave)(nil),       // 4: cluster.MembersLeave
+	(*Topology)(nil),           // 5: cluster.Topology
+	(*ActorInfo)(nil),          // 6: cluster.ActorInfo
+	(*ActorTopology)(nil),      // 7: cluster.ActorTopology
+	(*Activation)(nil),         // 8: cluster.Activation
+	(*Deactivation)(nil),       // 9: cluster.Deactivation
+	(*ActivationRequest)(nil),  // 10: cluster.ActivationRequest
+	(*ActivationResponse)(nil), // 11: cluster.ActivationResponse
+	(*actor.PID)(nil),          // 12: actor.PID
 }
 var file_cluster_proto_depIdxs = []int32{
 	1,  // 0: cluster.Members.members:type_name -> cluster.Member
@@ -664,18 +796,20 @@ var file_cluster_proto_depIdxs = []int32{
 	1,  // 4: cluster.Topology.left:type_name -> cluster.Member
 	1,  // 5: cluster.Topology.joined:type_name -> cluster.Member
 	1,  // 6: cluster.Topology.blocked:type_name -> cluster.Member
-	10, // 7: cluster.ActorInfo.PID:type_name -> actor.PID
+	12, // 7: cluster.ActorInfo.PID:type_name -> actor.PID
 	0,  // 8: cluster.ActorInfo.CID:type_name -> cluster.CID
 	6,  // 9: cluster.ActorTopology.actors:type_name -> cluster.ActorInfo
-	10, // 10: cluster.Activation.PID:type_name -> actor.PID
+	12, // 10: cluster.Activation.PID:type_name -> actor.PID
 	0,  // 11: cluster.Activation.CID:type_name -> cluster.CID
-	10, // 12: cluster.Deactivation.PID:type_name -> actor.PID
+	12, // 12: cluster.Deactivation.PID:type_name -> actor.PID
 	0,  // 13: cluster.Deactivation.CID:type_name -> cluster.CID
-	14, // [14:14] is the sub-list for method output_type
-	14, // [14:14] is the sub-list for method input_type
-	14, // [14:14] is the sub-list for extension type_name
-	14, // [14:14] is the sub-list for extension extendee
-	0,  // [0:14] is the sub-list for field type_name
+	0,  // 14: cluster.ActivationRequest.CID:type_name -> cluster.CID
+	12, // 15: cluster.ActivationResponse.PID:type_name -> actor.PID
+	16, // [16:16] is the sub-list for method output_type
+	16, // [16:16] is the sub-list for method input_type
+	16, // [16:16] is the sub-list for extension type_name
+	16, // [16:16] is the sub-list for extension extendee
+	0,  // [0:16] is the sub-list for field type_name
 }
 
 func init() { file_cluster_proto_init() }
@@ -804,6 +938,30 @@ func file_cluster_proto_init() {
 				return nil
 			}
 		}
+		file_cluster_proto_msgTypes[10].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*ActivationRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_cluster_proto_msgTypes[11].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*ActivationResponse); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -811,7 +969,7 @@ func file_cluster_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_cluster_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   10,
+			NumMessages:   12,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

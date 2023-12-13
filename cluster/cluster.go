@@ -1,6 +1,9 @@
 package cluster
 
 import (
+	"log/slog"
+	"time"
+
 	"github.com/anthdm/hollywood/actor"
 )
 
@@ -60,6 +63,16 @@ func (c *Cluster) Start() error {
 	return nil
 }
 
+// Activate actives the given kind with the given id in the cluster.
+func (c *Cluster) Activate(kind string, id string) *actor.PID {
+	resp, err := c.engine.Request(c.agentPID, activate{kind: kind, id: id}, time.Millisecond*100).Result()
+	if err != nil {
+		slog.Error("activation failed", "err", err)
+		return nil
+	}
+	return resp.(*actor.PID)
+}
+
 func (c *Cluster) RegisterKind(name string, producer actor.Producer, opts KindOpts) {
 	c.kinds[name] = NewKind(name, producer, opts)
 }
@@ -76,6 +89,11 @@ func (c *Cluster) Member() *Member {
 		Host:  c.engine.Address(),
 		Kinds: c.kindsToSlice(),
 	}
+}
+
+func (c *Cluster) HasKind(kind string) bool {
+	_, ok := c.kinds[kind]
+	return ok
 }
 
 func (c *Cluster) kindsToSlice() []string {

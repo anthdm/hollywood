@@ -52,3 +52,14 @@ message Deactivation {
 	actor.PID PID = 1;
 	CID CID = 2;
 }
+
+message ActivationRequest {
+	CID CID = 1;
+	uint64 topologyHash = 3;
+}
+
+message ActivationResponse {
+	actor.PID PID = 1;
+	bool success = 2;
+	uint64 topologyHash = 3;
+}
