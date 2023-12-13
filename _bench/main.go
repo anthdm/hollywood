@@ -22,7 +22,7 @@ type monitor struct {
 func (m *monitor) Receive(ctx *actor.Context) {
 	switch ctx.Message().(type) {
 	case actor.Initialized:
-		ctx.Engine().BroadcastEvent(&actor.EventSub{})
+		ctx.Engine().Subscribe(ctx.PID())
 	case actor.DeadLetterEvent:
 		deadLetters.Add(1)
 	}
