@@ -1,6 +1,7 @@
 package cluster
 
 import (
+	fmt "fmt"
 	"log/slog"
 	"math/rand"
 	reflect "reflect"
@@ -35,6 +36,7 @@ func (a *Agent) Receive(c *actor.Context) {
 	case actor.Started:
 	case *ActorTopology:
 		a.handleActorTopology(msg)
+		fmt.Println("got actor top", msg)
 	case *Members:
 		a.handleMembers(msg.Members)
 	case *Activation:
@@ -125,7 +127,22 @@ func (a *Agent) handleMembers(members []*Member) {
 func (a *Agent) memberJoin(member *Member) {
 	slog.Info("member joined", "we", a.cluster.id, "id", member.ID, "host", member.Host, "kinds", member.Kinds)
 	a.members.Add(member)
+
+	actorInfos := []*ActorInfo{}
+	for _, kinds := range a.activeKinds.kinds {
+		for _, akind := range kinds.ToSlice() {
+			actorInfo := &ActorInfo{
+				PID: akind.pid,
+				CID: akind.cid,
+			}
+			actorInfos = append(actorInfos, actorInfo)
+		}
+	}
+
 	// Send our ActorTopology to this member
+	if len(actorInfos) > 0 {
+		a.cluster.engine.Send(memberToPID(member), &ActorTopology{Actors: actorInfos})
+	}
 }
 
 func (a *Agent) memberLeave(member *Member) {
@@ -146,6 +163,8 @@ func (a *Agent) addKind(cid *CID, pid *actor.PID) {
 		cid:     cid,
 		isLocal: false,
 	}
-	a.activeKinds.Add(akind)
-	slog.Info("[ACTIVE]", "we", a.cluster.id, "cid", cid, "pid", pid)
+	if !a.activeKinds.Has(akind) {
+		a.activeKinds.Add(akind)
+		slog.Info("[ACTIVE]", "we", a.cluster.id, "cid", cid, "pid", pid)
+	}
 }

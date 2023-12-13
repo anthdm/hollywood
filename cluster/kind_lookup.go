@@ -32,3 +32,19 @@ func (l *KindLookup) Get(kind string) []ActiveKind {
 func (l *KindLookup) Remove(name string, kind ActiveKind) {
 
 }
+
+func (l *KindLookup) Has(kind ActiveKind) bool {
+	kinds, ok := l.kinds[kind.cid.Kind]
+	if !ok {
+		return false
+	}
+	found := false
+	kinds.Each(func(akind ActiveKind) bool {
+		if kind.cid.Equals(akind.cid) && kind.pid.Equals(akind.pid) {
+			found = true
+			return false
+		}
+		return true
+	})
+	return found
+}

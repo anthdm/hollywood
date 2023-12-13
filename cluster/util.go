@@ -31,3 +31,7 @@ func (m *Member) HasKind(kind string) bool {
 	}
 	return false
 }
+
+func (cid *CID) Equals(other *CID) bool {
+	return cid.ID == other.ID && cid.Kind == other.Kind
+}

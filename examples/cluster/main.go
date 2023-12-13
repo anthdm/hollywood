@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"time"
 
@@ -58,20 +57,16 @@ func main() {
 	c2 := makeCluster("localhost:3002", "B", member)
 	c2.RegisterKind("inventory", NewInventory, cluster.KindOpts{})
 	c2.RegisterKind("player", NewPlayer, cluster.KindOpts{})
-
 	c2.Start()
+
+	time.Sleep(time.Second)
+
+	c2.Activate("player", "supermario")
 	time.Sleep(time.Second)
 
 	c3 := makeCluster("localhost:3003", "C", member)
 	c3.RegisterKind("inventory", NewInventory, cluster.KindOpts{})
 	c3.Start()
-
-	time.Sleep(time.Second)
-	playerPID := c3.Activate("player", "someplayer")
-	time.Sleep(time.Second)
-
-	fmt.Println("we are node", c3.PID())
-	fmt.Println("just activated a player actor with id someplayer on the cluster", playerPID)
 
 	time.Sleep(time.Second * 10000)
 }
