@@ -22,7 +22,8 @@ func NewKind(name string, p actor.Producer, opts KindOpts) *Kind {
 	}
 }
 
-type ActivatedKind struct {
+// ActiveKind is a kind that is active somewhere on the cluster.
+type ActiveKind struct {
 	// pid of the activated kind
 	pid *actor.PID
 	// cid of the activated kind

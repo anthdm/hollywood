@@ -3,6 +3,7 @@ package cluster
 import (
 	"log/slog"
 	"math/rand"
+	reflect "reflect"
 	"time"
 
 	"github.com/anthdm/hollywood/actor"
@@ -14,15 +15,17 @@ type activate struct {
 }
 
 type Agent struct {
-	members *MemberSet
-	cluster *Cluster
+	members     *MemberSet
+	cluster     *Cluster
+	activeKinds *KindLookup
 }
 
 func NewAgent(c *Cluster) actor.Producer {
 	return func() actor.Receiver {
 		return &Agent{
-			members: NewMemberSet(),
-			cluster: c,
+			members:     NewMemberSet(),
+			cluster:     c,
+			activeKinds: NewKindLookup(),
 		}
 	}
 }
@@ -30,8 +33,12 @@ func NewAgent(c *Cluster) actor.Producer {
 func (a *Agent) Receive(c *actor.Context) {
 	switch msg := c.Message().(type) {
 	case actor.Started:
+	case *ActorTopology:
+		a.handleActorTopology(msg)
 	case *Members:
 		a.handleMembers(msg.Members)
+	case *Activation:
+		a.handleActivation(msg)
 	case activate:
 		pid := a.activate(NewCID(msg.kind, msg.id))
 		c.Respond(pid)
@@ -39,6 +46,19 @@ func (a *Agent) Receive(c *actor.Context) {
 		resp := a.handleActivationRequest(msg)
 		c.Respond(resp)
 	}
+}
+
+func (a *Agent) handleActorTopology(msg *ActorTopology) {
+	for _, actorInfo := range msg.Actors {
+		a.addKind(actorInfo.CID, actorInfo.PID)
+	}
+}
+
+// A new kind is activated on this cluster.
+func (a *Agent) handleActivation(msg *Activation) {
+	a.addKind(msg.CID, msg.PID)
+	// TODO:
+	// Make sure we update the cluster kinds when were have spawned this actor dynamically
 }
 
 func (a *Agent) handleActivationRequest(msg *ActivationRequest) *ActivationResponse {
@@ -74,8 +94,19 @@ func (a *Agent) activate(cid *CID) *actor.PID {
 	}
 	r, ok := resp.(*ActivationResponse)
 	if !ok {
-
+		slog.Error("expected *ActivationResponse", "msg", reflect.TypeOf(resp))
+		return nil
 	}
+	if !r.Success {
+		slog.Error("activation unsuccessfull", "msg", r)
+		return nil
+	}
+
+	a.bcast(&Activation{
+		PID: r.PID,
+		CID: cid,
+	})
+
 	return r.PID
 }
 
@@ -100,4 +131,21 @@ func (a *Agent) memberJoin(member *Member) {
 func (a *Agent) memberLeave(member *Member) {
 	slog.Info("member left", "we", a.cluster.id, "id", member.ID, "host", member.Host, "kinds", member.Kinds)
 	a.members.Remove(member)
+}
+
+func (a *Agent) bcast(msg any) {
+	a.members.ForEach(func(member *Member) bool {
+		a.cluster.engine.Send(memberToPID(member), msg)
+		return true
+	})
+}
+
+func (a *Agent) addKind(cid *CID, pid *actor.PID) {
+	akind := ActiveKind{
+		pid:     pid,
+		cid:     cid,
+		isLocal: false,
+	}
+	a.activeKinds.Add(akind)
+	slog.Info("[ACTIVE]", "we", a.cluster.id, "cid", cid, "pid", pid)
 }
