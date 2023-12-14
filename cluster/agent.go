@@ -56,7 +56,6 @@ func (a *Agent) Receive(c *actor.Context) {
 	case actor.Started:
 	case *ActorTopology:
 		a.handleActorTopology(msg)
-		fmt.Println("got actor top", msg)
 	case *Members:
 		a.handleMembers(msg.Members)
 	case *Activation:
@@ -162,7 +161,6 @@ func (a *Agent) handleMembers(members []*Member) {
 }
 
 func (a *Agent) memberJoin(member *Member) {
-	slog.Info("member joined", "we", a.cluster.id, "id", member.ID, "host", member.Host, "kinds", member.Kinds)
 	a.members.Add(member)
 
 	// track cluster wide available kinds
@@ -185,8 +183,11 @@ func (a *Agent) memberJoin(member *Member) {
 
 	// Send our ActorTopology to this member
 	if len(actorInfos) > 0 {
-		a.cluster.engine.Send(memberToPID(member), &ActorTopology{Actors: actorInfos})
+		a.cluster.engine.Send(member.PID(), &ActorTopology{Actors: actorInfos})
 	}
+
+	slog.Info("member joined", "we", a.cluster.id, "id", member.ID, "host", member.Host, "kinds", member.Kinds)
+	fmt.Println(a.kinds)
 }
 
 func (a *Agent) memberLeave(member *Member) {
@@ -196,7 +197,7 @@ func (a *Agent) memberLeave(member *Member) {
 
 func (a *Agent) bcast(msg any) {
 	a.members.ForEach(func(member *Member) bool {
-		a.cluster.engine.Send(memberToPID(member), msg)
+		a.cluster.engine.Send(member.PID(), msg)
 		return true
 	})
 }

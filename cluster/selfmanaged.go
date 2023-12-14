@@ -1,7 +1,6 @@
 package cluster
 
 import (
-	fmt "fmt"
 	"time"
 
 	"github.com/anthdm/hollywood/actor"
@@ -37,6 +36,10 @@ func (s *SelfManaged) Receive(c *actor.Context) {
 	switch msg := c.Message().(type) {
 	case actor.Started:
 		s.members.Add(s.cluster.Member())
+		members := &Members{
+			Members: s.members.Slice(),
+		}
+		s.cluster.engine.Send(s.cluster.PID(), members)
 		s.memberPinger = c.SendRepeat(c.PID(), memberPing{}, memberPingInterval)
 		s.start(c)
 	case actor.Stopped:
@@ -120,14 +123,14 @@ func (s *SelfManaged) updateCluster() {
 }
 
 func (s *SelfManaged) start(c *actor.Context) error {
-	eventSubPID := c.SpawnChildFunc(func(ctx *actor.Context) {
-		switch msg := ctx.Message().(type) {
-		case actor.DeadLetterEvent:
-			fmt.Println("got deadletter", msg)
-		}
-	}, "event")
+	// eventSubPID := c.SpawnChildFunc(func(ctx *actor.Context) {
+	// 	switch msg := ctx.Message().(type) {
+	// 	case actor.DeadLetterEvent:
+	// 		fmt.Println("got deadletter", msg)
+	// 	}
+	// }, "event")
 
-	s.cluster.engine.Subscribe(eventSubPID)
+	// s.cluster.engine.Subscribe(eventSubPID)
 
 	members := &MembersJoin{
 		Members: s.members.Slice(),

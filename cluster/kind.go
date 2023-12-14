@@ -2,10 +2,8 @@ package cluster
 
 import "github.com/anthdm/hollywood/actor"
 
-type KindOpts struct {
-	autoActivate bool
-	local        bool
-}
+// KindOpts is ...
+type KindOpts struct{}
 
 type Kind struct {
 	opts     KindOpts
@@ -13,6 +11,7 @@ type Kind struct {
 	producer actor.Producer
 }
 
+// NewKind returns a new kind.
 func NewKind(name string, p actor.Producer, opts KindOpts) *Kind {
 	return &Kind{
 		name:     name,

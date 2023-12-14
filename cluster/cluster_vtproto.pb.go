@@ -25,8 +25,9 @@ func (m *CID) CloneVT() *CID {
 		return (*CID)(nil)
 	}
 	r := &CID{
-		ID:   m.ID,
-		Kind: m.Kind,
+		ID:     m.ID,
+		Kind:   m.Kind,
+		Region: m.Region,
 	}
 	if len(m.unknownFields) > 0 {
 		r.unknownFields = make([]byte, len(m.unknownFields))
@@ -44,8 +45,9 @@ func (m *Member) CloneVT() *Member {
 		return (*Member)(nil)
 	}
 	r := &Member{
-		ID:   m.ID,
-		Host: m.Host,
+		ID:     m.ID,
+		Host:   m.Host,
+		Region: m.Region,
 	}
 	if rhs := m.Kinds; rhs != nil {
 		tmpContainer := make([]string, len(rhs))
@@ -333,6 +335,9 @@ func (this *CID) EqualVT(that *CID) bool {
 	if this.Kind != that.Kind {
 		return false
 	}
+	if this.Region != that.Region {
+		return false
+	}
 	return string(this.unknownFields) == string(that.unknownFields)
 }
 
@@ -353,6 +358,9 @@ func (this *Member) EqualVT(that *Member) bool {
 		return false
 	}
 	if this.Host != that.Host {
+		return false
+	}
+	if this.Region != that.Region {
 		return false
 	}
 	if len(this.Kinds) != len(that.Kinds) {
@@ -752,6 +760,13 @@ func (m *CID) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 		i -= len(m.unknownFields)
 		copy(dAtA[i:], m.unknownFields)
 	}
+	if len(m.Region) > 0 {
+		i -= len(m.Region)
+		copy(dAtA[i:], m.Region)
+		i = encodeVarint(dAtA, i, uint64(len(m.Region)))
+		i--
+		dAtA[i] = 0x1a
+	}
 	if len(m.Kind) > 0 {
 		i -= len(m.Kind)
 		copy(dAtA[i:], m.Kind)
@@ -805,8 +820,15 @@ func (m *Member) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 			copy(dAtA[i:], m.Kinds[iNdEx])
 			i = encodeVarint(dAtA, i, uint64(len(m.Kinds[iNdEx])))
 			i--
-			dAtA[i] = 0x1a
+			dAtA[i] = 0x22
 		}
+	}
+	if len(m.Region) > 0 {
+		i -= len(m.Region)
+		copy(dAtA[i:], m.Region)
+		i = encodeVarint(dAtA, i, uint64(len(m.Region)))
+		i--
+		dAtA[i] = 0x1a
 	}
 	if len(m.Host) > 0 {
 		i -= len(m.Host)
@@ -1445,6 +1467,13 @@ func (m *CID) MarshalToSizedBufferVTStrict(dAtA []byte) (int, error) {
 		i -= len(m.unknownFields)
 		copy(dAtA[i:], m.unknownFields)
 	}
+	if len(m.Region) > 0 {
+		i -= len(m.Region)
+		copy(dAtA[i:], m.Region)
+		i = encodeVarint(dAtA, i, uint64(len(m.Region)))
+		i--
+		dAtA[i] = 0x1a
+	}
 	if len(m.Kind) > 0 {
 		i -= len(m.Kind)
 		copy(dAtA[i:], m.Kind)
@@ -1498,8 +1527,15 @@ func (m *Member) MarshalToSizedBufferVTStrict(dAtA []byte) (int, error) {
 			copy(dAtA[i:], m.Kinds[iNdEx])
 			i = encodeVarint(dAtA, i, uint64(len(m.Kinds[iNdEx])))
 			i--
-			dAtA[i] = 0x1a
+			dAtA[i] = 0x22
 		}
+	}
+	if len(m.Region) > 0 {
+		i -= len(m.Region)
+		copy(dAtA[i:], m.Region)
+		i = encodeVarint(dAtA, i, uint64(len(m.Region)))
+		i--
+		dAtA[i] = 0x1a
 	}
 	if len(m.Host) > 0 {
 		i -= len(m.Host)
@@ -2111,6 +2147,10 @@ func (m *CID) SizeVT() (n int) {
 	if l > 0 {
 		n += 1 + l + sov(uint64(l))
 	}
+	l = len(m.Region)
+	if l > 0 {
+		n += 1 + l + sov(uint64(l))
+	}
 	n += len(m.unknownFields)
 	return n
 }
@@ -2126,6 +2166,10 @@ func (m *Member) SizeVT() (n int) {
 		n += 1 + l + sov(uint64(l))
 	}
 	l = len(m.Host)
+	if l > 0 {
+		n += 1 + l + sov(uint64(l))
+	}
+	l = len(m.Region)
 	if l > 0 {
 		n += 1 + l + sov(uint64(l))
 	}
@@ -2454,6 +2498,38 @@ func (m *CID) UnmarshalVT(dAtA []byte) error {
 			}
 			m.Kind = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Region", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLength
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLength
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Region = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skip(dAtA[iNdEx:])
@@ -2570,6 +2646,38 @@ func (m *Member) UnmarshalVT(dAtA []byte) error {
 			m.Host = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Region", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLength
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLength
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Region = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 4:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Kinds", wireType)
 			}

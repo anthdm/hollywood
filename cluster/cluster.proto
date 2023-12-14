@@ -6,12 +6,14 @@ import "actor.proto";
 message CID {
 	string ID = 1;
 	string kind = 2;
+	string region = 3;
 }
 
 message Member {
 	string ID = 1;
 	string host = 2;
-	repeated string kinds = 3;
+	string region = 3;
+	repeated string kinds = 4;
 }
 
 message Members {

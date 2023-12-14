@@ -87,7 +87,7 @@ func (c *Cluster) Activate(kind string, id string) *actor.PID {
 	return resp.(*actor.PID)
 }
 
-// Deactivate deactivates a kind with its id on the cluster
+// Deactivate deactivates the given CID. ??
 func (c *Cluster) Deactivate(kind string, id string) {
 	c.engine.Send(c.agentPID, deactivate{cid: NewCID(kind, id)})
 }
