@@ -2,6 +2,7 @@ package cluster
 
 import "github.com/anthdm/hollywood/actor"
 
+// TODO: make these 2 function func receivers
 // memberToPID creates a new PID from the member info.
 func memberToPID(m *Member) *actor.PID {
 	return actor.NewPID(m.Host, "cluster/"+m.ID)
@@ -21,6 +22,15 @@ func NewCID(kind, id string) *CID {
 	}
 }
 
+// Equals returns true whether the given CID equals the caller.
+func (cid *CID) Equals(other *CID) bool {
+	return cid.ID == other.ID && cid.Kind == other.Kind
+}
+
+func (m *Member) Equals(other *Member) bool {
+	return m.Host == other.Host && m.ID == other.ID
+}
+
 // TODO: Maybe relocate this function.
 // HasKind returns true whether the Member has the given kind registered.
 func (m *Member) HasKind(kind string) bool {
@@ -30,8 +40,4 @@ func (m *Member) HasKind(kind string) bool {
 		}
 	}
 	return false
-}
-
-func (cid *CID) Equals(other *CID) bool {
-	return cid.ID == other.ID && cid.Kind == other.Kind
 }

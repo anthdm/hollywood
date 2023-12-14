@@ -2,6 +2,7 @@ package remote
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"io"
 	"log/slog"
@@ -15,7 +16,7 @@ import (
 
 const (
 	connIdleTimeout       = time.Minute * 10
-	streamWriterBatchSize = 1024 * 32
+	streamWriterBatchSize = 1024
 )
 
 type streamWriter struct {
@@ -28,9 +29,10 @@ type streamWriter struct {
 	pid         *actor.PID
 	inbox       actor.Inboxer
 	serializer  Serializer
+	tlsConfig   *tls.Config
 }
 
-func newStreamWriter(e *actor.Engine, rpid *actor.PID, address string) actor.Processer {
+func newStreamWriter(e *actor.Engine, rpid *actor.PID, address string, tlsConfig *tls.Config) actor.Processer {
 	return &streamWriter{
 		writeToAddr: address,
 		engine:      e,
@@ -38,6 +40,7 @@ func newStreamWriter(e *actor.Engine, rpid *actor.PID, address string) actor.Pro
 		inbox:       actor.NewInbox(streamWriterBatchSize),
 		pid:         actor.NewPID(e.Address(), "stream", address),
 		serializer:  ProtoSerializer{},
+		tlsConfig:   tlsConfig,
 	}
 }
 
@@ -94,12 +97,15 @@ func (s *streamWriter) Invoke(msgs []actor.Envelope) {
 			_ = s.conn.Close()
 			return
 		}
-		slog.Error("failed sending message",
+		slog.Error("stream writer failed sending message",
 			"err", err,
 		)
 	}
 	// refresh the connection deadline.
-	s.rawconn.SetDeadline(time.Now().Add(connIdleTimeout))
+	err := s.rawconn.SetDeadline(time.Now().Add(connIdleTimeout))
+	if err != nil {
+		slog.Error("failed to set context deadline", "err", err)
+	}
 }
 
 func (s *streamWriter) init() {
@@ -109,11 +115,24 @@ func (s *streamWriter) init() {
 		delay   time.Duration = time.Millisecond * 500
 	)
 	for {
-		rawconn, err = net.Dial("tcp", s.writeToAddr)
-		if err != nil {
-			slog.Error("net.Dial", "err", err, "remote", s.writeToAddr)
-			time.Sleep(delay)
-			continue
+		// Here we try to connect to the remote address.
+		// Todo: can we make an Event here in case of failure?
+		switch s.tlsConfig {
+		case nil:
+			rawconn, err = net.Dial("tcp", s.writeToAddr)
+			if err != nil {
+				slog.Error("net.Dial", "err", err, "remote", s.writeToAddr)
+				time.Sleep(delay)
+				continue
+			}
+		default:
+			slog.Debug("remote using TLS for writing")
+			rawconn, err = tls.Dial("tcp", s.writeToAddr, s.tlsConfig)
+			if err != nil {
+				slog.Error("tls.Dial", "err", err, "remote", s.writeToAddr)
+				time.Sleep(delay)
+				continue
+			}
 		}
 		break
 	}
@@ -123,7 +142,11 @@ func (s *streamWriter) init() {
 	}
 
 	s.rawconn = rawconn
-	rawconn.SetDeadline(time.Now().Add(connIdleTimeout))
+	err = rawconn.SetDeadline(time.Now().Add(connIdleTimeout))
+	if err != nil {
+		slog.Error("failed to set deadline on raw connection", "err", err)
+		return
+	}
 
 	conn := drpcconn.New(rawconn)
 	client := NewDRPCRemoteClient(conn)
@@ -131,6 +154,7 @@ func (s *streamWriter) init() {
 	stream, err := client.Receive(context.Background())
 	if err != nil {
 		slog.Error("receive", "err", err, "remote", s.writeToAddr)
+		return
 	}
 
 	s.stream = stream

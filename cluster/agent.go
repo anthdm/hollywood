@@ -10,9 +10,18 @@ import (
 	"github.com/anthdm/hollywood/actor"
 )
 
+type spawn struct {
+	kind string
+	id   string
+}
+
 type activate struct {
 	kind string
 	id   string
+}
+
+type deactivate struct {
+	cid *CID
 }
 
 type Agent struct {
@@ -44,6 +53,9 @@ func (a *Agent) Receive(c *actor.Context) {
 	case activate:
 		pid := a.activate(NewCID(msg.kind, msg.id))
 		c.Respond(pid)
+	case deactivate:
+		// TODO:
+		a.bcast(&Deactivation{})
 	case *ActivationRequest:
 		resp := a.handleActivationRequest(msg)
 		c.Respond(resp)
@@ -69,7 +81,8 @@ func (a *Agent) handleActivationRequest(msg *ActivationRequest) *ActivationRespo
 		return &ActivationResponse{Success: false}
 	}
 	kind := a.cluster.kinds[msg.CID.Kind]
-	pid := a.cluster.engine.Spawn(kind.producer, msg.CID.ID)
+	// Spawn the actor (receiver) with kind/id
+	pid := a.cluster.engine.Spawn(kind.producer, msg.CID.Kind+"/"+msg.CID.ID)
 	resp := &ActivationResponse{
 		PID:     pid,
 		Success: true,
@@ -83,33 +96,40 @@ func (a *Agent) activate(cid *CID) *actor.PID {
 		members      = a.members.FilterByKind(cid.Kind)
 		owner        = members[rand.Intn(len(members))]
 		activatorPID = actor.NewPID(owner.Host, "cluster/"+owner.ID)
+		req          = &ActivationRequest{CID: cid}
 	)
 
-	// TODO: topology hash
-	req := &ActivationRequest{CID: cid}
-
-	// TODO: retry this couple times
-	resp, err := a.cluster.engine.Request(activatorPID, req, time.Millisecond*100).Result()
-	if err != nil {
-		slog.Error("failed activation request", "err", err)
-		return nil
-	}
-	r, ok := resp.(*ActivationResponse)
-	if !ok {
-		slog.Error("expected *ActivationResponse", "msg", reflect.TypeOf(resp))
-		return nil
-	}
-	if !r.Success {
-		slog.Error("activation unsuccessfull", "msg", r)
-		return nil
+	var activationResp *ActivationResponse
+	// Local activation
+	if owner.Equals(a.cluster.Member()) {
+		activationResp = a.handleActivationRequest(req)
+	} else {
+		// Remote activation
+		// TODO: topology hash
+		// TODO: retry this couple times
+		resp, err := a.cluster.engine.Request(activatorPID, req, time.Millisecond*100).Result()
+		if err != nil {
+			slog.Error("failed activation request", "err", err)
+			return nil
+		}
+		r, ok := resp.(*ActivationResponse)
+		if !ok {
+			slog.Error("expected *ActivationResponse", "msg", reflect.TypeOf(resp))
+			return nil
+		}
+		if !r.Success {
+			slog.Error("activation unsuccessfull", "msg", r)
+			return nil
+		}
+		activationResp = r
 	}
 
 	a.bcast(&Activation{
-		PID: r.PID,
+		PID: activationResp.PID,
 		CID: cid,
 	})
 
-	return r.PID
+	return activationResp.PID
 }
 
 func (a *Agent) handleMembers(members []*Member) {

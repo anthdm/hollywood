@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"time"
 
@@ -20,7 +21,7 @@ func makeCluster(addr string, id string, members ...*cluster.Member) *cluster.Cl
 	cfg := cluster.Config{
 		ClusterName:     "My Cluster",
 		ClusterProvider: cluster.NewSelfManagedProvider(members...),
-		ID:              id,
+		ClusterID:       id,
 		Engine:          e,
 	}
 	c, err := cluster.New(cfg)
@@ -44,7 +45,12 @@ func NewPlayer() actor.Receiver {
 	return &Player{}
 }
 
-func (p *Player) Receive(c *actor.Context) {}
+func (p *Player) Receive(c *actor.Context) {
+	switch msg := c.Message().(type) {
+	case *actor.PID:
+		fmt.Println("got", msg)
+	}
+}
 
 func main() {
 	c1 := makeCluster("localhost:3001", "A")
@@ -61,12 +67,16 @@ func main() {
 
 	time.Sleep(time.Second)
 
-	c2.Activate("player", "supermario")
+	pid := c2.Activate("player", "supermario")
 	time.Sleep(time.Second)
 
 	c3 := makeCluster("localhost:3003", "C", member)
-	c3.RegisterKind("inventory", NewInventory, cluster.KindOpts{})
 	c3.Start()
+
+	time.Sleep(time.Second * 2)
+	c3.Spawn(NewInventory, "foobar", "inv")
+
+	c3.Engine().Send(pid, pid)
 
 	time.Sleep(time.Second * 10000)
 }

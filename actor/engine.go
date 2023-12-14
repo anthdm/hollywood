@@ -1,8 +1,6 @@
 package actor
 
 import (
-	"log/slog"
-	reflect "reflect"
 	"sync"
 	"time"
 )
@@ -24,11 +22,9 @@ type Receiver interface {
 
 // Engine represents the actor engine.
 type Engine struct {
-	Registry *Registry
-
+	Registry    *Registry
 	address     string
 	remote      Remoter
-	deadLetter  *PID
 	eventStream *PID
 	initErrors  []error
 }
@@ -50,12 +46,7 @@ func NewEngine(opts ...func(*Engine)) (*Engine, error) {
 	if e.remote != nil {
 		e.address = e.remote.Address()
 	}
-
 	e.eventStream = e.Spawn(NewEventStream(), "eventstream")
-	// if no deadletter is registered, we will register the default deadletter from deadletter.go
-	if e.deadLetter == nil {
-		e.deadLetter = e.Spawn(newDeadLetter, "deadletter")
-	}
 	return e, nil
 }
 
@@ -67,31 +58,6 @@ func EngineOptRemote(r Remoter) func(*Engine) {
 		// TODO: potential error not handled here
 		r.Start(e)
 	}
-}
-
-// TODO: Doc
-// Todo: make the pid separator a struct variable
-func EngineOptPidSeparator(sep string) func(*Engine) {
-	// This looks weird because the separator is a global variable.
-	return func(e *Engine) {
-		pidSeparator = sep
-	}
-}
-
-// EngineOptDeadletter takes an actor and configures the engine to use it for dead letter handling
-// This allows you to customize how deadletters are handled.
-func EngineOptDeadletter(d Producer) func(*Engine) {
-	return func(e *Engine) {
-		e.deadLetter = e.Spawn(d, "deadletter")
-	}
-}
-
-// WithRemote returns a new actor Engine with the given Remoter,
-// and will call its Start function
-func (e *Engine) WithRemote(r Remoter) {
-	e.remote = r
-	e.address = r.Address()
-	r.Start(e)
 }
 
 // Spawn spawns a process that will producer by the given Producer and
@@ -165,12 +131,7 @@ func (e *Engine) send(pid *PID, msg any, sender *PID) {
 		return
 	}
 	if e.remote == nil {
-		slog.Error("failed sending messsage",
-			"err", "engine has no remote configured",
-			"to", pid,
-			"type", reflect.TypeOf(msg),
-			"msg", msg,
-		)
+		e.BroadcastEvent(EngineRemoteMissingEvent{Target: pid, Sender: sender, Message: msg})
 		return
 	}
 	e.remote.Send(pid, msg, sender)
@@ -244,9 +205,9 @@ func (e *Engine) sendPoisonPill(pid *PID, graceful bool, wg ...*sync.WaitGroup) 
 	}
 	_wg.Add(1)
 	proc := e.Registry.get(pid)
-	// deadletter - if we didn't find a process, we will send a deadletter message
+	// deadletter - if we didn't find a process, we will broadcast a DeadletterEvent
 	if proc == nil {
-		e.Send(e.deadLetter, &DeadLetterEvent{
+		e.BroadcastEvent(DeadLetterEvent{
 			Target:  pid,
 			Message: poisonPill{_wg, graceful},
 			Sender:  nil,
@@ -269,8 +230,8 @@ func (e *Engine) sendPoisonPill(pid *PID, graceful bool, wg ...*sync.WaitGroup) 
 func (e *Engine) SendLocal(pid *PID, msg any, sender *PID) {
 	proc := e.Registry.get(pid)
 	if proc == nil {
-		// send a deadletter message
-		e.Send(e.deadLetter, &DeadLetterEvent{
+		// broadcast a deadLetter message
+		e.BroadcastEvent(DeadLetterEvent{
 			Target:  pid,
 			Message: msg,
 			Sender:  sender,
@@ -282,12 +243,12 @@ func (e *Engine) SendLocal(pid *PID, msg any, sender *PID) {
 
 // Subscribe will subscribe the given PID to the event stream.
 func (e *Engine) Subscribe(pid *PID) {
-	e.Send(e.eventStream, EventSub{pid: pid})
+	e.Send(e.eventStream, eventSub{pid: pid})
 }
 
 // Unsubscribe will un subscribe the given PID from the event stream.
 func (e *Engine) Unsubscribe(pid *PID) {
-	e.Send(e.eventStream, EventUnsub{pid: pid})
+	e.Send(e.eventStream, eventUnsub{pid: pid})
 }
 
 func (e *Engine) isLocalMessage(pid *PID) bool {

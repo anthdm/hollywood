@@ -1,8 +1,10 @@
 package remote
 
 import (
-	"github.com/anthdm/hollywood/actor"
+	"crypto/tls"
 	"log/slog"
+
+	"github.com/anthdm/hollywood/actor"
 )
 
 type streamDeliver struct {
@@ -18,15 +20,17 @@ type terminateStream struct {
 type streamRouter struct {
 	engine *actor.Engine
 	// streams is a map of remote address to stream writer pid.
-	streams map[string]*actor.PID
-	pid     *actor.PID
+	streams   map[string]*actor.PID
+	pid       *actor.PID
+	tlsConfig *tls.Config
 }
 
-func newStreamRouter(e *actor.Engine) actor.Producer {
+func newStreamRouter(e *actor.Engine, tlsConfig *tls.Config) actor.Producer {
 	return func() actor.Receiver {
 		return &streamRouter{
-			streams: make(map[string]*actor.PID),
-			engine:  e,
+			streams:   make(map[string]*actor.PID),
+			engine:    e,
+			tlsConfig: tlsConfig,
 		}
 	}
 }
@@ -60,7 +64,7 @@ func (s *streamRouter) deliverStream(msg *streamDeliver) {
 
 	swpid, ok = s.streams[address]
 	if !ok {
-		swpid = s.engine.SpawnProc(newStreamWriter(s.engine, s.pid, address))
+		swpid = s.engine.SpawnProc(newStreamWriter(s.engine, s.pid, address, s.tlsConfig))
 		s.streams[address] = swpid
 	}
 	s.engine.Send(swpid, msg)

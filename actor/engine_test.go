@@ -189,6 +189,17 @@ func TestSpawn(t *testing.T) {
 	wg.Wait()
 }
 
+func TestSpawnDuplicateId(t *testing.T) {
+	e, err := NewEngine()
+	require.NoError(t, err)
+	wg := sync.WaitGroup{}
+	pid1 := e.Spawn(NewTestProducer(t, func(t *testing.T, ctx *Context) {}), "dummy")
+	e.Send(pid1, 1)
+	pid2 := e.Spawn(NewTestProducer(t, func(t *testing.T, ctx *Context) {}), "dummy")
+	e.Send(pid2, 2)
+	wg.Wait()
+}
+
 func TestStopWaitGroup(t *testing.T) {
 	var (
 		wg = sync.WaitGroup{}
@@ -295,22 +306,36 @@ func TestPoison(t *testing.T) {
 }
 
 func TestRequestResponse(t *testing.T) {
+	type responseEvent struct {
+		d time.Duration
+	}
 	e, err := NewEngine()
-	require.NoError(t, err)
-	pid := e.Spawn(NewTestProducer(t, func(t *testing.T, ctx *Context) {
-		if msg, ok := ctx.Message().(string); ok {
-			assert.Equal(t, "foo", msg)
-			ctx.Respond("bar")
+	assert.NoError(t, err)
+	a := e.SpawnFunc(func(c *Context) {
+		switch c.Message().(type) {
+		case responseEvent:
+			d := c.Message().(responseEvent).d
+			time.Sleep(d)
+			c.Respond("foo")
 		}
-	}), "dummy")
-	resp := e.Request(pid, "foo", time.Millisecond)
-	res, err := resp.Result()
-	assert.Nil(t, err)
-	assert.Equal(t, "bar", res)
-	// Response PID should be nil here. This is because
-	// the actual response process that will handle this RPC
-	// is deregistered. Test that it is actually cleaned up.
-	assert.Nil(t, e.Registry.get(resp.pid))
+	}, "actor_a")
+	t.Run("should timeout", func(t *testing.T) {
+		// a task with a 1us timeout which takes 20ms to complete, should always time out.
+		resp := e.Request(a, responseEvent{d: time.Millisecond * 20}, 1*time.Microsecond)
+		_, err := resp.Result()
+		assert.Error(t, err)
+		assert.Nil(t, e.Registry.get(resp.pid))
+
+	})
+	t.Run("should not timeout", func(t *testing.T) {
+		for i := 0; i < 200; i++ {
+			resp := e.Request(a, responseEvent{d: time.Microsecond * 1}, time.Millisecond*800)
+			res, err := resp.Result()
+			assert.NoError(t, err)
+			assert.Equal(t, "foo", res)
+			assert.Nil(t, e.Registry.get(resp.pid))
+		}
+	})
 }
 
 // 56 ns/op
@@ -336,4 +361,24 @@ func BenchmarkSendWithSenderMessageLocal(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		e.SendWithSender(pid, pid, pid)
 	}
+}
+
+type TestReceiveFunc func(*testing.T, *Context)
+
+type TestReceiver struct {
+	OnReceive TestReceiveFunc
+	t         *testing.T
+}
+
+func NewTestProducer(t *testing.T, f TestReceiveFunc) Producer {
+	return func() Receiver {
+		return &TestReceiver{
+			OnReceive: f,
+			t:         t,
+		}
+	}
+}
+
+func (r *TestReceiver) Receive(ctx *Context) {
+	r.OnReceive(r.t, ctx)
 }
