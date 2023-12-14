@@ -75,8 +75,13 @@ func main() {
 
 	time.Sleep(time.Second * 2)
 	c3.Spawn(NewInventory, "foobar", "inv")
-
 	c3.Engine().Send(pid, pid)
+
+	time.Sleep(time.Second)
+
+	fmt.Println(c3.HasKind("player"))
+	fmt.Println(c1.HasKind("player"))
+	fmt.Println(c2.HasKind("player"))
 
 	time.Sleep(time.Second * 10000)
 }

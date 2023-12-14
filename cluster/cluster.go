@@ -41,7 +41,9 @@ type Cluster struct {
 	agentPID    *actor.PID
 	providerPID *actor.PID
 
-	kinds map[string]*Kind
+	isStarted bool
+
+	kinds []Kind
 }
 
 func New(cfg Config) (*Cluster, error) {
@@ -56,7 +58,7 @@ func New(cfg Config) (*Cluster, error) {
 		name:     cfg.ClusterName,
 		provider: cfg.ClusterProvider,
 		engine:   cfg.Engine,
-		kinds:    make(map[string]*Kind),
+		kinds:    []Kind{},
 	}, nil
 }
 
@@ -64,6 +66,7 @@ func New(cfg Config) (*Cluster, error) {
 func (c *Cluster) Start() error {
 	c.agentPID = c.engine.Spawn(NewAgent(c), "cluster/"+c.id)
 	c.providerPID = c.engine.Spawn(c.provider(c), "cluster/"+c.id+"/provider")
+	c.isStarted = true
 	return nil
 }
 
@@ -91,8 +94,48 @@ func (c *Cluster) Deactivate(kind string, id string) {
 
 // RegisterKind registers a new actor/receiver kind that can be spawned from any node
 // on the cluster.
+// NOTE: Kinds can only be registered if the cluster is not running.
 func (c *Cluster) RegisterKind(name string, producer actor.Producer, opts KindOpts) {
-	c.kinds[name] = NewKind(name, producer, opts)
+	if c.isStarted {
+		slog.Warn("trying to register new kind on a running cluster")
+		return
+	}
+	kind := Kind{
+		producer: producer,
+		name:     name,
+		opts:     opts,
+	}
+	c.kinds = append(c.kinds, kind)
+}
+
+// LocalKinds returns all the kinds that are registered on THIS node.
+// kind that are registred locally can be activated on this node.
+func (c *Cluster) LocalKinds() []string {
+	kinds := make([]string, len(c.kinds))
+	for i := 0; i < len(c.kinds); i++ {
+		kinds[i] = c.kinds[i].name
+	}
+	return kinds
+}
+
+// Kinds returns the kinds that are available for activation on the cluster.
+func (c *Cluster) Kinds() []string {
+	resp, err := c.engine.Request(c.agentPID, getKinds{}, time.Millisecond*100).Result()
+	if err != nil {
+		slog.Error("failed to request kinds", "err", err)
+		return []string{}
+	}
+	return resp.([]string)
+}
+
+// HasKind returns if the cluster has the given kind registered for activation.
+func (c *Cluster) HasKind(name string) bool {
+	for _, kind := range c.Kinds() {
+		if kind == name {
+			return true
+		}
+	}
+	return false
 }
 
 // PID returns the reachable actor process id, which is the Agent actor.
@@ -100,31 +143,21 @@ func (c *Cluster) PID() *actor.PID {
 	return c.agentPID
 }
 
-// Member return the member info of this cluster.
+// Member returns the member info of this node.
 func (c *Cluster) Member() *Member {
-	return &Member{
+	kinds := make([]string, len(c.kinds))
+	for i := 0; i < len(c.kinds); i++ {
+		kinds[i] = c.kinds[i].name
+	}
+	m := &Member{
 		ID:    c.id,
 		Host:  c.engine.Address(),
-		Kinds: c.kindsToSlice(),
+		Kinds: kinds,
 	}
+	return m
 }
 
 // Engine returns the actor engine.
 func (c *Cluster) Engine() *actor.Engine {
 	return c.engine
-}
-
-func (c *Cluster) HasKind(kind string) bool {
-	_, ok := c.kinds[kind]
-	return ok
-}
-
-func (c *Cluster) kindsToSlice() []string {
-	kinds := make([]string, len(c.kinds))
-	i := 0
-	for kind := range c.kinds {
-		kinds[i] = kind
-		i++
-	}
-	return kinds
 }

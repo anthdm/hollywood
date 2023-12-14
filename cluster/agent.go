@@ -10,10 +10,7 @@ import (
 	"github.com/anthdm/hollywood/actor"
 )
 
-type spawn struct {
-	kind string
-	id   string
-}
+type getKinds struct{}
 
 type activate struct {
 	kind string
@@ -25,17 +22,31 @@ type deactivate struct {
 }
 
 type Agent struct {
-	members     *MemberSet
-	cluster     *Cluster
+	members *MemberSet
+	cluster *Cluster
+
+	kinds map[string]bool
+
+	localKinds map[string]Kind
+
+	// all the active kinds on the cluster
 	activeKinds *KindLookup
 }
 
 func NewAgent(c *Cluster) actor.Producer {
+	kinds := make(map[string]bool)
+	localKinds := make(map[string]Kind)
+	for _, kind := range c.kinds {
+		kinds[kind.name] = true
+		localKinds[kind.name] = kind
+	}
 	return func() actor.Receiver {
 		return &Agent{
 			members:     NewMemberSet(),
 			cluster:     c,
 			activeKinds: NewKindLookup(),
+			kinds:       kinds,
+			localKinds:  localKinds,
 		}
 	}
 }
@@ -59,28 +70,34 @@ func (a *Agent) Receive(c *actor.Context) {
 	case *ActivationRequest:
 		resp := a.handleActivationRequest(msg)
 		c.Respond(resp)
+	case getKinds:
+		kinds := make([]string, len(a.kinds))
+		i := 0
+		for kind := range a.kinds {
+			kinds[i] = kind
+			i++
+		}
+		c.Respond(kinds)
 	}
 }
 
 func (a *Agent) handleActorTopology(msg *ActorTopology) {
 	for _, actorInfo := range msg.Actors {
-		a.addKind(actorInfo.CID, actorInfo.PID)
+		a.addActiveKind(actorInfo.CID, actorInfo.PID)
 	}
 }
 
 // A new kind is activated on this cluster.
 func (a *Agent) handleActivation(msg *Activation) {
-	a.addKind(msg.CID, msg.PID)
-	// TODO:
-	// Make sure we update the cluster kinds when were have spawned this actor dynamically
+	a.addActiveKind(msg.CID, msg.PID)
 }
 
 func (a *Agent) handleActivationRequest(msg *ActivationRequest) *ActivationResponse {
-	if !a.cluster.HasKind(msg.CID.Kind) {
-		slog.Error("received activation request but kind not registered on the cluster", "kind", msg.CID.Kind)
+	if !a.hasKindLocal(msg.CID.Kind) {
+		slog.Error("received activation request but kind not registered locally on this node", "kind", msg.CID.Kind)
 		return &ActivationResponse{Success: false}
 	}
-	kind := a.cluster.kinds[msg.CID.Kind]
+	kind := a.localKinds[msg.CID.Kind]
 	// Spawn the actor (receiver) with kind/id
 	pid := a.cluster.engine.Spawn(kind.producer, msg.CID.Kind+"/"+msg.CID.ID)
 	resp := &ActivationResponse{
@@ -101,7 +118,7 @@ func (a *Agent) activate(cid *CID) *actor.PID {
 
 	var activationResp *ActivationResponse
 	// Local activation
-	if owner.Equals(a.cluster.Member()) {
+	if owner.Host == a.cluster.engine.Address() {
 		activationResp = a.handleActivationRequest(req)
 	} else {
 		// Remote activation
@@ -148,6 +165,13 @@ func (a *Agent) memberJoin(member *Member) {
 	slog.Info("member joined", "we", a.cluster.id, "id", member.ID, "host", member.Host, "kinds", member.Kinds)
 	a.members.Add(member)
 
+	// track cluster wide available kinds
+	for _, kind := range member.Kinds {
+		if _, ok := a.kinds[kind]; !ok {
+			a.kinds[kind] = true
+		}
+	}
+
 	actorInfos := []*ActorInfo{}
 	for _, kinds := range a.activeKinds.kinds {
 		for _, akind := range kinds.ToSlice() {
@@ -177,7 +201,7 @@ func (a *Agent) bcast(msg any) {
 	})
 }
 
-func (a *Agent) addKind(cid *CID, pid *actor.PID) {
+func (a *Agent) addActiveKind(cid *CID, pid *actor.PID) {
 	akind := ActiveKind{
 		pid:     pid,
 		cid:     cid,
@@ -187,4 +211,13 @@ func (a *Agent) addKind(cid *CID, pid *actor.PID) {
 		a.activeKinds.Add(akind)
 		slog.Info("[ACTIVE]", "we", a.cluster.id, "cid", cid, "pid", pid)
 	}
+}
+
+func (a *Agent) hasKindLocal(name string) bool {
+	for _, kind := range a.localKinds {
+		if kind.name == name {
+			return true
+		}
+	}
+	return false
 }

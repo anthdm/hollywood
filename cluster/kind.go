@@ -3,9 +3,8 @@ package cluster
 import "github.com/anthdm/hollywood/actor"
 
 type KindOpts struct {
-	activateOnClusterStart bool
-	id                     string
-	local                  bool
+	autoActivate bool
+	local        bool
 }
 
 type Kind struct {
