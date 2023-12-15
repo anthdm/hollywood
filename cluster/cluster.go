@@ -120,15 +120,16 @@ func (c *Cluster) LocalKinds() []string {
 	return kinds
 }
 
-func (c *Cluster) GetKinds(name string) []*actor.PID {
-	resp, err := c.engine.Request(c.agentPID, getKinds{}, time.Millisecond*100).Result()
+func (c *Cluster) GetKinds(name string) []*CID {
+	msg := getActiveKinds{filterByKind: name}
+	resp, err := c.engine.Request(c.agentPID, msg, time.Millisecond*100).Result()
 	if err != nil {
 		slog.Error("failed to request kinds", "err", err)
-		return []*actor.PID{}
+		return []*CID{}
 	}
-	r, ok := resp.([]*actor.PID)
+	r, ok := resp.([]*CID)
 	if !ok {
-		return []*actor.PID{}
+		return []*CID{}
 	}
 	return r
 }

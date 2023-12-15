@@ -9,6 +9,10 @@ import (
 	"github.com/anthdm/hollywood/actor"
 )
 
+type getActiveKinds struct {
+	filterByKind string
+}
+
 type getKinds struct{}
 
 type activate struct {
@@ -76,6 +80,8 @@ func (a *Agent) Receive(c *actor.Context) {
 			i++
 		}
 		c.Respond(kinds)
+	case getActiveKinds:
+		c.Respond(a.getActiveKinds(msg.filterByKind))
 	}
 }
 
@@ -216,4 +222,13 @@ func (a *Agent) hasKindLocal(name string) bool {
 		}
 	}
 	return false
+}
+
+func (a *Agent) getActiveKinds(kind string) []*CID {
+	kinds := a.activeKinds.Get(kind)
+	cids := make([]*CID, len(kinds))
+	for i, kind := range kinds {
+		cids[i] = kind.cid
+	}
+	return cids
 }
