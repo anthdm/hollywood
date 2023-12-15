@@ -110,32 +110,36 @@ func (s *streamWriter) Invoke(msgs []actor.Envelope) {
 
 func (s *streamWriter) init() {
 	var (
-		rawconn net.Conn
-		err     error
-		delay   time.Duration = time.Millisecond * 500
+		rawconn    net.Conn
+		err        error
+		delay      time.Duration = time.Millisecond * 500
+		maxRetries               = 3
 	)
-	for {
+	for i := 0; i < maxRetries; i++ {
 		// Here we try to connect to the remote address.
 		// Todo: can we make an Event here in case of failure?
 		switch s.tlsConfig {
 		case nil:
 			rawconn, err = net.Dial("tcp", s.writeToAddr)
 			if err != nil {
-				slog.Error("net.Dial", "err", err, "remote", s.writeToAddr)
-				time.Sleep(delay)
+				d := time.Duration(delay * time.Duration(i*2))
+				slog.Error("net.Dial", "err", err, "remote", s.writeToAddr, "retry", i, "max", maxRetries, "delay", d)
+				time.Sleep(d)
 				continue
 			}
 		default:
 			slog.Debug("remote using TLS for writing")
 			rawconn, err = tls.Dial("tcp", s.writeToAddr, s.tlsConfig)
 			if err != nil {
-				slog.Error("tls.Dial", "err", err, "remote", s.writeToAddr)
-				time.Sleep(delay)
+				d := time.Duration(delay * time.Duration(i*2))
+				slog.Error("tls.Dial", "err", err, "remote", s.writeToAddr, "retry", i, "max", maxRetries, "delay", d)
+				time.Sleep(d)
 				continue
 			}
 		}
 		break
 	}
+	// This probably means we retried N times but the remote is still unreachable
 	if rawconn == nil {
 		s.Shutdown(nil)
 		return
