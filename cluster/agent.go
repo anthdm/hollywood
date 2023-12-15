@@ -67,8 +67,9 @@ func (a *Agent) Receive(c *actor.Context) {
 		cid := a.activate(msg.kind, msg.id)
 		c.Respond(cid)
 	case deactivate:
-		// TODO:
-		a.bcast(&Deactivation{})
+		a.bcast(&Deactivation{CID: msg.cid})
+	case *Deactivation:
+		a.handleDeactivation(msg)
 	case *ActivationRequest:
 		resp := a.handleActivationRequest(msg)
 		c.Respond(resp)
@@ -89,6 +90,28 @@ func (a *Agent) handleActorTopology(msg *ActorTopology) {
 	for _, actorInfo := range msg.Actors {
 		a.addActiveKind(actorInfo.CID)
 	}
+}
+
+func (a *Agent) handleDeactivation(msg *Deactivation) {
+	// Remove from our activeKinds
+	kinds, ok := a.activeKinds.kinds[msg.CID.Kind]
+	if !ok {
+		// we dont have this kind somehow?
+		return
+	}
+	// This seems kinda a hacky way to do it. But it works.
+	theKind := ActiveKind{}
+	kinds.Each(func(k ActiveKind) bool {
+		if k.cid.Equals(msg.CID) {
+			theKind = k
+			return false
+		}
+		return true
+	})
+	if theKind.isLocal {
+		a.cluster.engine.Poison(msg.CID.PID)
+	}
+	kinds.Remove(theKind)
 }
 
 // A new kind is activated on this cluster.
@@ -207,7 +230,7 @@ func (a *Agent) bcast(msg any) {
 func (a *Agent) addActiveKind(cid *CID) {
 	akind := ActiveKind{
 		cid:     cid,
-		isLocal: false,
+		isLocal: cid.PID.Address == a.cluster.engine.Address(),
 	}
 	if !a.activeKinds.Has(akind) {
 		a.activeKinds.Add(akind)

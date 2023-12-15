@@ -67,7 +67,7 @@ func main() {
 
 	time.Sleep(time.Second)
 
-	pid := c2.Activate("player", "supermario")
+	cid := c2.Activate("player", "supermario")
 	time.Sleep(time.Second)
 
 	c3 := makeCluster("localhost:3003", "C", member)
@@ -75,7 +75,7 @@ func main() {
 
 	time.Sleep(time.Second * 2)
 	c3.Spawn(NewInventory, "foobar", "inv")
-	c3.Engine().Send(pid, pid)
+	c3.Engine().Send(cid.PID, cid.PID)
 
 	time.Sleep(time.Second)
 
