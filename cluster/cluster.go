@@ -1,10 +1,12 @@
 package cluster
 
 import (
+	fmt "fmt"
 	"log/slog"
 	"time"
 
 	"github.com/anthdm/hollywood/actor"
+	"github.com/google/uuid"
 )
 
 const (
@@ -23,18 +25,18 @@ type Provider interface {
 }
 
 type Config struct {
-	// The global (group) name of the cluster
-	ClusterName string
 	// The individual ID of this specific node
-	ClusterID string
+	ID string
+	// The region this node is hosted
+	Region string
 
 	Engine          *actor.Engine
 	ClusterProvider Producer
 }
 
 type Cluster struct {
-	name string
-	id   string
+	id     string
+	region string
 
 	provider    Producer
 	engine      *actor.Engine
@@ -47,15 +49,15 @@ type Cluster struct {
 }
 
 func New(cfg Config) (*Cluster, error) {
-	if len(cfg.ClusterName) == 0 {
-		cfg.ClusterName = "todo random"
+	if len(cfg.ID) == 0 {
+		cfg.ID = uuid.New().String()
 	}
-	if len(cfg.ClusterID) == 0 {
-		cfg.ClusterID = "TODO SOMETHING RANDOM"
+	if len(cfg.Region) == 0 {
+		return nil, fmt.Errorf("cannot start cluster without a region")
 	}
 	return &Cluster{
-		id:       cfg.ClusterID,
-		name:     cfg.ClusterName,
+		id:       cfg.ID,
+		region:   cfg.Region,
 		provider: cfg.ClusterProvider,
 		engine:   cfg.Engine,
 		kinds:    []Kind{},
@@ -89,7 +91,7 @@ func (c *Cluster) Activate(kind string, id string) *actor.PID {
 
 // Deactivate deactivates the given CID. ??
 func (c *Cluster) Deactivate(kind string, id string) {
-	c.engine.Send(c.agentPID, deactivate{cid: NewCID(kind, id)})
+	c.engine.Send(c.agentPID, deactivate{cid: NewCID(kind, id, "")})
 }
 
 // RegisterKind registers a new actor/receiver kind that can be spawned from any node
@@ -116,6 +118,19 @@ func (c *Cluster) LocalKinds() []string {
 		kinds[i] = c.kinds[i].name
 	}
 	return kinds
+}
+
+func (c *Cluster) GetKinds(name string) []*actor.PID {
+	resp, err := c.engine.Request(c.agentPID, getKinds{}, time.Millisecond*100).Result()
+	if err != nil {
+		slog.Error("failed to request kinds", "err", err)
+		return []*actor.PID{}
+	}
+	r, ok := resp.([]*actor.PID)
+	if !ok {
+		return []*actor.PID{}
+	}
+	return r
 }
 
 // Kinds returns the kinds that are available for activation on the cluster.

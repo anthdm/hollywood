@@ -10,6 +10,10 @@ import (
 	"github.com/anthdm/hollywood/actor"
 )
 
+type getActiveKinds struct {
+	byName string
+}
+
 type getKinds struct{}
 
 type activate struct {
@@ -61,7 +65,7 @@ func (a *Agent) Receive(c *actor.Context) {
 	case *Activation:
 		a.handleActivation(msg)
 	case activate:
-		pid := a.activate(NewCID(msg.kind, msg.id))
+		pid := a.activate(NewCID(msg.kind, msg.id, "r"))
 		c.Respond(pid)
 	case deactivate:
 		// TODO:

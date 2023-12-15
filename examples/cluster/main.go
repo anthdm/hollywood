@@ -19,9 +19,9 @@ func makeCluster(addr string, id string, members ...*cluster.Member) *cluster.Cl
 		log.Fatal(err)
 	}
 	cfg := cluster.Config{
-		ClusterName:     "My Cluster",
 		ClusterProvider: cluster.NewSelfManagedProvider(members...),
-		ClusterID:       id,
+		ID:              id,
+		Region:          "eu-west",
 		Engine:          e,
 	}
 	c, err := cluster.New(cfg)
