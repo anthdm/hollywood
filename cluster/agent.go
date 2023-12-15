@@ -1,7 +1,6 @@
 package cluster
 
 import (
-	fmt "fmt"
 	"log/slog"
 	"math/rand"
 	reflect "reflect"
@@ -9,10 +8,6 @@ import (
 
 	"github.com/anthdm/hollywood/actor"
 )
-
-type getActiveKinds struct {
-	byName string
-}
 
 type getKinds struct{}
 
@@ -65,8 +60,8 @@ func (a *Agent) Receive(c *actor.Context) {
 	case *Activation:
 		a.handleActivation(msg)
 	case activate:
-		pid := a.activate(NewCID(msg.kind, msg.id, "r"))
-		c.Respond(pid)
+		cid := a.activate(msg.kind, msg.id)
+		c.Respond(cid)
 	case deactivate:
 		// TODO:
 		a.bcast(&Deactivation{})
@@ -86,37 +81,37 @@ func (a *Agent) Receive(c *actor.Context) {
 
 func (a *Agent) handleActorTopology(msg *ActorTopology) {
 	for _, actorInfo := range msg.Actors {
-		a.addActiveKind(actorInfo.CID, actorInfo.PID)
+		a.addActiveKind(actorInfo.CID)
 	}
 }
 
 // A new kind is activated on this cluster.
 func (a *Agent) handleActivation(msg *Activation) {
-	a.addActiveKind(msg.CID, msg.PID)
+	a.addActiveKind(msg.CID)
 }
 
 func (a *Agent) handleActivationRequest(msg *ActivationRequest) *ActivationResponse {
-	if !a.hasKindLocal(msg.CID.Kind) {
-		slog.Error("received activation request but kind not registered locally on this node", "kind", msg.CID.Kind)
+	if !a.hasKindLocal(msg.Kind) {
+		slog.Error("received activation request but kind not registered locally on this node", "kind", msg.Kind)
 		return &ActivationResponse{Success: false}
 	}
-	kind := a.localKinds[msg.CID.Kind]
+	kind := a.localKinds[msg.Kind]
 	// Spawn the actor (receiver) with kind/id
-	pid := a.cluster.engine.Spawn(kind.producer, msg.CID.Kind+"/"+msg.CID.ID)
+	pid := a.cluster.engine.Spawn(kind.producer, msg.Kind+"/"+msg.ID)
 	resp := &ActivationResponse{
-		PID:     pid,
+		CID:     NewCID(pid, msg.Kind, msg.ID, a.cluster.region),
 		Success: true,
 	}
 	return resp
 }
 
-func (a *Agent) activate(cid *CID) *actor.PID {
+func (a *Agent) activate(kind, id string) *CID {
 	var (
 		// TODO: pick member based on rendezvous and custom strategy
-		members      = a.members.FilterByKind(cid.Kind)
+		members      = a.members.FilterByKind(kind)
 		owner        = members[rand.Intn(len(members))]
 		activatorPID = actor.NewPID(owner.Host, "cluster/"+owner.ID)
-		req          = &ActivationRequest{CID: cid}
+		req          = &ActivationRequest{Kind: kind, ID: id}
 	)
 
 	var activationResp *ActivationResponse
@@ -145,11 +140,10 @@ func (a *Agent) activate(cid *CID) *actor.PID {
 	}
 
 	a.bcast(&Activation{
-		PID: activationResp.PID,
-		CID: cid,
+		CID: activationResp.CID,
 	})
 
-	return activationResp.PID
+	return activationResp.CID
 }
 
 func (a *Agent) handleMembers(members []*Member) {
@@ -178,7 +172,6 @@ func (a *Agent) memberJoin(member *Member) {
 	for _, kinds := range a.activeKinds.kinds {
 		for _, akind := range kinds.ToSlice() {
 			actorInfo := &ActorInfo{
-				PID: akind.pid,
 				CID: akind.cid,
 			}
 			actorInfos = append(actorInfos, actorInfo)
@@ -191,7 +184,6 @@ func (a *Agent) memberJoin(member *Member) {
 	}
 
 	slog.Info("member joined", "we", a.cluster.id, "id", member.ID, "host", member.Host, "kinds", member.Kinds)
-	fmt.Println(a.kinds)
 }
 
 func (a *Agent) memberLeave(member *Member) {
@@ -206,15 +198,14 @@ func (a *Agent) bcast(msg any) {
 	})
 }
 
-func (a *Agent) addActiveKind(cid *CID, pid *actor.PID) {
+func (a *Agent) addActiveKind(cid *CID) {
 	akind := ActiveKind{
-		pid:     pid,
 		cid:     cid,
 		isLocal: false,
 	}
 	if !a.activeKinds.Has(akind) {
 		a.activeKinds.Add(akind)
-		slog.Info("[ACTIVE]", "we", a.cluster.id, "cid", cid, "pid", pid)
+		slog.Info("[ACTIVE]", "we", a.cluster.id, "cid", cid)
 	}
 }
 

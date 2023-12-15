@@ -29,6 +29,13 @@ func (m *CID) CloneVT() *CID {
 		Kind:   m.Kind,
 		Region: m.Region,
 	}
+	if rhs := m.PID; rhs != nil {
+		if vtpb, ok := interface{}(rhs).(interface{ CloneVT() *actor.PID }); ok {
+			r.PID = vtpb.CloneVT()
+		} else {
+			r.PID = proto.Clone(rhs).(*actor.PID)
+		}
+	}
 	if len(m.unknownFields) > 0 {
 		r.unknownFields = make([]byte, len(m.unknownFields))
 		copy(r.unknownFields, m.unknownFields)
@@ -187,13 +194,6 @@ func (m *ActorInfo) CloneVT() *ActorInfo {
 	r := &ActorInfo{
 		CID: m.CID.CloneVT(),
 	}
-	if rhs := m.PID; rhs != nil {
-		if vtpb, ok := interface{}(rhs).(interface{ CloneVT() *actor.PID }); ok {
-			r.PID = vtpb.CloneVT()
-		} else {
-			r.PID = proto.Clone(rhs).(*actor.PID)
-		}
-	}
 	if len(m.unknownFields) > 0 {
 		r.unknownFields = make([]byte, len(m.unknownFields))
 		copy(r.unknownFields, m.unknownFields)
@@ -235,13 +235,6 @@ func (m *Activation) CloneVT() *Activation {
 	r := &Activation{
 		CID: m.CID.CloneVT(),
 	}
-	if rhs := m.PID; rhs != nil {
-		if vtpb, ok := interface{}(rhs).(interface{ CloneVT() *actor.PID }); ok {
-			r.PID = vtpb.CloneVT()
-		} else {
-			r.PID = proto.Clone(rhs).(*actor.PID)
-		}
-	}
 	if len(m.unknownFields) > 0 {
 		r.unknownFields = make([]byte, len(m.unknownFields))
 		copy(r.unknownFields, m.unknownFields)
@@ -260,13 +253,6 @@ func (m *Deactivation) CloneVT() *Deactivation {
 	r := &Deactivation{
 		CID: m.CID.CloneVT(),
 	}
-	if rhs := m.PID; rhs != nil {
-		if vtpb, ok := interface{}(rhs).(interface{ CloneVT() *actor.PID }); ok {
-			r.PID = vtpb.CloneVT()
-		} else {
-			r.PID = proto.Clone(rhs).(*actor.PID)
-		}
-	}
 	if len(m.unknownFields) > 0 {
 		r.unknownFields = make([]byte, len(m.unknownFields))
 		copy(r.unknownFields, m.unknownFields)
@@ -283,7 +269,8 @@ func (m *ActivationRequest) CloneVT() *ActivationRequest {
 		return (*ActivationRequest)(nil)
 	}
 	r := &ActivationRequest{
-		CID:          m.CID.CloneVT(),
+		Kind:         m.Kind,
+		ID:           m.ID,
 		TopologyHash: m.TopologyHash,
 	}
 	if len(m.unknownFields) > 0 {
@@ -302,15 +289,9 @@ func (m *ActivationResponse) CloneVT() *ActivationResponse {
 		return (*ActivationResponse)(nil)
 	}
 	r := &ActivationResponse{
+		CID:          m.CID.CloneVT(),
 		Success:      m.Success,
 		TopologyHash: m.TopologyHash,
-	}
-	if rhs := m.PID; rhs != nil {
-		if vtpb, ok := interface{}(rhs).(interface{ CloneVT() *actor.PID }); ok {
-			r.PID = vtpb.CloneVT()
-		} else {
-			r.PID = proto.Clone(rhs).(*actor.PID)
-		}
 	}
 	if len(m.unknownFields) > 0 {
 		r.unknownFields = make([]byte, len(m.unknownFields))
@@ -327,6 +308,13 @@ func (this *CID) EqualVT(that *CID) bool {
 	if this == that {
 		return true
 	} else if this == nil || that == nil {
+		return false
+	}
+	if equal, ok := interface{}(this.PID).(interface{ EqualVT(*actor.PID) bool }); ok {
+		if !equal.EqualVT(that.PID) {
+			return false
+		}
+	} else if !proto.Equal(this.PID, that.PID) {
 		return false
 	}
 	if this.ID != that.ID {
@@ -574,13 +562,6 @@ func (this *ActorInfo) EqualVT(that *ActorInfo) bool {
 	} else if this == nil || that == nil {
 		return false
 	}
-	if equal, ok := interface{}(this.PID).(interface{ EqualVT(*actor.PID) bool }); ok {
-		if !equal.EqualVT(that.PID) {
-			return false
-		}
-	} else if !proto.Equal(this.PID, that.PID) {
-		return false
-	}
 	if !this.CID.EqualVT(that.CID) {
 		return false
 	}
@@ -633,13 +614,6 @@ func (this *Activation) EqualVT(that *Activation) bool {
 	} else if this == nil || that == nil {
 		return false
 	}
-	if equal, ok := interface{}(this.PID).(interface{ EqualVT(*actor.PID) bool }); ok {
-		if !equal.EqualVT(that.PID) {
-			return false
-		}
-	} else if !proto.Equal(this.PID, that.PID) {
-		return false
-	}
 	if !this.CID.EqualVT(that.CID) {
 		return false
 	}
@@ -657,13 +631,6 @@ func (this *Deactivation) EqualVT(that *Deactivation) bool {
 	if this == that {
 		return true
 	} else if this == nil || that == nil {
-		return false
-	}
-	if equal, ok := interface{}(this.PID).(interface{ EqualVT(*actor.PID) bool }); ok {
-		if !equal.EqualVT(that.PID) {
-			return false
-		}
-	} else if !proto.Equal(this.PID, that.PID) {
 		return false
 	}
 	if !this.CID.EqualVT(that.CID) {
@@ -685,7 +652,10 @@ func (this *ActivationRequest) EqualVT(that *ActivationRequest) bool {
 	} else if this == nil || that == nil {
 		return false
 	}
-	if !this.CID.EqualVT(that.CID) {
+	if this.Kind != that.Kind {
+		return false
+	}
+	if this.ID != that.ID {
 		return false
 	}
 	if this.TopologyHash != that.TopologyHash {
@@ -707,11 +677,7 @@ func (this *ActivationResponse) EqualVT(that *ActivationResponse) bool {
 	} else if this == nil || that == nil {
 		return false
 	}
-	if equal, ok := interface{}(this.PID).(interface{ EqualVT(*actor.PID) bool }); ok {
-		if !equal.EqualVT(that.PID) {
-			return false
-		}
-	} else if !proto.Equal(this.PID, that.PID) {
+	if !this.CID.EqualVT(that.CID) {
 		return false
 	}
 	if this.Success != that.Success {
@@ -765,19 +731,41 @@ func (m *CID) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 		copy(dAtA[i:], m.Region)
 		i = encodeVarint(dAtA, i, uint64(len(m.Region)))
 		i--
-		dAtA[i] = 0x1a
+		dAtA[i] = 0x22
 	}
 	if len(m.Kind) > 0 {
 		i -= len(m.Kind)
 		copy(dAtA[i:], m.Kind)
 		i = encodeVarint(dAtA, i, uint64(len(m.Kind)))
 		i--
-		dAtA[i] = 0x12
+		dAtA[i] = 0x1a
 	}
 	if len(m.ID) > 0 {
 		i -= len(m.ID)
 		copy(dAtA[i:], m.ID)
 		i = encodeVarint(dAtA, i, uint64(len(m.ID)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if m.PID != nil {
+		if vtmsg, ok := interface{}(m.PID).(interface {
+			MarshalToSizedBufferVT([]byte) (int, error)
+		}); ok {
+			size, err := vtmsg.MarshalToSizedBufferVT(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarint(dAtA, i, uint64(size))
+		} else {
+			encoded, err := proto.Marshal(m.PID)
+			if err != nil {
+				return 0, err
+			}
+			i -= len(encoded)
+			copy(dAtA[i:], encoded)
+			i = encodeVarint(dAtA, i, uint64(len(encoded)))
+		}
 		i--
 		dAtA[i] = 0xa
 	}
@@ -1108,28 +1096,6 @@ func (m *ActorInfo) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 		i--
 		dAtA[i] = 0x12
 	}
-	if m.PID != nil {
-		if vtmsg, ok := interface{}(m.PID).(interface {
-			MarshalToSizedBufferVT([]byte) (int, error)
-		}); ok {
-			size, err := vtmsg.MarshalToSizedBufferVT(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarint(dAtA, i, uint64(size))
-		} else {
-			encoded, err := proto.Marshal(m.PID)
-			if err != nil {
-				return 0, err
-			}
-			i -= len(encoded)
-			copy(dAtA[i:], encoded)
-			i = encodeVarint(dAtA, i, uint64(len(encoded)))
-		}
-		i--
-		dAtA[i] = 0xa
-	}
 	return len(dAtA) - i, nil
 }
 
@@ -1218,28 +1184,6 @@ func (m *Activation) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 		i--
 		dAtA[i] = 0x12
 	}
-	if m.PID != nil {
-		if vtmsg, ok := interface{}(m.PID).(interface {
-			MarshalToSizedBufferVT([]byte) (int, error)
-		}); ok {
-			size, err := vtmsg.MarshalToSizedBufferVT(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarint(dAtA, i, uint64(size))
-		} else {
-			encoded, err := proto.Marshal(m.PID)
-			if err != nil {
-				return 0, err
-			}
-			i -= len(encoded)
-			copy(dAtA[i:], encoded)
-			i = encodeVarint(dAtA, i, uint64(len(encoded)))
-		}
-		i--
-		dAtA[i] = 0xa
-	}
 	return len(dAtA) - i, nil
 }
 
@@ -1283,28 +1227,6 @@ func (m *Deactivation) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 		i--
 		dAtA[i] = 0x12
 	}
-	if m.PID != nil {
-		if vtmsg, ok := interface{}(m.PID).(interface {
-			MarshalToSizedBufferVT([]byte) (int, error)
-		}); ok {
-			size, err := vtmsg.MarshalToSizedBufferVT(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarint(dAtA, i, uint64(size))
-		} else {
-			encoded, err := proto.Marshal(m.PID)
-			if err != nil {
-				return 0, err
-			}
-			i -= len(encoded)
-			copy(dAtA[i:], encoded)
-			i = encodeVarint(dAtA, i, uint64(len(encoded)))
-		}
-		i--
-		dAtA[i] = 0xa
-	}
 	return len(dAtA) - i, nil
 }
 
@@ -1343,13 +1265,17 @@ func (m *ActivationRequest) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 		i--
 		dAtA[i] = 0x18
 	}
-	if m.CID != nil {
-		size, err := m.CID.MarshalToSizedBufferVT(dAtA[:i])
-		if err != nil {
-			return 0, err
-		}
-		i -= size
-		i = encodeVarint(dAtA, i, uint64(size))
+	if len(m.ID) > 0 {
+		i -= len(m.ID)
+		copy(dAtA[i:], m.ID)
+		i = encodeVarint(dAtA, i, uint64(len(m.ID)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.Kind) > 0 {
+		i -= len(m.Kind)
+		copy(dAtA[i:], m.Kind)
+		i = encodeVarint(dAtA, i, uint64(len(m.Kind)))
 		i--
 		dAtA[i] = 0xa
 	}
@@ -1401,25 +1327,13 @@ func (m *ActivationResponse) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 		i--
 		dAtA[i] = 0x10
 	}
-	if m.PID != nil {
-		if vtmsg, ok := interface{}(m.PID).(interface {
-			MarshalToSizedBufferVT([]byte) (int, error)
-		}); ok {
-			size, err := vtmsg.MarshalToSizedBufferVT(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarint(dAtA, i, uint64(size))
-		} else {
-			encoded, err := proto.Marshal(m.PID)
-			if err != nil {
-				return 0, err
-			}
-			i -= len(encoded)
-			copy(dAtA[i:], encoded)
-			i = encodeVarint(dAtA, i, uint64(len(encoded)))
+	if m.CID != nil {
+		size, err := m.CID.MarshalToSizedBufferVT(dAtA[:i])
+		if err != nil {
+			return 0, err
 		}
+		i -= size
+		i = encodeVarint(dAtA, i, uint64(size))
 		i--
 		dAtA[i] = 0xa
 	}
@@ -1472,19 +1386,41 @@ func (m *CID) MarshalToSizedBufferVTStrict(dAtA []byte) (int, error) {
 		copy(dAtA[i:], m.Region)
 		i = encodeVarint(dAtA, i, uint64(len(m.Region)))
 		i--
-		dAtA[i] = 0x1a
+		dAtA[i] = 0x22
 	}
 	if len(m.Kind) > 0 {
 		i -= len(m.Kind)
 		copy(dAtA[i:], m.Kind)
 		i = encodeVarint(dAtA, i, uint64(len(m.Kind)))
 		i--
-		dAtA[i] = 0x12
+		dAtA[i] = 0x1a
 	}
 	if len(m.ID) > 0 {
 		i -= len(m.ID)
 		copy(dAtA[i:], m.ID)
 		i = encodeVarint(dAtA, i, uint64(len(m.ID)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if m.PID != nil {
+		if vtmsg, ok := interface{}(m.PID).(interface {
+			MarshalToSizedBufferVTStrict([]byte) (int, error)
+		}); ok {
+			size, err := vtmsg.MarshalToSizedBufferVTStrict(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarint(dAtA, i, uint64(size))
+		} else {
+			encoded, err := proto.Marshal(m.PID)
+			if err != nil {
+				return 0, err
+			}
+			i -= len(encoded)
+			copy(dAtA[i:], encoded)
+			i = encodeVarint(dAtA, i, uint64(len(encoded)))
+		}
 		i--
 		dAtA[i] = 0xa
 	}
@@ -1815,28 +1751,6 @@ func (m *ActorInfo) MarshalToSizedBufferVTStrict(dAtA []byte) (int, error) {
 		i--
 		dAtA[i] = 0x12
 	}
-	if m.PID != nil {
-		if vtmsg, ok := interface{}(m.PID).(interface {
-			MarshalToSizedBufferVTStrict([]byte) (int, error)
-		}); ok {
-			size, err := vtmsg.MarshalToSizedBufferVTStrict(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarint(dAtA, i, uint64(size))
-		} else {
-			encoded, err := proto.Marshal(m.PID)
-			if err != nil {
-				return 0, err
-			}
-			i -= len(encoded)
-			copy(dAtA[i:], encoded)
-			i = encodeVarint(dAtA, i, uint64(len(encoded)))
-		}
-		i--
-		dAtA[i] = 0xa
-	}
 	return len(dAtA) - i, nil
 }
 
@@ -1925,28 +1839,6 @@ func (m *Activation) MarshalToSizedBufferVTStrict(dAtA []byte) (int, error) {
 		i--
 		dAtA[i] = 0x12
 	}
-	if m.PID != nil {
-		if vtmsg, ok := interface{}(m.PID).(interface {
-			MarshalToSizedBufferVTStrict([]byte) (int, error)
-		}); ok {
-			size, err := vtmsg.MarshalToSizedBufferVTStrict(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarint(dAtA, i, uint64(size))
-		} else {
-			encoded, err := proto.Marshal(m.PID)
-			if err != nil {
-				return 0, err
-			}
-			i -= len(encoded)
-			copy(dAtA[i:], encoded)
-			i = encodeVarint(dAtA, i, uint64(len(encoded)))
-		}
-		i--
-		dAtA[i] = 0xa
-	}
 	return len(dAtA) - i, nil
 }
 
@@ -1990,28 +1882,6 @@ func (m *Deactivation) MarshalToSizedBufferVTStrict(dAtA []byte) (int, error) {
 		i--
 		dAtA[i] = 0x12
 	}
-	if m.PID != nil {
-		if vtmsg, ok := interface{}(m.PID).(interface {
-			MarshalToSizedBufferVTStrict([]byte) (int, error)
-		}); ok {
-			size, err := vtmsg.MarshalToSizedBufferVTStrict(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarint(dAtA, i, uint64(size))
-		} else {
-			encoded, err := proto.Marshal(m.PID)
-			if err != nil {
-				return 0, err
-			}
-			i -= len(encoded)
-			copy(dAtA[i:], encoded)
-			i = encodeVarint(dAtA, i, uint64(len(encoded)))
-		}
-		i--
-		dAtA[i] = 0xa
-	}
 	return len(dAtA) - i, nil
 }
 
@@ -2050,13 +1920,17 @@ func (m *ActivationRequest) MarshalToSizedBufferVTStrict(dAtA []byte) (int, erro
 		i--
 		dAtA[i] = 0x18
 	}
-	if m.CID != nil {
-		size, err := m.CID.MarshalToSizedBufferVTStrict(dAtA[:i])
-		if err != nil {
-			return 0, err
-		}
-		i -= size
-		i = encodeVarint(dAtA, i, uint64(size))
+	if len(m.ID) > 0 {
+		i -= len(m.ID)
+		copy(dAtA[i:], m.ID)
+		i = encodeVarint(dAtA, i, uint64(len(m.ID)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.Kind) > 0 {
+		i -= len(m.Kind)
+		copy(dAtA[i:], m.Kind)
+		i = encodeVarint(dAtA, i, uint64(len(m.Kind)))
 		i--
 		dAtA[i] = 0xa
 	}
@@ -2108,25 +1982,13 @@ func (m *ActivationResponse) MarshalToSizedBufferVTStrict(dAtA []byte) (int, err
 		i--
 		dAtA[i] = 0x10
 	}
-	if m.PID != nil {
-		if vtmsg, ok := interface{}(m.PID).(interface {
-			MarshalToSizedBufferVTStrict([]byte) (int, error)
-		}); ok {
-			size, err := vtmsg.MarshalToSizedBufferVTStrict(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarint(dAtA, i, uint64(size))
-		} else {
-			encoded, err := proto.Marshal(m.PID)
-			if err != nil {
-				return 0, err
-			}
-			i -= len(encoded)
-			copy(dAtA[i:], encoded)
-			i = encodeVarint(dAtA, i, uint64(len(encoded)))
+	if m.CID != nil {
+		size, err := m.CID.MarshalToSizedBufferVTStrict(dAtA[:i])
+		if err != nil {
+			return 0, err
 		}
+		i -= size
+		i = encodeVarint(dAtA, i, uint64(size))
 		i--
 		dAtA[i] = 0xa
 	}
@@ -2139,6 +2001,16 @@ func (m *CID) SizeVT() (n int) {
 	}
 	var l int
 	_ = l
+	if m.PID != nil {
+		if size, ok := interface{}(m.PID).(interface {
+			SizeVT() int
+		}); ok {
+			l = size.SizeVT()
+		} else {
+			l = proto.Size(m.PID)
+		}
+		n += 1 + l + sov(uint64(l))
+	}
 	l = len(m.ID)
 	if l > 0 {
 		n += 1 + l + sov(uint64(l))
@@ -2274,16 +2146,6 @@ func (m *ActorInfo) SizeVT() (n int) {
 	}
 	var l int
 	_ = l
-	if m.PID != nil {
-		if size, ok := interface{}(m.PID).(interface {
-			SizeVT() int
-		}); ok {
-			l = size.SizeVT()
-		} else {
-			l = proto.Size(m.PID)
-		}
-		n += 1 + l + sov(uint64(l))
-	}
 	if m.CID != nil {
 		l = m.CID.SizeVT()
 		n += 1 + l + sov(uint64(l))
@@ -2314,16 +2176,6 @@ func (m *Activation) SizeVT() (n int) {
 	}
 	var l int
 	_ = l
-	if m.PID != nil {
-		if size, ok := interface{}(m.PID).(interface {
-			SizeVT() int
-		}); ok {
-			l = size.SizeVT()
-		} else {
-			l = proto.Size(m.PID)
-		}
-		n += 1 + l + sov(uint64(l))
-	}
 	if m.CID != nil {
 		l = m.CID.SizeVT()
 		n += 1 + l + sov(uint64(l))
@@ -2338,16 +2190,6 @@ func (m *Deactivation) SizeVT() (n int) {
 	}
 	var l int
 	_ = l
-	if m.PID != nil {
-		if size, ok := interface{}(m.PID).(interface {
-			SizeVT() int
-		}); ok {
-			l = size.SizeVT()
-		} else {
-			l = proto.Size(m.PID)
-		}
-		n += 1 + l + sov(uint64(l))
-	}
 	if m.CID != nil {
 		l = m.CID.SizeVT()
 		n += 1 + l + sov(uint64(l))
@@ -2362,8 +2204,12 @@ func (m *ActivationRequest) SizeVT() (n int) {
 	}
 	var l int
 	_ = l
-	if m.CID != nil {
-		l = m.CID.SizeVT()
+	l = len(m.Kind)
+	if l > 0 {
+		n += 1 + l + sov(uint64(l))
+	}
+	l = len(m.ID)
+	if l > 0 {
 		n += 1 + l + sov(uint64(l))
 	}
 	if m.TopologyHash != 0 {
@@ -2379,14 +2225,8 @@ func (m *ActivationResponse) SizeVT() (n int) {
 	}
 	var l int
 	_ = l
-	if m.PID != nil {
-		if size, ok := interface{}(m.PID).(interface {
-			SizeVT() int
-		}); ok {
-			l = size.SizeVT()
-		} else {
-			l = proto.Size(m.PID)
-		}
+	if m.CID != nil {
+		l = m.CID.SizeVT()
 		n += 1 + l + sov(uint64(l))
 	}
 	if m.Success {
@@ -2436,6 +2276,50 @@ func (m *CID) UnmarshalVT(dAtA []byte) error {
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field PID", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLength
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLength
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.PID == nil {
+				m.PID = &actor.PID{}
+			}
+			if unmarshal, ok := interface{}(m.PID).(interface {
+				UnmarshalVT([]byte) error
+			}); ok {
+				if err := unmarshal.UnmarshalVT(dAtA[iNdEx:postIndex]); err != nil {
+					return err
+				}
+			} else {
+				if err := proto.Unmarshal(dAtA[iNdEx:postIndex], m.PID); err != nil {
+					return err
+				}
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field ID", wireType)
 			}
 			var stringLen uint64
@@ -2466,7 +2350,7 @@ func (m *CID) UnmarshalVT(dAtA []byte) error {
 			}
 			m.ID = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
-		case 2:
+		case 3:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Kind", wireType)
 			}
@@ -2498,7 +2382,7 @@ func (m *CID) UnmarshalVT(dAtA []byte) error {
 			}
 			m.Kind = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
-		case 3:
+		case 4:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Region", wireType)
 			}
@@ -3221,50 +3105,6 @@ func (m *ActorInfo) UnmarshalVT(dAtA []byte) error {
 			return fmt.Errorf("proto: ActorInfo: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field PID", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflow
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLength
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLength
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.PID == nil {
-				m.PID = &actor.PID{}
-			}
-			if unmarshal, ok := interface{}(m.PID).(interface {
-				UnmarshalVT([]byte) error
-			}); ok {
-				if err := unmarshal.UnmarshalVT(dAtA[iNdEx:postIndex]); err != nil {
-					return err
-				}
-			} else {
-				if err := proto.Unmarshal(dAtA[iNdEx:postIndex], m.PID); err != nil {
-					return err
-				}
-			}
-			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field CID", wireType)
@@ -3437,50 +3277,6 @@ func (m *Activation) UnmarshalVT(dAtA []byte) error {
 			return fmt.Errorf("proto: Activation: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field PID", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflow
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLength
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLength
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.PID == nil {
-				m.PID = &actor.PID{}
-			}
-			if unmarshal, ok := interface{}(m.PID).(interface {
-				UnmarshalVT([]byte) error
-			}); ok {
-				if err := unmarshal.UnmarshalVT(dAtA[iNdEx:postIndex]); err != nil {
-					return err
-				}
-			} else {
-				if err := proto.Unmarshal(dAtA[iNdEx:postIndex], m.PID); err != nil {
-					return err
-				}
-			}
-			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field CID", wireType)
@@ -3568,50 +3364,6 @@ func (m *Deactivation) UnmarshalVT(dAtA []byte) error {
 			return fmt.Errorf("proto: Deactivation: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field PID", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflow
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLength
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLength
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.PID == nil {
-				m.PID = &actor.PID{}
-			}
-			if unmarshal, ok := interface{}(m.PID).(interface {
-				UnmarshalVT([]byte) error
-			}); ok {
-				if err := unmarshal.UnmarshalVT(dAtA[iNdEx:postIndex]); err != nil {
-					return err
-				}
-			} else {
-				if err := proto.Unmarshal(dAtA[iNdEx:postIndex], m.PID); err != nil {
-					return err
-				}
-			}
-			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field CID", wireType)
@@ -3701,9 +3453,9 @@ func (m *ActivationRequest) UnmarshalVT(dAtA []byte) error {
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field CID", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Kind", wireType)
 			}
-			var msglen int
+			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflow
@@ -3713,27 +3465,55 @@ func (m *ActivationRequest) UnmarshalVT(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				msglen |= int(b&0x7F) << shift
+				stringLen |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-			if msglen < 0 {
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
 				return ErrInvalidLength
 			}
-			postIndex := iNdEx + msglen
+			postIndex := iNdEx + intStringLen
 			if postIndex < 0 {
 				return ErrInvalidLength
 			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			if m.CID == nil {
-				m.CID = &CID{}
+			m.Kind = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ID", wireType)
 			}
-			if err := m.CID.UnmarshalVT(dAtA[iNdEx:postIndex]); err != nil {
-				return err
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
 			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLength
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLength
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.ID = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 3:
 			if wireType != 0 {
@@ -3807,7 +3587,7 @@ func (m *ActivationResponse) UnmarshalVT(dAtA []byte) error {
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field PID", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field CID", wireType)
 			}
 			var msglen int
 			for shift := uint(0); ; shift += 7 {
@@ -3834,19 +3614,11 @@ func (m *ActivationResponse) UnmarshalVT(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			if m.PID == nil {
-				m.PID = &actor.PID{}
+			if m.CID == nil {
+				m.CID = &CID{}
 			}
-			if unmarshal, ok := interface{}(m.PID).(interface {
-				UnmarshalVT([]byte) error
-			}); ok {
-				if err := unmarshal.UnmarshalVT(dAtA[iNdEx:postIndex]); err != nil {
-					return err
-				}
-			} else {
-				if err := proto.Unmarshal(dAtA[iNdEx:postIndex], m.PID); err != nil {
-					return err
-				}
+			if err := m.CID.UnmarshalVT(dAtA[iNdEx:postIndex]); err != nil {
+				return err
 			}
 			iNdEx = postIndex
 		case 2:

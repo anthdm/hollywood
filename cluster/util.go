@@ -1,6 +1,10 @@
 package cluster
 
-import "github.com/anthdm/hollywood/actor"
+import (
+	fmt "fmt"
+
+	"github.com/anthdm/hollywood/actor"
+)
 
 // memberToProviderPID create a new PID from the member that
 // will target the provider actor of the cluster.
@@ -9,12 +13,17 @@ func memberToProviderPID(m *Member) *actor.PID {
 }
 
 // NewCID returns a new Cluster ID.
-func NewCID(kind, id, region string) *CID {
+func NewCID(pid *actor.PID, kind, id, region string) *CID {
 	return &CID{
+		PID:    pid,
 		Kind:   kind,
 		ID:     id,
 		Region: region,
 	}
+}
+
+func (cid *CID) String() string {
+	return fmt.Sprintf("%s :: [%s/%s] :: %s", cid.PID, cid.Kind, cid.ID, cid.Region)
 }
 
 // Equals returns true whether the given CID equals the caller.

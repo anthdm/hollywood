@@ -4,9 +4,10 @@ option go_package = "github.com/anthdm/hollywood/cluster";
 import "actor.proto";
 
 message CID {
-	string ID = 1;
-	string kind = 2;
-	string region = 3;
+	actor.PID PID = 1;
+	string ID = 2;
+	string kind = 3;
+	string region = 4;
 }
 
 message Member {
@@ -37,7 +38,6 @@ message Topology {
 }
 
 message ActorInfo {
-	actor.PID PID = 1;
 	CID CID = 2;
 }
 
@@ -46,22 +46,21 @@ message ActorTopology {
 }
 
 message Activation {
-	actor.PID PID = 1;
 	CID CID = 2;
 }
 
 message Deactivation {
-	actor.PID PID = 1;
 	CID CID = 2;
 }
 
 message ActivationRequest {
-	CID CID = 1;
+	string Kind = 1;
+	string ID = 2;
 	uint64 topologyHash = 3;
 }
 
 message ActivationResponse {
-	actor.PID PID = 1;
+	CID CID = 1;
 	bool success = 2;
 	uint64 topologyHash = 3;
 }

@@ -40,7 +40,7 @@ func (l *KindLookup) Has(kind ActiveKind) bool {
 	}
 	found := false
 	kinds.Each(func(akind ActiveKind) bool {
-		if kind.cid.Equals(akind.cid) && kind.pid.Equals(akind.pid) {
+		if kind.cid.Equals(akind.cid) {
 			found = true
 			return false
 		}
