@@ -71,6 +71,9 @@ func (rb *RingBuffer[T]) Pop() (T, bool) {
 }
 
 func (rb *RingBuffer[T]) PopN(n int64) ([]T, bool) {
+	if rb.Len() == 0 {
+		return nil, false
+	}
 	rb.mu.Lock()
 	content := rb.content
 
