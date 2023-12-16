@@ -10,7 +10,7 @@ import (
 	"github.com/anthdm/hollywood/remote"
 )
 
-func makeCluster(addr string, id string, members ...*cluster.Member) *cluster.Cluster {
+func makeCluster(addr string, id string, members ...cluster.MemberAddr) *cluster.Cluster {
 	remote := remote.New(remote.Config{
 		ListenAddr: addr,
 	})
@@ -59,8 +59,11 @@ func main() {
 	c1.Start()
 	time.Sleep(time.Second)
 
-	member := c1.Member()
-	c2 := makeCluster("localhost:3002", "B", member)
+	memberAddr := cluster.MemberAddr{
+		ListenAddr: "localhost:3001",
+		ID:         "A",
+	}
+	c2 := makeCluster("localhost:3002", "B", memberAddr)
 	c2.RegisterKind("inventory", NewInventory, cluster.KindOpts{})
 	c2.RegisterKind("player", NewPlayer, cluster.KindOpts{})
 	c2.Start()
@@ -70,7 +73,7 @@ func main() {
 	cid := c2.Activate("player", "supermario")
 	time.Sleep(time.Second)
 
-	c3 := makeCluster("localhost:3003", "C", member)
+	c3 := makeCluster("localhost:3003", "C", memberAddr)
 	c3.Start()
 
 	time.Sleep(time.Second * 2)

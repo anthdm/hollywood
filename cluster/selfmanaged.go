@@ -1,6 +1,8 @@
 package cluster
 
 import (
+	fmt "fmt"
+	"strings"
 	"time"
 
 	"github.com/anthdm/hollywood/actor"
@@ -8,25 +10,31 @@ import (
 
 const memberPingInterval = time.Second * 5
 
+type MemberAddr struct {
+	ListenAddr string
+	ID         string
+}
+
 type memberPing struct{}
 
 type SelfManaged struct {
-	cluster          *Cluster
-	bootstrapMembers []*Member
-	members          *MemberSet
-	memberPinger     actor.SendRepeater
+	cluster        *Cluster
+	bootstrapAddrs []MemberAddr
+	members        *MemberSet
+	memberPinger   actor.SendRepeater
+	eventSubPID    *actor.PID
 
 	membersAlive *MemberSet
 }
 
-func NewSelfManagedProvider(members ...*Member) Producer {
+func NewSelfManagedProvider(addrs ...MemberAddr) Producer {
 	return func(c *Cluster) actor.Producer {
 		return func() actor.Receiver {
 			return &SelfManaged{
-				cluster:          c,
-				bootstrapMembers: members,
-				members:          NewMemberSet(),
-				membersAlive:     NewMemberSet(),
+				cluster:        c,
+				bootstrapAddrs: addrs,
+				members:        NewMemberSet(),
+				membersAlive:   NewMemberSet(),
 			}
 		}
 	}
@@ -44,6 +52,7 @@ func (s *SelfManaged) Receive(c *actor.Context) {
 		s.start(c)
 	case actor.Stopped:
 		s.memberPinger.Stop()
+		s.cluster.engine.Unsubscribe(s.eventSubPID)
 	case *MembersJoin:
 		for _, member := range msg.Members {
 			s.addMember(member)
@@ -68,39 +77,20 @@ func (s *SelfManaged) Receive(c *actor.Context) {
 			s.cluster.engine.Send(s.cluster.PID(), members)
 		}
 	case memberPing:
-		// fmt.Println("pinging all the members", s.members.Len())
-		// s.members.ForEach(func(member *Member) bool {
-		// 	ping := &actor.Ping{
-		// 		From: c.PID(),
-		// 	}
-		// 	c.Send(memberToProviderPID(member), ping)
-		// 	return true
-		// })
-		// 	pong, err := c.Request(memberToProviderPID(member), ping, time.Millisecond*1000).Result()
-		// 	if err != nil {
-		// 		slog.Error("member ping failed", "err", err, "memberID", member.ID)
-		// 		s.removeMember(member)
-		// 	}
-		// 	// TODO: Something is not quite right here!
-		// 	if _, ok := pong.(*actor.Pong); !ok {
-		// 		slog.Error("member ping failed", "err", err, "memberID", member.ID)
-		// 		s.removeMember(member)
-		// 	}
-		// 	return true
-		// })
-		// case *actor.Ping:
-		// 	pong := &actor.Pong{
-		// 		From: c.PID(),
-		// 	}
-		// 	c.Respond(pong)
-		// case *actor.Pong:
-		// 	id := msg.From.ID
-		// 	fmt.Println("got pong id", id)
+		s.members.ForEach(func(member *Member) bool {
+			if member.Host != s.cluster.agentPID.Address {
+				ping := &actor.Ping{
+					From: c.PID(),
+				}
+				c.Send(memberToProviderPID(member), ping)
+			}
+			return true
+		})
 	}
 }
 
 // If we receive members from another node in the cluster
-// we respond with all the members we know of and, ofcourse
+// we respond with all the members we know of, and ofcourse
 // add the new one.
 func (s *SelfManaged) addMember(member *Member) {
 	if !s.members.Contains(member) {
@@ -123,20 +113,26 @@ func (s *SelfManaged) updateCluster() {
 }
 
 func (s *SelfManaged) start(c *actor.Context) error {
-	// eventSubPID := c.SpawnChildFunc(func(ctx *actor.Context) {
-	// 	switch msg := ctx.Message().(type) {
-	// 	case actor.DeadLetterEvent:
-	// 		fmt.Println("got deadletter", msg)
-	// 	}
-	// }, "event")
+	s.eventSubPID = c.SpawnChildFunc(func(ctx *actor.Context) {
+		switch msg := ctx.Message().(type) {
+		case actor.DeadLetterEvent:
+			// This is going to be a dirty hack right here
+			parts := strings.Split(msg.Target.String(), "/")
+			if len(parts) == 3 {
+				port := parts[len(parts)-1]
+				fmt.Printf("got deadletter %+v\n", port)
+			}
+		}
+	}, "event")
 
-	// s.cluster.engine.Subscribe(eventSubPID)
+	s.cluster.engine.Subscribe(s.eventSubPID)
 
 	members := &MembersJoin{
 		Members: s.members.Slice(),
 	}
-	for _, m := range s.bootstrapMembers {
-		s.cluster.engine.Send(memberToProviderPID(m), members)
+	for _, ma := range s.bootstrapAddrs {
+		memberPID := actor.NewPID(ma.ListenAddr, "cluster", ma.ID, "provider")
+		s.cluster.engine.Send(memberPID, members)
 	}
 	return nil
 }
