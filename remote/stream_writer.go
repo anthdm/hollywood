@@ -139,8 +139,13 @@ func (s *streamWriter) init() {
 		}
 		break
 	}
-	// This probably means we retried N times but the remote is still unreachable
+	// We could not reach the remote after retrying N times. Hence, shutdown the stream writer.
+	// and notify RemoteUnreachableEvent.
 	if rawconn == nil {
+		evt := actor.RemoteUnreachableEvent{
+			ListenAddr: s.writeToAddr,
+		}
+		s.engine.BroadcastEvent(evt)
 		s.Shutdown(nil)
 		return
 	}

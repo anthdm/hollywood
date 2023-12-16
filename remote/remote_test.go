@@ -35,6 +35,8 @@ func NewDlActor(wg *sync.WaitGroup, n int) actor.Producer {
 
 func (a *dlactor) Receive(c *actor.Context) {
 	switch c.Message().(type) {
+	case actor.RemoteUnreachableEvent:
+		a.wg.Done()
 	case actor.DeadLetterEvent:
 		a.count++
 		if a.count == a.n {
@@ -53,7 +55,7 @@ func TestRemoteUnreachableMessagesEndUpInDeadletter(t *testing.T) {
 	assert.Nil(t, err)
 
 	wg := &sync.WaitGroup{}
-	wg.Add(1)
+	wg.Add(2)
 
 	pid := a.Spawn(NewDlActor(wg, n), "event")
 	a.Subscribe(pid)
