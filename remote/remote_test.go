@@ -18,6 +18,52 @@ func init() {
 	RegisterType(&TestMessage{})
 }
 
+type dlactor struct {
+	count int
+	n     int
+	wg    *sync.WaitGroup
+}
+
+func NewDlActor(wg *sync.WaitGroup, n int) actor.Producer {
+	return func() actor.Receiver {
+		return &dlactor{
+			wg: wg,
+			n:  n,
+		}
+	}
+}
+
+func (a *dlactor) Receive(c *actor.Context) {
+	switch c.Message().(type) {
+	case actor.DeadLetterEvent:
+		a.count++
+		if a.count == a.n {
+			a.wg.Done()
+		}
+	}
+}
+
+// When a remote is unreachable we retry connecting N times. If the remote is still not reachable
+// after N retries, we send all the buffered messages as Deadletter events.
+// This test checks if we receive N deadletters after sending N messages to an unreachable
+// remote.
+func TestRemoteUnreachableMessagesEndUpInDeadletter(t *testing.T) {
+	n := 10
+	a, _, err := makeRemoteEngine(getRandomLocalhostAddr())
+	assert.Nil(t, err)
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+
+	pid := a.Spawn(NewDlActor(wg, n), "event")
+	a.Subscribe(pid)
+
+	for i := 0; i < n; i++ {
+		a.Send(actor.NewPID("127.0.0.1:4000", "foo/bar"), &TestMessage{Data: []byte("foo")})
+	}
+	wg.Wait()
+}
+
 func TestSend(t *testing.T) {
 	const msgs = 10
 	aAddr := getRandomLocalhostAddr()

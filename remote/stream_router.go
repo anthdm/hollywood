@@ -67,5 +67,6 @@ func (s *streamRouter) deliverStream(msg *streamDeliver) {
 		swpid = s.engine.SpawnProc(newStreamWriter(s.engine, s.pid, address, s.tlsConfig))
 		s.streams[address] = swpid
 	}
+
 	s.engine.Send(swpid, msg)
 }
