@@ -84,6 +84,14 @@ func (e EngineRemoteMissingEvent) Log() (slog.Level, string, []any) {
 	return slog.LevelError, "Engine has no remote", []any{"sender", e.Target.GetID()}
 }
 
+// RemoteUnreachableEvent gets published when trying to send a message to
+// an remote that is not reachable. The event will be published after we
+// retry to dial it N times.
+type RemoteUnreachableEvent struct {
+	// The listen address of the remote we are trying to dial.
+	ListenAddr string
+}
+
 // DeadLetterEvent is delivered to the deadletter actor when a message can't be delivered to it's recipient
 type DeadLetterEvent struct {
 	Target  *PID

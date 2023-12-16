@@ -252,6 +252,7 @@ message and the attributes of the event set by the `actor.LogEvent` `log()` meth
 * `ActorStoppedEvent`, an actor has stopped
 * `DeadLetterEvent`, a message was not delivered to an actor
 * `ActorRestartedEvent`, an actor has restarted after a crash/panic.
+* `RemoteUnreachableEvent`, sending a message over the wire to a remote that is not reachable.
 
 ### Eventstream example
 
