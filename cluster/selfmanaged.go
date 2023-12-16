@@ -2,7 +2,6 @@ package cluster
 
 import (
 	fmt "fmt"
-	"strings"
 	"time"
 
 	"github.com/anthdm/hollywood/actor"
@@ -15,6 +14,10 @@ type MemberAddr struct {
 	ID         string
 }
 
+type memberLeave struct {
+	ListenAddr string
+}
+
 type memberPing struct{}
 
 type SelfManaged struct {
@@ -23,6 +26,8 @@ type SelfManaged struct {
 	members        *MemberSet
 	memberPinger   actor.SendRepeater
 	eventSubPID    *actor.PID
+
+	pid *actor.PID
 
 	membersAlive *MemberSet
 }
@@ -43,6 +48,7 @@ func NewSelfManagedProvider(addrs ...MemberAddr) Producer {
 func (s *SelfManaged) Receive(c *actor.Context) {
 	switch msg := c.Message().(type) {
 	case actor.Started:
+		s.pid = c.PID()
 		s.members.Add(s.cluster.Member())
 		members := &Members{
 			Members: s.members.Slice(),
@@ -86,6 +92,9 @@ func (s *SelfManaged) Receive(c *actor.Context) {
 			}
 			return true
 		})
+	case memberLeave:
+		member := s.members.GetByHost(msg.ListenAddr)
+		s.removeMember(member)
 	}
 }
 
@@ -99,6 +108,7 @@ func (s *SelfManaged) addMember(member *Member) {
 }
 
 func (s *SelfManaged) removeMember(member *Member) {
+	fmt.Println("removing member", member)
 	if s.members.Contains(member) {
 		s.members.Remove(member)
 	}
@@ -115,13 +125,8 @@ func (s *SelfManaged) updateCluster() {
 func (s *SelfManaged) start(c *actor.Context) error {
 	s.eventSubPID = c.SpawnChildFunc(func(ctx *actor.Context) {
 		switch msg := ctx.Message().(type) {
-		case actor.DeadLetterEvent:
-			// This is going to be a dirty hack right here
-			parts := strings.Split(msg.Target.String(), "/")
-			if len(parts) == 3 {
-				port := parts[len(parts)-1]
-				fmt.Printf("got deadletter %+v\n", port)
-			}
+		case actor.RemoteUnreachableEvent:
+			ctx.Send(s.pid, memberLeave{ListenAddr: msg.ListenAddr})
 		}
 	}, "event")
 

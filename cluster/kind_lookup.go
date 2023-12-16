@@ -1,6 +1,8 @@
 package cluster
 
-import mapset "github.com/deckarep/golang-set/v2"
+import (
+	mapset "github.com/deckarep/golang-set/v2"
+)
 
 type KindLookup struct {
 	kinds map[string]mapset.Set[ActiveKind]
@@ -29,8 +31,13 @@ func (l *KindLookup) Get(kind string) []ActiveKind {
 	return []ActiveKind{}
 }
 
-func (l *KindLookup) Remove(name string, kind ActiveKind) {
-
+func (l *KindLookup) Remove(kind ActiveKind) {
+	if l.Has(kind) {
+		l.kinds[kind.cid.Kind].Remove(kind)
+	}
+	if len(l.Get(kind.cid.Kind)) == 0 {
+		delete(l.kinds, kind.cid.Kind)
+	}
 }
 
 func (l *KindLookup) Has(kind ActiveKind) bool {

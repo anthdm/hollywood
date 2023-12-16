@@ -3,10 +3,11 @@ package cluster
 import (
 	"log/slog"
 	"math/rand"
-	reflect "reflect"
+	"reflect"
 	"time"
 
 	"github.com/anthdm/hollywood/actor"
+	"golang.org/x/exp/maps"
 )
 
 type getActiveKinds struct {
@@ -149,8 +150,8 @@ func (a *Agent) activate(kind, id string) *CID {
 		activationResp = a.handleActivationRequest(req)
 	} else {
 		// Remote activation
+
 		// TODO: topology hash
-		// TODO: retry this couple times
 		resp, err := a.cluster.engine.Request(activatorPID, req, time.Millisecond*100).Result()
 		if err != nil {
 			slog.Error("failed activation request", "err", err)
@@ -216,8 +217,23 @@ func (a *Agent) memberJoin(member *Member) {
 }
 
 func (a *Agent) memberLeave(member *Member) {
-	slog.Info("member left", "we", a.cluster.id, "id", member.ID, "host", member.Host, "kinds", member.Kinds)
 	a.members.Remove(member)
+	a.rebuildKinds()
+
+	// Remove all the activeKinds that where running on the member that left the cluster.
+	for _, kind := range member.Kinds {
+		activeKinds := a.activeKinds.Get(kind)
+		for _, activeKind := range activeKinds {
+			if !activeKind.isLocal {
+				if activeKind.cid.PID.Address == member.Host {
+					a.activeKinds.Remove(activeKind)
+					break
+				}
+			}
+		}
+	}
+
+	slog.Info("member left", "id", member.ID, "host", member.Host, "kinds", member.Kinds)
 }
 
 func (a *Agent) bcast(msg any) {
@@ -254,4 +270,16 @@ func (a *Agent) getActiveKinds(kind string) []*CID {
 		cids[i] = kind.cid
 	}
 	return cids
+}
+
+func (a *Agent) rebuildKinds() {
+	maps.Clear(a.kinds)
+	a.members.ForEach(func(m *Member) bool {
+		for _, kind := range m.Kinds {
+			if _, ok := a.kinds[kind]; !ok {
+				a.kinds[kind] = true
+			}
+		}
+		return true
+	})
 }

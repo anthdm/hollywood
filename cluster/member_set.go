@@ -18,6 +18,16 @@ func (s *MemberSet) Len() int {
 	return len(s.members)
 }
 
+func (s *MemberSet) GetByHost(host string) *Member {
+	var theMember *Member
+	for _, member := range s.members {
+		if member.Host == host {
+			theMember = member
+		}
+	}
+	return theMember
+}
+
 func (s *MemberSet) Add(member *Member) {
 	s.members[member.ID] = member
 }
@@ -29,6 +39,13 @@ func (s *MemberSet) Contains(member *Member) bool {
 
 func (s *MemberSet) Remove(member *Member) {
 	delete(s.members, member.ID)
+}
+
+func (s *MemberSet) RemoveByHost(host string) {
+	member := s.GetByHost(host)
+	if member != nil {
+		s.Remove(member)
+	}
 }
 
 func (s *MemberSet) Slice() []*Member {

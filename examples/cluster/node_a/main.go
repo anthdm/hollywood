@@ -42,5 +42,6 @@ func main() {
 	if err := c.Start(); err != nil {
 		log.Fatal(err)
 	}
+	c.Activate("player", "1")
 	select {}
 }
