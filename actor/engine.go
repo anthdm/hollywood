@@ -232,7 +232,8 @@ func (e *Engine) SendLocal(pid *PID, msg any, sender *PID) {
 		// broadcast a deadLetter message
 		e.BroadcastEvent(DeadLetterEvent{
 			Target:  pid,
-			Message: msg, Sender: sender,
+			Message: msg,
+			Sender:  sender,
 		})
 		return
 	}
