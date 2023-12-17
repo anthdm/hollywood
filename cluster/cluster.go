@@ -9,16 +9,13 @@ import (
 	"github.com/google/uuid"
 )
 
-const (
-	ClusterAgentID = "agent"
-	ProviderID     = "provider"
-)
-
 // Producer is a function that can produce an actor.Producer.
 // Pretty simple, but yet powerfull tool to construct receivers
 // depending on Cluster.
 type Producer func(c *Cluster) actor.Producer
 
+// Provider is an interface that can be used to create custom providers
+// for the cluster.
 type Provider interface {
 	Start(*Cluster) error
 	Stop() error
@@ -111,7 +108,7 @@ func (c *Cluster) RegisterKind(name string, producer actor.Producer, opts KindOp
 }
 
 // LocalKinds returns all the kinds that are registered on THIS node.
-// kind that are registred locally can be activated on this node.
+// kind that are registered locally can be activated on this node.
 func (c *Cluster) LocalKinds() []string {
 	kinds := make([]string, len(c.kinds))
 	for i := 0; i < len(c.kinds); i++ {
@@ -120,7 +117,8 @@ func (c *Cluster) LocalKinds() []string {
 	return kinds
 }
 
-func (c *Cluster) GetKinds(name string) []*CID {
+// GetActiveKinds returns all the active actors/receivers on the cluster.
+func (c *Cluster) GetActiveKinds(name string) []*CID {
 	msg := getActiveKinds{filterByKind: name}
 	resp, err := c.engine.Request(c.agentPID, msg, time.Millisecond*100).Result()
 	if err != nil {
