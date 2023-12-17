@@ -22,7 +22,7 @@ func (i *Inventory) Receive(c *actor.Context) {
 
 func main() {
 	remote := remote.New(remote.Config{
-		ListenAddr: ":3001",
+		ListenAddr: "127.0.0.1:3001",
 	})
 	e, err := actor.NewEngine(actor.EngineOptRemote(remote))
 	if err != nil {

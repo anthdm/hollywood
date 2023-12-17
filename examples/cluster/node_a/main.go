@@ -22,7 +22,7 @@ func (p *Player) Receive(c *actor.Context) {
 
 func main() {
 	remote := remote.New(remote.Config{
-		ListenAddr: ":3000",
+		ListenAddr: "127.0.0.1:3000",
 	})
 	e, err := actor.NewEngine(actor.EngineOptRemote(remote))
 	if err != nil {

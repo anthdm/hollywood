@@ -14,13 +14,7 @@ import (
 // depending on Cluster.
 type Producer func(c *Cluster) actor.Producer
 
-// Provider is an interface that can be used to create custom providers
-// for the cluster.
-type Provider interface {
-	Start(*Cluster) error
-	Stop() error
-}
-
+// Config holds the cluster configuration
 type Config struct {
 	// The individual ID of this specific node
 	ID string
@@ -69,7 +63,7 @@ func (c *Cluster) Start() error {
 	return nil
 }
 
-// TODO:
+// TODO: Spawn an actor with cluster awareness.
 func (c *Cluster) Spawn(p actor.Producer, kind string, id string) *actor.PID {
 	return nil
 }

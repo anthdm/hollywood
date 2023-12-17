@@ -213,7 +213,7 @@ func (a *Agent) memberJoin(member *Member) {
 		a.cluster.engine.Send(member.PID(), &ActorTopology{Actors: actorInfos})
 	}
 
-	slog.Info("member joined", "we", a.cluster.id, "id", member.ID, "host", member.Host, "kinds", member.Kinds)
+	slog.Info("member joined", "id", member.ID, "host", member.Host, "kinds", member.Kinds)
 }
 
 func (a *Agent) memberLeave(member *Member) {
@@ -250,7 +250,7 @@ func (a *Agent) addActiveKind(cid *CID) {
 	}
 	if !a.activeKinds.Has(akind) {
 		a.activeKinds.Add(akind)
-		slog.Info("[ACTIVE]", "we", a.cluster.id, "cid", cid)
+		slog.Info("activation", "cid", cid)
 	}
 }
 
