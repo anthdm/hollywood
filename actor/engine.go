@@ -136,7 +136,9 @@ func (e *Engine) send(pid *PID, msg any, sender *PID) {
 	e.remote.Send(pid, msg, sender)
 }
 
-// TODO: documentation
+// SendRepeater is a struct that can be used to send a repeating message to a given PID.
+// If you need to have an actor wake up periodically, you can use a SendRepeater.
+// It is started by the SendRepeat method and stopped by it's Stop() method.
 type SendRepeater struct {
 	engine   *Engine
 	self     *PID
@@ -161,6 +163,7 @@ func (sr SendRepeater) start() {
 	}()
 }
 
+// Stop will stop the repeating message.
 func (sr SendRepeater) Stop() {
 	close(sr.cancelch)
 }
