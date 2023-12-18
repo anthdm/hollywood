@@ -13,13 +13,57 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const (
-	debugLog = false // if you want a lot of noise when debugging the tests set this to true.
-)
-
 func init() {
 	// Needed for now when having the VTProtoserializer
 	RegisterType(&TestMessage{})
+}
+
+type dlactor struct {
+	count int
+	n     int
+	wg    *sync.WaitGroup
+}
+
+func NewDlActor(wg *sync.WaitGroup, n int) actor.Producer {
+	return func() actor.Receiver {
+		return &dlactor{
+			wg: wg,
+			n:  n,
+		}
+	}
+}
+
+func (a *dlactor) Receive(c *actor.Context) {
+	switch c.Message().(type) {
+	case actor.RemoteUnreachableEvent:
+		a.wg.Done()
+	case actor.DeadLetterEvent:
+		a.count++
+		if a.count == a.n {
+			a.wg.Done()
+		}
+	}
+}
+
+// When a remote is unreachable we retry connecting N times. If the remote is still not reachable
+// after N retries, we send all the buffered messages as Deadletter events.
+// This test checks if we receive N deadletters after sending N messages to an unreachable
+// remote.
+func TestRemoteUnreachableMessagesEndUpInDeadletter(t *testing.T) {
+	n := 10
+	a, _, err := makeRemoteEngine(getRandomLocalhostAddr())
+	assert.Nil(t, err)
+
+	wg := &sync.WaitGroup{}
+	wg.Add(2)
+
+	pid := a.Spawn(NewDlActor(wg, n), "event")
+	a.Subscribe(pid)
+
+	for i := 0; i < n; i++ {
+		a.Send(actor.NewPID("127.0.0.1:4000", "foo/bar"), &TestMessage{Data: []byte("foo")})
+	}
+	wg.Wait()
 }
 
 func TestSend(t *testing.T) {
@@ -175,12 +219,7 @@ func makeRemoteEngine(listenAddr string) (*actor.Engine, *Remote, error) {
 	var e *actor.Engine
 	r := New(Config{ListenAddr: listenAddr})
 	var err error
-	switch debugLog {
-	case false:
-		e, err = actor.NewEngine(actor.EngineOptRemote(r))
-	case true:
-		e, err = actor.NewEngine(actor.EngineOptRemote(r))
-	}
+	e, err = actor.NewEngine(actor.EngineOptRemote(r))
 	if err != nil {
 		return nil, nil, fmt.Errorf("actor.NewEngine: %w", err)
 	}

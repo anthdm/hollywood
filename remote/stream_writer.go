@@ -2,6 +2,7 @@ package remote
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"io"
 	"log/slog"
@@ -28,9 +29,10 @@ type streamWriter struct {
 	pid         *actor.PID
 	inbox       actor.Inboxer
 	serializer  Serializer
+	tlsConfig   *tls.Config
 }
 
-func newStreamWriter(e *actor.Engine, rpid *actor.PID, address string) actor.Processer {
+func newStreamWriter(e *actor.Engine, rpid *actor.PID, address string, tlsConfig *tls.Config) actor.Processer {
 	return &streamWriter{
 		writeToAddr: address,
 		engine:      e,
@@ -38,6 +40,7 @@ func newStreamWriter(e *actor.Engine, rpid *actor.PID, address string) actor.Pro
 		inbox:       actor.NewInbox(streamWriterBatchSize),
 		pid:         actor.NewPID(e.Address(), "stream", address),
 		serializer:  ProtoSerializer{},
+		tlsConfig:   tlsConfig,
 	}
 }
 
@@ -107,20 +110,42 @@ func (s *streamWriter) Invoke(msgs []actor.Envelope) {
 
 func (s *streamWriter) init() {
 	var (
-		rawconn net.Conn
-		err     error
-		delay   time.Duration = time.Millisecond * 500
+		rawconn    net.Conn
+		err        error
+		delay      time.Duration = time.Millisecond * 500
+		maxRetries               = 3
 	)
-	for {
-		rawconn, err = net.Dial("tcp", s.writeToAddr)
-		if err != nil {
-			slog.Error("net.Dial", "err", err, "remote", s.writeToAddr)
-			time.Sleep(delay)
-			continue
+	for i := 0; i < maxRetries; i++ {
+		// Here we try to connect to the remote address.
+		// Todo: can we make an Event here in case of failure?
+		switch s.tlsConfig {
+		case nil:
+			rawconn, err = net.Dial("tcp", s.writeToAddr)
+			if err != nil {
+				d := time.Duration(delay * time.Duration(i*2))
+				slog.Error("net.Dial", "err", err, "remote", s.writeToAddr, "retry", i, "max", maxRetries, "delay", d)
+				time.Sleep(d)
+				continue
+			}
+		default:
+			slog.Debug("remote using TLS for writing")
+			rawconn, err = tls.Dial("tcp", s.writeToAddr, s.tlsConfig)
+			if err != nil {
+				d := time.Duration(delay * time.Duration(i*2))
+				slog.Error("tls.Dial", "err", err, "remote", s.writeToAddr, "retry", i, "max", maxRetries, "delay", d)
+				time.Sleep(d)
+				continue
+			}
 		}
 		break
 	}
+	// We could not reach the remote after retrying N times. Hence, shutdown the stream writer.
+	// and notify RemoteUnreachableEvent.
 	if rawconn == nil {
+		evt := actor.RemoteUnreachableEvent{
+			ListenAddr: s.writeToAddr,
+		}
+		s.engine.BroadcastEvent(evt)
 		s.Shutdown(nil)
 		return
 	}
