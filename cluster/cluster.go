@@ -1,7 +1,7 @@
 package cluster
 
 import (
-	fmt "fmt"
+	"fmt"
 	"log/slog"
 	"reflect"
 	"time"
@@ -69,14 +69,16 @@ func (c *Cluster) Spawn(p actor.Producer, kind string, id string) *actor.PID {
 	return nil
 }
 
+type ActivationConfig struct {
+	// if empty, a unique identifier will be generated.
+	ID     string
+	Region string
+}
+
 // Activate actives the given actor kind with an optional id. If there is no id
 // given, the engine will create an unique id automatically.
-func (c *Cluster) Activate(kind string, id ...string) *actor.PID {
-	var theid string
-	if len(id) > 0 {
-		theid = id[0]
-	}
-	resp, err := c.engine.Request(c.agentPID, activate{kind: kind, id: theid}, time.Millisecond*100).Result()
+func (c *Cluster) Activate(kind string, config ActivationConfig) *actor.PID {
+	resp, err := c.engine.Request(c.agentPID, activate{kind: kind, id: config.ID}, time.Millisecond*100).Result()
 	if err != nil {
 		slog.Error("activation failed", "err", err)
 		return nil
@@ -104,6 +106,17 @@ func (c *Cluster) RegisterKind(name string, producer actor.Producer, config Kind
 	}
 	kind := newKind(name, producer, config)
 	c.kinds = append(c.kinds, kind)
+}
+
+// HasLocalKind returns true if this members of the cluster has the kind
+// locally registered.
+func (c *Cluster) HasKindLocal(name string) bool {
+	for _, kind := range c.kinds {
+		if kind.name == name {
+			return true
+		}
+	}
+	return false
 }
 
 // PID returns the reachable actor process id, which is the Agent actor.

@@ -104,11 +104,11 @@ func (a *Agent) handleActivationRequest(msg *ActivationRequest) *ActivationRespo
 func (a *Agent) activate(kind, id string) *actor.PID {
 	var (
 		// TODO: pick member based on rendezvous and custom strategy
-		members      = a.members.FilterByKind(kind)
-		owner        = members[rand.Intn(len(members))]
-		activatorPID = actor.NewPID(owner.Host, "cluster/"+owner.ID)
-		req          = &ActivationRequest{Kind: kind, ID: id}
+		members = a.members.FilterByKind(kind)
+		req     = &ActivationRequest{Kind: kind, ID: id}
 	)
+	owner := members[rand.Intn(len(members))]
+	activatorPID := actor.NewPID(owner.Host, "cluster/"+owner.ID)
 
 	var activationResp *ActivationResponse
 	// Local activation
@@ -176,6 +176,11 @@ func (a *Agent) memberJoin(member *Member) {
 	if len(actorInfos) > 0 {
 		a.cluster.engine.Send(member.PID(), &ActorTopology{Actors: actorInfos})
 	}
+
+	// Broadcast MemberJoinEvent
+	a.cluster.engine.BroadcastEvent(MemberJoinEvent{
+		Member: member,
+	})
 
 	slog.Info("member joined", "id", member.ID, "host", member.Host, "kinds", member.Kinds)
 }
