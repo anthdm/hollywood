@@ -1,7 +1,6 @@
 package cluster
 
 import (
-	fmt "fmt"
 	"time"
 
 	"github.com/anthdm/hollywood/actor"
@@ -108,7 +107,6 @@ func (s *SelfManaged) addMember(member *Member) {
 }
 
 func (s *SelfManaged) removeMember(member *Member) {
-	fmt.Println("removing member", member)
 	if s.members.Contains(member) {
 		s.members.Remove(member)
 	}

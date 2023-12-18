@@ -42,7 +42,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	c.RegisterKind("inventory", NewInventory(), cluster.KindOpts{})
+	c.RegisterKind("inventory", NewInventory(), cluster.KindConfig{})
 	if err := c.Start(); err != nil {
 		log.Fatal(err)
 	}

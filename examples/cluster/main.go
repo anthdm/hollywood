@@ -54,8 +54,8 @@ func (p *Player) Receive(c *actor.Context) {
 
 func main() {
 	c1 := makeCluster("localhost:3001", "A")
-	c1.RegisterKind("inventory", NewInventory, cluster.KindOpts{})
-	c1.RegisterKind("player", NewPlayer, cluster.KindOpts{})
+	c1.RegisterKind("inventory", NewInventory, cluster.KindConfig{})
+	c1.RegisterKind("player", NewPlayer, cluster.KindConfig{})
 	c1.Start()
 	time.Sleep(time.Second)
 
@@ -64,8 +64,8 @@ func main() {
 		ID:         "A",
 	}
 	c2 := makeCluster("localhost:3002", "B", memberAddr)
-	c2.RegisterKind("inventory", NewInventory, cluster.KindOpts{})
-	c2.RegisterKind("player", NewPlayer, cluster.KindOpts{})
+	c2.RegisterKind("inventory", NewInventory, cluster.KindConfig{})
+	c2.RegisterKind("player", NewPlayer, cluster.KindConfig{})
 	c2.Start()
 
 	time.Sleep(time.Second)

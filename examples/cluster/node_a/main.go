@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/anthdm/hollywood/actor"
@@ -38,10 +39,11 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	c.RegisterKind("player", NewPlayer(), cluster.KindOpts{})
+	c.RegisterKind("player", NewPlayer(), cluster.KindConfig{})
 	if err := c.Start(); err != nil {
 		log.Fatal(err)
 	}
-	c.Activate("player", "1")
+	pid := c.Activate("player", "1")
+	fmt.Println(pid)
 	select {}
 }

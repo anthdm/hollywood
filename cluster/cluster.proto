@@ -38,7 +38,7 @@ message Topology {
 }
 
 message ActorInfo {
-	CID CID = 2;
+	actor.PID PID = 2;
 }
 
 message ActorTopology {
@@ -46,11 +46,11 @@ message ActorTopology {
 }
 
 message Activation {
-	CID CID = 2;
+	actor.PID PID = 1;
 }
 
 message Deactivation {
-	CID CID = 2;
+	actor.PID PID = 1;
 }
 
 message ActivationRequest {
@@ -60,7 +60,7 @@ message ActivationRequest {
 }
 
 message ActivationResponse {
-	CID CID = 1;
+	actor.PID PID = 1;
 	bool success = 2;
 	uint64 topologyHash = 3;
 }

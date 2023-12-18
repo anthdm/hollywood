@@ -10,12 +10,6 @@ import (
 	"golang.org/x/exp/maps"
 )
 
-type getActiveKinds struct {
-	filterByKind string
-}
-
-type getKinds struct{}
-
 type activate struct {
 	kind string
 	id   string
@@ -31,26 +25,26 @@ type Agent struct {
 
 	kinds map[string]bool
 
-	localKinds map[string]Kind
+	localKinds map[string]kind
 
-	// all the active kinds on the cluster
-	activeKinds *KindLookup
+	// All the actors that are available cluster wide.
+	activated map[string]*actor.PID
 }
 
 func NewAgent(c *Cluster) actor.Producer {
 	kinds := make(map[string]bool)
-	localKinds := make(map[string]Kind)
+	localKinds := make(map[string]kind)
 	for _, kind := range c.kinds {
 		kinds[kind.name] = true
 		localKinds[kind.name] = kind
 	}
 	return func() actor.Receiver {
 		return &Agent{
-			members:     NewMemberSet(),
-			cluster:     c,
-			activeKinds: NewKindLookup(),
-			kinds:       kinds,
-			localKinds:  localKinds,
+			members:    NewMemberSet(),
+			cluster:    c,
+			kinds:      kinds,
+			localKinds: localKinds,
+			activated:  make(map[string]*actor.PID),
 		}
 	}
 }
@@ -68,56 +62,29 @@ func (a *Agent) Receive(c *actor.Context) {
 		cid := a.activate(msg.kind, msg.id)
 		c.Respond(cid)
 	case deactivate:
-		a.bcast(&Deactivation{CID: msg.cid})
+		a.bcast(&Deactivation{PID: msg.cid.PID})
 	case *Deactivation:
 		a.handleDeactivation(msg)
 	case *ActivationRequest:
 		resp := a.handleActivationRequest(msg)
 		c.Respond(resp)
-	case getKinds:
-		kinds := make([]string, len(a.kinds))
-		i := 0
-		for kind := range a.kinds {
-			kinds[i] = kind
-			i++
-		}
-		c.Respond(kinds)
-	case getActiveKinds:
-		c.Respond(a.getActiveKinds(msg.filterByKind))
 	}
 }
 
 func (a *Agent) handleActorTopology(msg *ActorTopology) {
 	for _, actorInfo := range msg.Actors {
-		a.addActiveKind(actorInfo.CID)
+		a.addActivated(actorInfo.PID)
 	}
 }
 
 func (a *Agent) handleDeactivation(msg *Deactivation) {
-	// Remove from our activeKinds
-	kinds, ok := a.activeKinds.kinds[msg.CID.Kind]
-	if !ok {
-		// we dont have this kind somehow?
-		return
-	}
-	// This seems kinda a hacky way to do it. But it works.
-	theKind := ActiveKind{}
-	kinds.Each(func(k ActiveKind) bool {
-		if k.cid.Equals(msg.CID) {
-			theKind = k
-			return false
-		}
-		return true
-	})
-	if theKind.isLocal {
-		a.cluster.engine.Poison(msg.CID.PID)
-	}
-	kinds.Remove(theKind)
+	delete(a.activated, msg.PID.ID)
+	a.cluster.engine.Poison(msg.PID)
 }
 
 // A new kind is activated on this cluster.
 func (a *Agent) handleActivation(msg *Activation) {
-	a.addActiveKind(msg.CID)
+	a.addActivated(msg.PID)
 }
 
 func (a *Agent) handleActivationRequest(msg *ActivationRequest) *ActivationResponse {
@@ -126,16 +93,15 @@ func (a *Agent) handleActivationRequest(msg *ActivationRequest) *ActivationRespo
 		return &ActivationResponse{Success: false}
 	}
 	kind := a.localKinds[msg.Kind]
-	// Spawn the actor (receiver) with kind/id
 	pid := a.cluster.engine.Spawn(kind.producer, msg.Kind+"/"+msg.ID)
 	resp := &ActivationResponse{
-		CID:     NewCID(pid, msg.Kind, msg.ID, a.cluster.region),
+		PID:     pid,
 		Success: true,
 	}
 	return resp
 }
 
-func (a *Agent) activate(kind, id string) *CID {
+func (a *Agent) activate(kind, id string) *actor.PID {
 	var (
 		// TODO: pick member based on rendezvous and custom strategy
 		members      = a.members.FilterByKind(kind)
@@ -170,10 +136,10 @@ func (a *Agent) activate(kind, id string) *CID {
 	}
 
 	a.bcast(&Activation{
-		CID: activationResp.CID,
+		PID: activationResp.PID,
 	})
 
-	return activationResp.CID
+	return activationResp.PID
 }
 
 func (a *Agent) handleMembers(members []*Member) {
@@ -199,13 +165,11 @@ func (a *Agent) memberJoin(member *Member) {
 	}
 
 	actorInfos := []*ActorInfo{}
-	for _, kinds := range a.activeKinds.kinds {
-		for _, akind := range kinds.ToSlice() {
-			actorInfo := &ActorInfo{
-				CID: akind.cid,
-			}
-			actorInfos = append(actorInfos, actorInfo)
+	for _, pid := range a.activated {
+		actorInfo := &ActorInfo{
+			PID: pid,
 		}
+		actorInfos = append(actorInfos, actorInfo)
 	}
 
 	// Send our ActorTopology to this member
@@ -221,15 +185,9 @@ func (a *Agent) memberLeave(member *Member) {
 	a.rebuildKinds()
 
 	// Remove all the activeKinds that where running on the member that left the cluster.
-	for _, kind := range member.Kinds {
-		activeKinds := a.activeKinds.Get(kind)
-		for _, activeKind := range activeKinds {
-			if !activeKind.isLocal {
-				if activeKind.cid.PID.Address == member.Host {
-					a.activeKinds.Remove(activeKind)
-					break
-				}
-			}
+	for _, pid := range a.activated {
+		if pid.Address == member.Host {
+			a.removeActivated(pid)
 		}
 	}
 
@@ -243,33 +201,21 @@ func (a *Agent) bcast(msg any) {
 	})
 }
 
-func (a *Agent) addActiveKind(cid *CID) {
-	akind := ActiveKind{
-		cid:     cid,
-		isLocal: cid.PID.Address == a.cluster.engine.Address(),
+func (a *Agent) addActivated(pid *actor.PID) {
+	if _, ok := a.activated[pid.ID]; !ok {
+		a.activated[pid.ID] = pid
+		slog.Info("new actor available on cluster", "pid", pid)
 	}
-	if !a.activeKinds.Has(akind) {
-		a.activeKinds.Add(akind)
-		slog.Info("activation", "cid", cid)
-	}
+}
+
+func (a *Agent) removeActivated(pid *actor.PID) {
+	delete(a.activated, pid.ID)
+	slog.Info("actor removed from cluster", "pid", pid)
 }
 
 func (a *Agent) hasKindLocal(name string) bool {
-	for _, kind := range a.localKinds {
-		if kind.name == name {
-			return true
-		}
-	}
-	return false
-}
-
-func (a *Agent) getActiveKinds(kind string) []*CID {
-	kinds := a.activeKinds.Get(kind)
-	cids := make([]*CID, len(kinds))
-	for i, kind := range kinds {
-		cids[i] = kind.cid
-	}
-	return cids
+	_, ok := a.localKinds[name]
+	return ok
 }
 
 func (a *Agent) rebuildKinds() {

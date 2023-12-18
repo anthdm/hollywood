@@ -3,6 +3,7 @@ package cluster
 import (
 	fmt "fmt"
 	"log/slog"
+	"reflect"
 	"time"
 
 	"github.com/anthdm/hollywood/actor"
@@ -36,7 +37,7 @@ type Cluster struct {
 
 	isStarted bool
 
-	kinds []Kind
+	kinds []kind
 }
 
 func New(cfg Config) (*Cluster, error) {
@@ -51,7 +52,7 @@ func New(cfg Config) (*Cluster, error) {
 		region:   cfg.Region,
 		provider: cfg.ClusterProvider,
 		engine:   cfg.Engine,
-		kinds:    []Kind{},
+		kinds:    []kind{},
 	}, nil
 }
 
@@ -68,16 +69,24 @@ func (c *Cluster) Spawn(p actor.Producer, kind string, id string) *actor.PID {
 	return nil
 }
 
-// Activate actives the given kind with the given id in the cluster.
-// cluster.Activate("player", "139884") should return a PID:
-// 0.0.0.0:3000/player/139884
-func (c *Cluster) Activate(kind string, id string) *CID {
-	resp, err := c.engine.Request(c.agentPID, activate{kind: kind, id: id}, time.Millisecond*100).Result()
+// Activate actives the given actor kind with an optional id. If there is no id
+// given, the engine will create an unique id automatically.
+func (c *Cluster) Activate(kind string, id ...string) *actor.PID {
+	var theid string
+	if len(id) > 0 {
+		theid = id[0]
+	}
+	resp, err := c.engine.Request(c.agentPID, activate{kind: kind, id: theid}, time.Millisecond*100).Result()
 	if err != nil {
 		slog.Error("activation failed", "err", err)
 		return nil
 	}
-	return resp.(*CID)
+	pid, ok := resp.(*actor.PID)
+	if !ok {
+		slog.Warn("activation expected response of *actor.PID", "got", reflect.TypeOf(resp))
+		return nil
+	}
+	return pid
 }
 
 // Deactivate deactivates the given CID.
@@ -88,62 +97,13 @@ func (c *Cluster) Deactivate(cid *CID) {
 // RegisterKind registers a new actor/receiver kind that can be spawned from any node
 // on the cluster.
 // NOTE: Kinds can only be registered if the cluster is not running.
-func (c *Cluster) RegisterKind(name string, producer actor.Producer, opts KindOpts) {
+func (c *Cluster) RegisterKind(name string, producer actor.Producer, config KindConfig) {
 	if c.isStarted {
 		slog.Warn("trying to register new kind on a running cluster")
 		return
 	}
-	kind := Kind{
-		producer: producer,
-		name:     name,
-		opts:     opts,
-	}
+	kind := newKind(name, producer, config)
 	c.kinds = append(c.kinds, kind)
-}
-
-// LocalKinds returns all the kinds that are registered on THIS node.
-// kind that are registered locally can be activated on this node.
-func (c *Cluster) LocalKinds() []string {
-	kinds := make([]string, len(c.kinds))
-	for i := 0; i < len(c.kinds); i++ {
-		kinds[i] = c.kinds[i].name
-	}
-	return kinds
-}
-
-// GetActiveKinds returns all the active actors/receivers on the cluster.
-func (c *Cluster) GetActiveKinds(name string) []*CID {
-	msg := getActiveKinds{filterByKind: name}
-	resp, err := c.engine.Request(c.agentPID, msg, time.Millisecond*100).Result()
-	if err != nil {
-		slog.Error("failed to request kinds", "err", err)
-		return []*CID{}
-	}
-	r, ok := resp.([]*CID)
-	if !ok {
-		return []*CID{}
-	}
-	return r
-}
-
-// Kinds returns the kinds that are available for activation on the cluster.
-func (c *Cluster) Kinds() []string {
-	resp, err := c.engine.Request(c.agentPID, getKinds{}, time.Millisecond*100).Result()
-	if err != nil {
-		slog.Error("failed to request kinds", "err", err)
-		return []string{}
-	}
-	return resp.([]string)
-}
-
-// HasKind returns if the cluster has the given kind registered for activation.
-func (c *Cluster) HasKind(name string) bool {
-	for _, kind := range c.Kinds() {
-		if kind == name {
-			return true
-		}
-	}
-	return false
 }
 
 // PID returns the reachable actor process id, which is the Agent actor.

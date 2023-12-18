@@ -1,8 +1,6 @@
 package cluster
 
 import (
-	fmt "fmt"
-
 	"github.com/anthdm/hollywood/actor"
 )
 
@@ -20,10 +18,6 @@ func NewCID(pid *actor.PID, kind, id, region string) *CID {
 		ID:     id,
 		Region: region,
 	}
-}
-
-func (cid *CID) String() string {
-	return fmt.Sprintf("%s :: [%s/%s] :: %s", cid.PID, cid.Kind, cid.ID, cid.Region)
 }
 
 // Equals returns true whether the given CID equals the caller.

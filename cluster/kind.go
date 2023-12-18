@@ -2,34 +2,21 @@ package cluster
 
 import "github.com/anthdm/hollywood/actor"
 
-// KindOpts is ...
-type KindOpts struct{}
+// KindConfig holds the Kind configuration
+type KindConfig struct{}
 
-type Kind struct {
-	opts     KindOpts
+// A kind is a type of actor that can be activate on a node.
+type kind struct {
+	config   KindConfig
 	name     string
 	producer actor.Producer
 }
 
-// NewKind returns a new kind.
-func NewKind(name string, p actor.Producer, opts KindOpts) *Kind {
-	return &Kind{
+// newKind returns a new kind.
+func newKind(name string, p actor.Producer, config KindConfig) kind {
+	return kind{
 		name:     name,
-		opts:     opts,
+		config:   config,
 		producer: p,
 	}
-}
-
-// ActiveKind is a kind that is active somewhere on the cluster.
-type ActiveKind struct {
-	// cid of the activated kind
-	cid *CID
-	// Wether the actor is activated on this cluster or not.
-	isLocal bool
-}
-
-func (k ActiveKind) Equals(other ActiveKind) bool {
-	return k.cid.ID == other.cid.ID &&
-		k.cid.Kind == other.cid.Kind &&
-		k.cid.PID.Equals(other.cid.PID)
 }
