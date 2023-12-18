@@ -50,13 +50,13 @@ func TestEventStreamActorStartedEvent(t *testing.T) {
 	pidb := e.SpawnFunc(func(c *Context) {
 		switch msg := c.Message().(type) {
 		case ActorStartedEvent:
-			assert.Equal(t, msg.PID.ID, "a")
+			assert.Equal(t, msg.PID.ID, "a/1")
 			wg.Done()
 		}
 	}, "b")
 	e.Subscribe(pidb)
 
-	e.SpawnFunc(func(c *Context) {}, "a")
+	e.SpawnFunc(func(c *Context) {}, "a", WithID("1"))
 	wg.Wait()
 }
 
@@ -65,11 +65,11 @@ func TestEventStreamActorStoppedEvent(t *testing.T) {
 	wg := sync.WaitGroup{}
 
 	wg.Add(1)
-	a := e.SpawnFunc(func(c *Context) {}, "a")
+	a := e.SpawnFunc(func(c *Context) {}, "a", WithID("1"))
 	pidb := e.SpawnFunc(func(c *Context) {
 		switch msg := c.Message().(type) {
 		case ActorStoppedEvent:
-			assert.Equal(t, msg.PID.ID, "a")
+			assert.Equal(t, msg.PID.ID, "a/1")
 			wg.Done()
 		}
 	}, "b")

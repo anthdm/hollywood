@@ -181,7 +181,7 @@ func TestSpawn(t *testing.T) {
 		go func(i int) {
 			tag := strconv.Itoa(i)
 			pid := e.Spawn(NewTestProducer(t, func(t *testing.T, ctx *Context) {
-			}), "dummy", WithTags(tag))
+			}), "dummy", WithID(tag))
 			e.Send(pid, 1)
 			wg.Done()
 		}(i)
@@ -240,7 +240,7 @@ func TestStop(t *testing.T) {
 				wg.Done()
 			case Stopped:
 			}
-		}, "foo", WithTags(tag))
+		}, "foo", WithID(tag))
 
 		wg.Wait()
 		stopwg := &sync.WaitGroup{}
@@ -292,7 +292,7 @@ func TestPoison(t *testing.T) {
 				wg.Done()
 			case Stopped:
 			}
-		}, "foo", WithTags(tag))
+		}, "foo", WithID(tag))
 
 		wg.Wait()
 		stopwg := &sync.WaitGroup{}

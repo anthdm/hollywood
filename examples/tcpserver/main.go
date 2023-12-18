@@ -131,7 +131,7 @@ func (s *server) acceptLoop(c *actor.Context) {
 			slog.Error("accept error", "err", err)
 			break
 		}
-		pid := c.SpawnChild(newSession(conn), "session", actor.WithTags(conn.RemoteAddr().String()))
+		pid := c.SpawnChild(newSession(conn), "session", actor.WithID(conn.RemoteAddr().String()))
 		c.Send(c.PID(), &connAdd{
 			pid:  pid,
 			conn: conn,

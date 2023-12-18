@@ -34,7 +34,7 @@ type process struct {
 }
 
 func newProcess(e *Engine, opts Opts) *process {
-	pid := NewPID(e.address, opts.Name, opts.Tags...)
+	pid := NewPID(e.address, opts.Name+pidSeparator+opts.ID)
 	ctx := newContext(e, pid)
 	p := &process{
 		pid:     pid,

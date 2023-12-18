@@ -18,10 +18,4 @@ func TestPID(t *testing.T) {
 
 	pid := NewPID(address, id)
 	assert.Equal(t, address+pidSeparator+id, pid.String())
-
-	pid = NewPID(address, id, "100")
-	assert.Equal(t, address+pidSeparator+id+pidSeparator+"100", pid.String())
-
-	pid = NewPID(address, id, "100", "bar")
-	assert.Equal(t, address+pidSeparator+id+pidSeparator+"100"+pidSeparator+"bar", pid.String())
 }

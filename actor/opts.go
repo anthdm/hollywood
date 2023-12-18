@@ -18,7 +18,7 @@ type MiddlewareFunc = func(ReceiveFunc) ReceiveFunc
 type Opts struct {
 	Producer     Producer
 	Name         string
-	Tags         []string
+	ID           string
 	MaxRestarts  int32
 	RestartDelay time.Duration
 	InboxSize    int
@@ -62,8 +62,8 @@ func WithMaxRestarts(n int) OptFunc {
 	}
 }
 
-func WithTags(tags ...string) OptFunc {
+func WithID(id string) OptFunc {
 	return func(opts *Opts) {
-		opts.Tags = tags
+		opts.ID = id
 	}
 }
