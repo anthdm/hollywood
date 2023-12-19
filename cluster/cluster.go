@@ -98,9 +98,9 @@ func (c *Cluster) Activate(kind string, config ActivationConfig) *actor.PID {
 	return pid
 }
 
-// Deactivate deactivates the given CID.
-func (c *Cluster) Deactivate(cid *CID) {
-	c.engine.Send(c.agentPID, deactivate{cid: cid})
+// Deactivate deactivates the given PID.
+func (c *Cluster) Deactivate(pid *actor.PID) {
+	c.engine.Send(c.agentPID, deactivate{pid: pid})
 }
 
 // RegisterKind registers a new actor/receiver kind that can be spawned from any node

@@ -19,10 +19,21 @@ func newRegistry(e *Engine) *Registry {
 	}
 }
 
+// Remove removes the given PID from the registry.
 func (r *Registry) Remove(pid *PID) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	delete(r.lookup, pid.ID)
+}
+
+// GetReceiver returns the underlying receiver that is associated with
+// the given ID.
+func (r *Registry) GetReceiver(id string) Receiver {
+	proc := r.getByID(id)
+	if _, ok := proc.(*process); ok {
+		return proc.(*process).context.Receiver()
+	}
+	return nil
 }
 
 // get returns the processer for the given PID, if it exists.

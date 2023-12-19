@@ -1,7 +1,6 @@
 package cluster
 
 import (
-	"fmt"
 	"log/slog"
 	"reflect"
 	"time"
@@ -16,7 +15,7 @@ type activate struct {
 }
 
 type deactivate struct {
-	cid *CID
+	pid *actor.PID
 }
 
 type Agent struct {
@@ -62,7 +61,7 @@ func (a *Agent) Receive(c *actor.Context) {
 		cid := a.activate(msg.kind, msg.id)
 		c.Respond(cid)
 	case deactivate:
-		a.bcast(&Deactivation{PID: msg.cid.PID})
+		a.bcast(&Deactivation{PID: msg.pid})
 	case *Deactivation:
 		a.handleDeactivation(msg)
 	case *ActivationRequest:
@@ -78,13 +77,15 @@ func (a *Agent) handleActorTopology(msg *ActorTopology) {
 }
 
 func (a *Agent) handleDeactivation(msg *Deactivation) {
-	delete(a.activated, msg.PID.ID)
+	a.removeActivated(msg.PID)
 	a.cluster.engine.Poison(msg.PID)
+	a.cluster.engine.BroadcastEvent(DeactivationEvent{PID: msg.PID})
 }
 
 // A new kind is activated on this cluster.
 func (a *Agent) handleActivation(msg *Activation) {
 	a.addActivated(msg.PID)
+	a.cluster.engine.BroadcastEvent(ActivationEvent{PID: msg.PID})
 }
 
 func (a *Agent) handleActivationRequest(msg *ActivationRequest) *ActivationResponse {
@@ -103,8 +104,6 @@ func (a *Agent) handleActivationRequest(msg *ActivationRequest) *ActivationRespo
 
 func (a *Agent) activate(kind, id string) *actor.PID {
 	members := a.members.FilterByKind(kind)
-	fmt.Println("we are", a.cluster.id)
-	fmt.Println(members)
 	owner := a.cluster.activationStrategy.SelectMember(members)
 	if owner == nil {
 		panic("TODO")
@@ -179,7 +178,6 @@ func (a *Agent) memberJoin(member *Member) {
 		a.cluster.engine.Send(member.PID(), &ActorTopology{Actors: actorInfos})
 	}
 
-	fmt.Println("from inside the add agent", a.members)
 	// Broadcast MemberJoinEvent
 	a.cluster.engine.BroadcastEvent(MemberJoinEvent{
 		Member: member,
@@ -198,6 +196,8 @@ func (a *Agent) memberLeave(member *Member) {
 			a.removeActivated(pid)
 		}
 	}
+
+	a.cluster.engine.BroadcastEvent(MemberLeaveEvent{Member: member})
 
 	slog.Info("member left", "id", member.ID, "host", member.Host, "kinds", member.Kinds)
 }
