@@ -34,7 +34,7 @@ type process struct {
 }
 
 func newProcess(e *Engine, opts Opts) *process {
-	pid := NewPID(e.address, opts.Name, opts.Tags...)
+	pid := NewPID(e.address, opts.Name+pidSeparator+opts.ID)
 	ctx := newContext(e, pid)
 	p := &process{
 		pid:     pid,
@@ -100,6 +100,10 @@ func (p *process) Invoke(msgs []Envelope) {
 }
 
 func (p *process) invokeMsg(msg Envelope) {
+	// suppress poison pill messages here. they're private to the actor engine.
+	if _, ok := msg.Msg.(poisonPill); ok {
+		return
+	}
 	p.context.message = msg.Msg
 	p.context.sender = msg.Sender
 	recv := p.context.receiver

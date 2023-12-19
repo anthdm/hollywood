@@ -2,7 +2,6 @@ package actor
 
 import (
 	"log/slog"
-	"strings"
 	"time"
 
 	"github.com/anthdm/hollywood/safemap"
@@ -102,13 +101,10 @@ func (c *Context) Forward(pid *PID) {
 	c.engine.SendWithSender(pid, c.message, c.pid)
 }
 
-// GetPID returns the PID of the process found by the given name and tags.
+// GetPID returns the PID of the process found by the given id.
 // Returns nil when it could not find any process..
-func (c *Context) GetPID(name string, tags ...string) *PID {
-	if len(tags) > 0 {
-		name = name + pidSeparator + strings.Join(tags, pidSeparator)
-	}
-	proc := c.engine.Registry.getByID(name)
+func (c *Context) GetPID(id string) *PID {
+	proc := c.engine.Registry.getByID(id)
 	if proc != nil {
 		return proc.PID()
 	}

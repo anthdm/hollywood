@@ -1,6 +1,9 @@
 package actor
 
 import (
+	"math"
+	"math/rand"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -67,6 +70,11 @@ func (e *Engine) Spawn(p Producer, name string, opts ...OptFunc) *PID {
 	options.Name = name
 	for _, opt := range opts {
 		opt(&options)
+	}
+	// Check if we got an ID, generate otherwise
+	if len(options.ID) == 0 {
+		id := strconv.Itoa(rand.Intn(math.MaxInt))
+		options.ID = id
 	}
 	proc := newProcess(e, options)
 	return e.SpawnProc(proc)

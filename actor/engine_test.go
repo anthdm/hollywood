@@ -181,7 +181,7 @@ func TestSpawn(t *testing.T) {
 		go func(i int) {
 			tag := strconv.Itoa(i)
 			pid := e.Spawn(NewTestProducer(t, func(t *testing.T, ctx *Context) {
-			}), "dummy", WithTags(tag))
+			}), "dummy", WithID(tag))
 			e.Send(pid, 1)
 			wg.Done()
 		}(i)
@@ -240,7 +240,7 @@ func TestStop(t *testing.T) {
 				wg.Done()
 			case Stopped:
 			}
-		}, "foo", WithTags(tag))
+		}, "foo", WithID(tag))
 
 		wg.Wait()
 		stopwg := &sync.WaitGroup{}
@@ -292,7 +292,7 @@ func TestPoison(t *testing.T) {
 				wg.Done()
 			case Stopped:
 			}
-		}, "foo", WithTags(tag))
+		}, "foo", WithID(tag))
 
 		wg.Wait()
 		stopwg := &sync.WaitGroup{}
@@ -336,6 +336,32 @@ func TestRequestResponse(t *testing.T) {
 			assert.Nil(t, e.Registry.get(resp.pid))
 		}
 	})
+}
+
+func TestPoisonPillPrivate(t *testing.T) {
+	e, err := NewEngine()
+	require.NoError(t, err)
+	successCh := make(chan struct{}, 1)
+	failCh := make(chan struct{}, 1)
+	pid := e.SpawnFunc(func(c *Context) {
+		switch c.Message().(type) {
+		case Stopped:
+			successCh <- struct{}{}
+		case poisonPill:
+			failCh <- struct{}{}
+			time.Sleep(time.Millisecond)
+		}
+	}, "victim")
+	e.Poison(pid).Wait()
+	assert.Nil(t, e.Registry.get(pid))
+	select {
+	case <-failCh:
+		t.Fatal("poison pill seen")
+	case <-successCh:
+		return // actor was stopped without seeing a poison pill
+	case <-time.After(time.Millisecond * 20):
+		t.Fatal("timeout")
+	}
 }
 
 // 56 ns/op
