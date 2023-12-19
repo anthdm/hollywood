@@ -120,7 +120,7 @@ func (s *SelfManaged) updateCluster() {
 	s.cluster.engine.Send(s.cluster.PID(), members)
 }
 
-func (s *SelfManaged) start(c *actor.Context) error {
+func (s *SelfManaged) start(c *actor.Context) {
 	s.eventSubPID = c.SpawnChildFunc(func(ctx *actor.Context) {
 		switch msg := ctx.Message().(type) {
 		case actor.RemoteUnreachableEvent:
@@ -137,5 +137,4 @@ func (s *SelfManaged) start(c *actor.Context) error {
 		memberPID := actor.NewPID(ma.ListenAddr, "cluster", ma.ID, "provider")
 		s.cluster.engine.Send(memberPID, members)
 	}
-	return nil
 }
