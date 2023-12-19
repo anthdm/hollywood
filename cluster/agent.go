@@ -9,6 +9,14 @@ import (
 	"golang.org/x/exp/maps"
 )
 
+type getActive struct {
+	id string
+}
+
+type getMembers struct{}
+
+type getKinds struct{}
+
 type activate struct {
 	kind string
 	id   string
@@ -67,6 +75,19 @@ func (a *Agent) Receive(c *actor.Context) {
 	case *ActivationRequest:
 		resp := a.handleActivationRequest(msg)
 		c.Respond(resp)
+	case getMembers:
+		c.Respond(a.members.Slice())
+	case getKinds:
+		kinds := make([]string, len(a.kinds))
+		i := 0
+		for kind := range a.kinds {
+			kinds[i] = kind
+			i++
+		}
+		c.Respond(kinds)
+	case getActive:
+		pid := a.activated[msg.id]
+		c.Respond(pid)
 	}
 }
 

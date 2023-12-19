@@ -26,16 +26,6 @@ func (r *Registry) Remove(pid *PID) {
 	delete(r.lookup, pid.ID)
 }
 
-// GetReceiver returns the underlying receiver that is associated with
-// the given ID.
-func (r *Registry) GetReceiver(id string) Receiver {
-	proc := r.getByID(id)
-	if _, ok := proc.(*process); ok {
-		return proc.(*process).context.Receiver()
-	}
-	return nil
-}
-
 // get returns the processer for the given PID, if it exists.
 // If it doesn't exist, nil is returned so the caller must check for that
 // and direct the message to the deadletter processer instead.

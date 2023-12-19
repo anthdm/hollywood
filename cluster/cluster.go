@@ -10,6 +10,8 @@ import (
 	"github.com/google/uuid"
 )
 
+var requestTimeout = time.Millisecond * 50
+
 // Producer is a function that can produce an actor.Producer.
 // Pretty simple, but yet powerfull tool to construct receivers
 // depending on Cluster.
@@ -124,6 +126,46 @@ func (c *Cluster) HasKindLocal(name string) bool {
 		}
 	}
 	return false
+}
+
+// Members returns all the members that are part of the cluster.
+func (c *Cluster) Members() []*Member {
+	resp, err := c.engine.Request(c.agentPID, getMembers{}, requestTimeout).Result()
+	if err != nil {
+		return []*Member{}
+	}
+	if res, ok := resp.([]*Member); ok {
+		return res
+	}
+	return nil
+}
+
+// HasKind returns true whether the given kind is available for activation on
+// the cluster.
+func (c *Cluster) HasKind(name string) bool {
+	resp, err := c.engine.Request(c.agentPID, getKinds{}, requestTimeout).Result()
+	if err != nil {
+		return false
+	}
+	if kinds, ok := resp.([]string); ok {
+		for _, kind := range kinds {
+			if kind == name {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func (c *Cluster) GetActivated(id string) *actor.PID {
+	resp, err := c.engine.Request(c.agentPID, getActive{id: id}, requestTimeout).Result()
+	if err != nil {
+		return nil
+	}
+	if res, ok := resp.(*actor.PID); ok {
+		return res
+	}
+	return nil
 }
 
 // PID returns the reachable actor process id, which is the Agent actor.

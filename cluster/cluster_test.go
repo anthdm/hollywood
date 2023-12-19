@@ -62,9 +62,8 @@ func TestMemberJoin(t *testing.T) {
 	c2.Start()
 
 	wg.Wait()
-	agent := c1.engine.Registry.GetReceiver("cluster/A").(*Agent)
-	assert.Equal(t, agent.members.Len(), 2)
-	assert.True(t, agent.kinds["player"])
+	assert.Equal(t, len(c1.Members()), 2)
+	assert.True(t, c1.HasKind("player"))
 }
 
 func TestActivate(t *testing.T) {
@@ -98,10 +97,9 @@ func TestActivate(t *testing.T) {
 	c2.Start()
 
 	wg.Wait()
-	agent := c1.engine.Registry.GetReceiver("cluster/A").(*Agent)
-	assert.Equal(t, agent.members.Len(), 2)
-	assert.True(t, agent.kinds["player"])
-	assert.True(t, agent.activated["player/1"].Equals(expectedPID))
+	assert.Equal(t, len(c1.Members()), 2)
+	assert.True(t, c1.HasKind("player"))
+	assert.True(t, c1.GetActivated("player/1").Equals(expectedPID))
 }
 
 func TestDeactivate(t *testing.T) {
@@ -135,10 +133,9 @@ func TestDeactivate(t *testing.T) {
 	c2.Start()
 	wg.Wait()
 
-	agent := c1.engine.Registry.GetReceiver("cluster/A").(*Agent)
-	assert.Equal(t, agent.members.Len(), 2)
-	assert.True(t, agent.kinds["player"])
-	assert.Nil(t, agent.activated["player/1"])
+	assert.Equal(t, len(c1.Members()), 2)
+	assert.True(t, c1.HasKind("player"))
+	assert.Nil(t, c1.GetActivated("player/1"))
 }
 
 func TestMemberLeave(t *testing.T) {
@@ -184,9 +181,8 @@ func TestMemberLeave(t *testing.T) {
 	c2.Start()
 
 	wg.Wait()
-	agent := c1.engine.Registry.GetReceiver("cluster/A").(*Agent)
-	assert.Equal(t, agent.members.Len(), 1)
-	assert.False(t, agent.kinds["player"])
+	assert.Equal(t, len(c1.Members()), 1)
+	assert.False(t, c1.HasKind("player"))
 }
 
 func TestMembersExcept(t *testing.T) {
