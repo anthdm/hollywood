@@ -1,8 +1,10 @@
 package cluster
 
 import (
+	"fmt"
 	"log"
-	"sync"
+	"math/rand"
+	sync "sync"
 	"testing"
 
 	"github.com/anthdm/hollywood/actor"
@@ -27,7 +29,7 @@ func NewInventory() actor.Receiver {
 func (i Inventory) Receive(c *actor.Context) {}
 
 func TestRegisterKind(t *testing.T) {
-	c := makeCluster(t, "127.0.0.1:3000", "A", "eu-west")
+	c := makeCluster(t, getRandomLocalhostAddr(), "A", "eu-west")
 	c.RegisterKind("player", NewPlayer, KindConfig{})
 	c.RegisterKind("inventory", NewInventory, KindConfig{})
 	assert.True(t, c.HasKindLocal("player"))
@@ -35,25 +37,28 @@ func TestRegisterKind(t *testing.T) {
 }
 
 func TestMemberJoin(t *testing.T) {
-	c1 := makeCluster(t, "127.0.0.1:3000", "A", "eu-west")
-	c2 := makeCluster(t, "127.0.0.1:3001", "B", "eu-west", MemberAddr{
-		ListenAddr: "127.0.0.1:3000",
+	addr := getRandomLocalhostAddr()
+	c1 := makeCluster(t, addr, "A", "eu-west")
+	c2 := makeCluster(t, getRandomLocalhostAddr(), "B", "eu-west", MemberAddr{
+		ListenAddr: addr,
 		ID:         "A",
 	})
 	c2.RegisterKind("player", NewPlayer, KindConfig{})
-	c1.Start()
 
 	wg := sync.WaitGroup{}
-	wg.Add(2)
+	wg.Add(1)
 	eventPID := c1.engine.SpawnFunc(func(c *actor.Context) {
 		switch msg := c.Message().(type) {
 		// we do this so we are 100% sure nodes are connected with eachother.
 		case MemberJoinEvent:
-			_ = msg
-			wg.Done()
+			if msg.Member.ID == "B" {
+				_ = msg
+				wg.Done()
+			}
 		}
 	}, "event")
 	c1.engine.Subscribe(eventPID)
+	c1.Start()
 	c2.Start()
 
 	wg.Wait()
@@ -63,13 +68,13 @@ func TestMemberJoin(t *testing.T) {
 }
 
 func TestActivate(t *testing.T) {
-	c1 := makeCluster(t, "127.0.0.1:3000", "A", "eu-west")
-	c2 := makeCluster(t, "127.0.0.1:3001", "B", "eu-west", MemberAddr{
-		ListenAddr: "127.0.0.1:3000",
+	addr := getRandomLocalhostAddr()
+	c1 := makeCluster(t, addr, "A", "eu-west")
+	c2 := makeCluster(t, getRandomLocalhostAddr(), "B", "eu-west", MemberAddr{
+		ListenAddr: addr,
 		ID:         "A",
 	})
 	c2.RegisterKind("player", NewPlayer, KindConfig{})
-	c1.Start()
 
 	expectedPID := actor.NewPID(c2.engine.Address(), "player/1")
 	wg := sync.WaitGroup{}
@@ -89,6 +94,7 @@ func TestActivate(t *testing.T) {
 	}, "event")
 	c1.engine.Subscribe(eventPID)
 
+	c1.Start()
 	c2.Start()
 
 	wg.Wait()
@@ -99,13 +105,13 @@ func TestActivate(t *testing.T) {
 }
 
 func TestDeactivate(t *testing.T) {
-	c1 := makeCluster(t, "127.0.0.1:3000", "A", "eu-west")
-	c2 := makeCluster(t, "127.0.0.1:3001", "B", "eu-west", MemberAddr{
-		ListenAddr: "127.0.0.1:3000",
+	addr := getRandomLocalhostAddr()
+	c1 := makeCluster(t, addr, "A", "eu-west")
+	c2 := makeCluster(t, getRandomLocalhostAddr(), "B", "eu-west", MemberAddr{
+		ListenAddr: addr,
 		ID:         "A",
 	})
 	c2.RegisterKind("player", NewPlayer, KindConfig{})
-	c1.Start()
 
 	expectedPID := actor.NewPID(c2.engine.Address(), "player/1")
 	wg := sync.WaitGroup{}
@@ -125,6 +131,7 @@ func TestDeactivate(t *testing.T) {
 	}, "event")
 	c1.engine.Subscribe(eventPID)
 
+	c1.Start()
 	c2.Start()
 	wg.Wait()
 
@@ -135,9 +142,10 @@ func TestDeactivate(t *testing.T) {
 }
 
 func TestMemberLeave(t *testing.T) {
-	memberLeaveAddr := "127.0.0.1:3001"
+	c1Addr := getRandomLocalhostAddr()
+	c2Addr := getRandomLocalhostAddr()
 	remote := remote.New(remote.Config{
-		ListenAddr: memberLeaveAddr,
+		ListenAddr: c2Addr,
 	})
 	e, err := actor.NewEngine(actor.EngineOptRemote(remote))
 	if err != nil {
@@ -145,7 +153,7 @@ func TestMemberLeave(t *testing.T) {
 	}
 	cfg := Config{
 		ClusterProvider: NewSelfManagedProvider(MemberAddr{
-			ListenAddr: "127.0.0.1:3000",
+			ListenAddr: c1Addr,
 			ID:         "A",
 		}),
 		ID:     "B",
@@ -155,7 +163,7 @@ func TestMemberLeave(t *testing.T) {
 	c2, err := New(cfg)
 	assert.Nil(t, err)
 
-	c1 := makeCluster(t, "127.0.0.1:3000", "A", "eu-west")
+	c1 := makeCluster(t, c1Addr, "A", "eu-west")
 	c2.RegisterKind("player", NewPlayer, KindConfig{})
 	c1.Start()
 
@@ -228,4 +236,8 @@ func makeCluster(t *testing.T, addr, id, region string, members ...MemberAddr) *
 	c, err := New(cfg)
 	assert.Nil(t, err)
 	return c
+}
+
+func getRandomLocalhostAddr() string {
+	return fmt.Sprintf("localhost:%d", rand.Intn(50000)+10000)
 }

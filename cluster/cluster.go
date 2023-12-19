@@ -71,8 +71,8 @@ func (c *Cluster) Start() error {
 	return nil
 }
 
-// TODO: Spawn an actor with cluster awareness.
-func (c *Cluster) Spawn(p actor.Producer, kind string, id string) *actor.PID {
+// Spawn an actor locally on the node with cluster awareness.
+func (c *Cluster) Spawn(p actor.Producer) *actor.PID {
 	return nil
 }
 
