@@ -185,7 +185,7 @@ func (a *Agent) memberJoin(member *Member) {
 		}
 	}
 
-	actorInfos := []*ActorInfo{}
+	actorInfos := make([]*ActorInfo, 0)
 	for _, pid := range a.activated {
 		actorInfo := &ActorInfo{
 			PID: pid,
