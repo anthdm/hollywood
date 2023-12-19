@@ -22,8 +22,9 @@ type Config struct {
 	// The region this node is hosted
 	Region string
 
-	Engine          *actor.Engine
-	ClusterProvider Producer
+	ActivationStrategy ActivationStrategy
+	Engine             *actor.Engine
+	ClusterProvider    Producer
 }
 
 type Cluster struct {
@@ -37,10 +38,15 @@ type Cluster struct {
 
 	isStarted bool
 
+	activationStrategy ActivationStrategy
+
 	kinds []kind
 }
 
 func New(cfg Config) (*Cluster, error) {
+	if cfg.ActivationStrategy == nil {
+		cfg.ActivationStrategy = DefaultActivationStrategy{}
+	}
 	if len(cfg.ID) == 0 {
 		cfg.ID = uuid.New().String()
 	}
@@ -48,11 +54,12 @@ func New(cfg Config) (*Cluster, error) {
 		return nil, fmt.Errorf("cannot start cluster without a region")
 	}
 	return &Cluster{
-		id:       cfg.ID,
-		region:   cfg.Region,
-		provider: cfg.ClusterProvider,
-		engine:   cfg.Engine,
-		kinds:    []kind{},
+		id:                 cfg.ID,
+		region:             cfg.Region,
+		provider:           cfg.ClusterProvider,
+		engine:             cfg.Engine,
+		kinds:              []kind{},
+		activationStrategy: cfg.ActivationStrategy,
 	}, nil
 }
 

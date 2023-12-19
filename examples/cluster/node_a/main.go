@@ -43,7 +43,7 @@ func main() {
 	if err := c.Start(); err != nil {
 		log.Fatal(err)
 	}
-	pid := c.Activate("player", "1")
+	pid := c.Activate("player", cluster.ActivationConfig{ID: "1"})
 	fmt.Println(pid)
 	select {}
 }

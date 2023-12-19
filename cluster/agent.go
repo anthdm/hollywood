@@ -1,8 +1,8 @@
 package cluster
 
 import (
+	"fmt"
 	"log/slog"
-	"math/rand"
 	"reflect"
 	"time"
 
@@ -102,12 +102,14 @@ func (a *Agent) handleActivationRequest(msg *ActivationRequest) *ActivationRespo
 }
 
 func (a *Agent) activate(kind, id string) *actor.PID {
-	var (
-		// TODO: pick member based on rendezvous and custom strategy
-		members = a.members.FilterByKind(kind)
-		req     = &ActivationRequest{Kind: kind, ID: id}
-	)
-	owner := members[rand.Intn(len(members))]
+	members := a.members.FilterByKind(kind)
+	fmt.Println("we are", a.cluster.id)
+	fmt.Println(members)
+	owner := a.cluster.activationStrategy.SelectMember(members)
+	if owner == nil {
+		panic("TODO")
+	}
+	req := &ActivationRequest{Kind: kind, ID: id}
 	activatorPID := actor.NewPID(owner.Host, "cluster/"+owner.ID)
 
 	var activationResp *ActivationResponse
@@ -177,6 +179,7 @@ func (a *Agent) memberJoin(member *Member) {
 		a.cluster.engine.Send(member.PID(), &ActorTopology{Actors: actorInfos})
 	}
 
+	fmt.Println("from inside the add agent", a.members)
 	// Broadcast MemberJoinEvent
 	a.cluster.engine.BroadcastEvent(MemberJoinEvent{
 		Member: member,

@@ -46,6 +46,6 @@ func main() {
 	if err := c.Start(); err != nil {
 		log.Fatal(err)
 	}
-	c.Activate("inventory", "1")
+	c.Activate("inventory", cluster.ActivationConfig{ID: "1"})
 	select {}
 }

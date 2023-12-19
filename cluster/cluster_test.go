@@ -1,6 +1,7 @@
 package cluster
 
 import (
+	"fmt"
 	"log"
 	"sync"
 	"testing"
@@ -42,14 +43,13 @@ func TestActivate(t *testing.T) {
 	})
 	c2.RegisterKind("player", NewPlayer, KindConfig{})
 	c1.Start()
-	c2.Start()
-
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 	eventPID := c1.engine.SpawnFunc(func(c *actor.Context) {
 		switch c.Message().(type) {
 		// we do this so we are 100% sure nodes are connected with eachother.
 		case MemberJoinEvent:
+			fmt.Println("from inside the test")
 			pid := c1.Activate("player", ActivationConfig{ID: "1"})
 			// Because c1 doesnt have player registered locally we can only spawned
 			// the player on c2
@@ -59,8 +59,17 @@ func TestActivate(t *testing.T) {
 		}
 	}, "event")
 	c1.engine.Subscribe(eventPID)
+
+	c2.Start()
+
 	wg.Wait()
 }
+
+func TestDeactivate(t *testing.T) {}
+
+func TestMemberJoin(t *testing.T) {}
+
+func TestMemberLeave(t *testing.T) {}
 
 func TestMembersExcept(t *testing.T) {
 	a := []*Member{
