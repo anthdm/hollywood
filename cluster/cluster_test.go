@@ -44,7 +44,7 @@ func TestClusterSpawn(t *testing.T) {
 		ID:         "A",
 	})
 
-	expectedPID := actor.NewPID(c1Addr, "player")
+	expectedPID := actor.NewPID(c1Addr, "player/1")
 
 	wg := sync.WaitGroup{}
 	wg.Add(2)
@@ -53,7 +53,7 @@ func TestClusterSpawn(t *testing.T) {
 		switch msg := c.Message().(type) {
 		case MemberJoinEvent:
 			if msg.Member.ID == "B" {
-				c1.Spawn(NewPlayer, "player")
+				c1.Spawn(NewPlayer, "player", actor.WithID("1"))
 			}
 		case ActivationEvent:
 			assert.True(t, msg.PID.Equals(expectedPID))

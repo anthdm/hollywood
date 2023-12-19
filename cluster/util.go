@@ -7,7 +7,7 @@ import (
 // memberToProviderPID create a new PID from the member that
 // will target the provider actor of the cluster.
 func memberToProviderPID(m *Member) *actor.PID {
-	return actor.NewPID(m.Host, "cluster/"+m.ID+"/provider")
+	return actor.NewPID(m.Host, "provider/"+m.ID)
 }
 
 // NewCID returns a new Cluster ID.

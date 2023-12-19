@@ -67,8 +67,8 @@ func New(cfg Config) (*Cluster, error) {
 
 // Start the cluster
 func (c *Cluster) Start() error {
-	c.agentPID = c.engine.Spawn(NewAgent(c), "cluster/"+c.id)
-	c.providerPID = c.engine.Spawn(c.provider(c), "cluster/"+c.id+"/provider")
+	c.agentPID = c.engine.Spawn(NewAgent(c), "cluster", actor.WithID(c.id))
+	c.providerPID = c.engine.Spawn(c.provider(c), "provider", actor.WithID(c.id))
 	c.isStarted = true
 	return nil
 }

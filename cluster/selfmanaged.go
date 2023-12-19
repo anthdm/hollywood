@@ -134,7 +134,7 @@ func (s *SelfManaged) start(c *actor.Context) {
 		Members: s.members.Slice(),
 	}
 	for _, ma := range s.bootstrapAddrs {
-		memberPID := actor.NewPID(ma.ListenAddr, "cluster/"+ma.ID+"/provider")
+		memberPID := actor.NewPID(ma.ListenAddr, "provider/"+ma.ID)
 		s.cluster.engine.Send(memberPID, members)
 	}
 }

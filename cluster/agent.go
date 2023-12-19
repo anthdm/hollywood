@@ -114,7 +114,7 @@ func (a *Agent) handleActivationRequest(msg *ActivationRequest) *ActivationRespo
 		return &ActivationResponse{Success: false}
 	}
 	kind := a.localKinds[msg.Kind]
-	pid := a.cluster.engine.Spawn(kind.producer, msg.Kind+"/"+msg.ID)
+	pid := a.cluster.engine.Spawn(kind.producer, msg.Kind, actor.WithID(msg.ID))
 	resp := &ActivationResponse{
 		PID:     pid,
 		Success: true,
