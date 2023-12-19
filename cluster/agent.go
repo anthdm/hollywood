@@ -3,7 +3,6 @@ package cluster
 import (
 	"log/slog"
 	"reflect"
-	"time"
 
 	"github.com/anthdm/hollywood/actor"
 	"golang.org/x/exp/maps"
@@ -140,7 +139,7 @@ func (a *Agent) activate(kind, id string) *actor.PID {
 		// Remote activation
 
 		// TODO: topology hash
-		resp, err := a.cluster.engine.Request(activatorPID, req, time.Millisecond*100).Result()
+		resp, err := a.cluster.engine.Request(activatorPID, req, requestTimeout).Result()
 		if err != nil {
 			slog.Error("failed activation request", "err", err)
 			return nil

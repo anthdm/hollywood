@@ -86,8 +86,11 @@ type ActivationConfig struct {
 
 // Activate actives the given actor kind with an optional id. If there is no id
 // given, the engine will create an unique id automatically.
-func (c *Cluster) Activate(kind string, config ActivationConfig) *actor.PID {
-	resp, err := c.engine.Request(c.agentPID, activate{kind: kind, id: config.ID}, time.Millisecond*100).Result()
+func (c *Cluster) Activate(kind string, config *ActivationConfig) *actor.PID {
+	if config == nil {
+		config = &ActivationConfig{}
+	}
+	resp, err := c.engine.Request(c.agentPID, activate{kind: kind, id: config.ID}, requestTimeout).Result()
 	if err != nil {
 		slog.Error("activation failed", "err", err)
 		return nil
@@ -108,12 +111,15 @@ func (c *Cluster) Deactivate(pid *actor.PID) {
 // RegisterKind registers a new actor/receiver kind that can be spawned from any node
 // on the cluster.
 // NOTE: Kinds can only be registered if the cluster is not running.
-func (c *Cluster) RegisterKind(name string, producer actor.Producer, config KindConfig) {
+func (c *Cluster) RegisterKind(name string, producer actor.Producer, config *KindConfig) {
 	if c.isStarted {
 		slog.Warn("trying to register new kind on a running cluster")
 		return
 	}
-	kind := newKind(name, producer, config)
+	if config == nil {
+		config = &KindConfig{}
+	}
+	kind := newKind(name, producer, *config)
 	c.kinds = append(c.kinds, kind)
 }
 

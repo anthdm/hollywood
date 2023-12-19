@@ -30,8 +30,8 @@ func (i Inventory) Receive(c *actor.Context) {}
 
 func TestRegisterKind(t *testing.T) {
 	c := makeCluster(t, getRandomLocalhostAddr(), "A", "eu-west")
-	c.RegisterKind("player", NewPlayer, KindConfig{})
-	c.RegisterKind("inventory", NewInventory, KindConfig{})
+	c.RegisterKind("player", NewPlayer, nil)
+	c.RegisterKind("inventory", NewInventory, nil)
 	assert.True(t, c.HasKindLocal("player"))
 	assert.True(t, c.HasKindLocal("inventory"))
 }
@@ -43,7 +43,7 @@ func TestMemberJoin(t *testing.T) {
 		ListenAddr: addr,
 		ID:         "A",
 	})
-	c2.RegisterKind("player", NewPlayer, KindConfig{})
+	c2.RegisterKind("player", NewPlayer, nil)
 
 	wg := sync.WaitGroup{}
 	wg.Add(1)
@@ -73,7 +73,7 @@ func TestActivate(t *testing.T) {
 		ListenAddr: addr,
 		ID:         "A",
 	})
-	c2.RegisterKind("player", NewPlayer, KindConfig{})
+	c2.RegisterKind("player", NewPlayer, nil)
 
 	expectedPID := actor.NewPID(c2.engine.Address(), "player/1")
 	wg := sync.WaitGroup{}
@@ -85,7 +85,7 @@ func TestActivate(t *testing.T) {
 			if msg.Member.ID == "B" {
 				// Because c1 doesnt have player registered locally we can only spawned
 				// the player on c2
-				pid := c1.Activate("player", ActivationConfig{ID: "1"})
+				pid := c1.Activate("player", &ActivationConfig{ID: "1"})
 				assert.True(t, pid.Equals(expectedPID))
 			}
 			wg.Done()
@@ -109,7 +109,7 @@ func TestDeactivate(t *testing.T) {
 		ListenAddr: addr,
 		ID:         "A",
 	})
-	c2.RegisterKind("player", NewPlayer, KindConfig{})
+	c2.RegisterKind("player", NewPlayer, nil)
 
 	expectedPID := actor.NewPID(c2.engine.Address(), "player/1")
 	wg := sync.WaitGroup{}
@@ -118,7 +118,7 @@ func TestDeactivate(t *testing.T) {
 		switch msg := c.Message().(type) {
 		case MemberJoinEvent:
 			if msg.Member.ID == "B" {
-				pid := c1.Activate("player", ActivationConfig{ID: "1"})
+				pid := c1.Activate("player", &ActivationConfig{ID: "1"})
 				assert.True(t, pid.Equals(expectedPID))
 			}
 		case ActivationEvent:
@@ -161,7 +161,7 @@ func TestMemberLeave(t *testing.T) {
 	assert.Nil(t, err)
 
 	c1 := makeCluster(t, c1Addr, "A", "eu-west")
-	c2.RegisterKind("player", NewPlayer, KindConfig{})
+	c2.RegisterKind("player", NewPlayer, nil)
 	c1.Start()
 
 	wg := sync.WaitGroup{}

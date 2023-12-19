@@ -39,11 +39,11 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	c.RegisterKind("player", NewPlayer(), cluster.KindConfig{})
+	c.RegisterKind("player", NewPlayer(), nil)
 	if err := c.Start(); err != nil {
 		log.Fatal(err)
 	}
-	pid := c.Activate("player", cluster.ActivationConfig{ID: "1"})
+	pid := c.Activate("player", &cluster.ActivationConfig{ID: "1"})
 	fmt.Println(pid)
 	select {}
 }

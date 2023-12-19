@@ -42,10 +42,10 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	c.RegisterKind("inventory", NewInventory(), cluster.KindConfig{})
+	c.RegisterKind("inventory", NewInventory(), nil)
 	if err := c.Start(); err != nil {
 		log.Fatal(err)
 	}
-	c.Activate("inventory", cluster.ActivationConfig{ID: "1"})
+	c.Activate("inventory", &cluster.ActivationConfig{ID: "1"})
 	select {}
 }
