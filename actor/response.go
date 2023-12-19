@@ -21,7 +21,7 @@ func NewResponse(e *Engine, timeout time.Duration) *Response {
 		engine:  e,
 		result:  make(chan any, 1),
 		timeout: timeout,
-		pid:     NewPID(e.address, "response", strconv.Itoa(rand.Intn(math.MaxInt32))),
+		pid:     NewPID(e.address, "response"+pidSeparator+strconv.Itoa(rand.Intn(math.MaxInt32))),
 	}
 }
 

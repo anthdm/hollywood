@@ -37,11 +37,10 @@ func TestContextSendRepeat(t *testing.T) {
 }
 
 func TestSpawnChildPID(t *testing.T) {
-	pidSeparator = ">"
 	var (
 		wg          = sync.WaitGroup{}
 		childfn     = func(c *Context) {}
-		expectedPID = NewPID(LocalLookupAddr, "parent", "child")
+		expectedPID = NewPID(LocalLookupAddr, "parent/1/child/1")
 	)
 	e, err := NewEngine()
 	require.NoError(t, err)
@@ -49,15 +48,14 @@ func TestSpawnChildPID(t *testing.T) {
 	e.SpawnFunc(func(c *Context) {
 		switch c.Message().(type) {
 		case Started:
-			pid := c.SpawnChildFunc(childfn, "child")
+			pid := c.SpawnChildFunc(childfn, "child", WithID("1"))
 			assert.True(t, expectedPID.Equals(pid))
 			wg.Done()
 		case Stopped:
 		}
-	}, "parent")
+	}, "parent", WithID("1"))
 
 	wg.Wait()
-	pidSeparator = "/"
 }
 
 func TestChild(t *testing.T) {
@@ -70,21 +68,21 @@ func TestChild(t *testing.T) {
 	e.SpawnFunc(func(c *Context) {
 		switch c.Message().(type) {
 		case Initialized:
-			c.SpawnChildFunc(func(_ *Context) {}, "child", WithTags("1"))
-			c.SpawnChildFunc(func(_ *Context) {}, "child", WithTags("2"))
-			c.SpawnChildFunc(func(_ *Context) {}, "child", WithTags("3"))
+			c.SpawnChildFunc(func(_ *Context) {}, "child", WithID("1"))
+			c.SpawnChildFunc(func(_ *Context) {}, "child", WithID("2"))
+			c.SpawnChildFunc(func(_ *Context) {}, "child", WithID("3"))
 		case Started:
 			assert.Equal(t, 3, len(c.Children()))
 			wg.Done()
 		}
-	}, "foo", WithTags("bar", "baz"))
+	}, "foo", WithID("bar/baz"))
 	wg.Wait()
 }
 
 func TestParent(t *testing.T) {
 	var (
 		wg     = sync.WaitGroup{}
-		parent = NewPID(LocalLookupAddr, "foo", "bar", "baz")
+		parent = NewPID(LocalLookupAddr, "foo/bar/baz")
 	)
 	e, err := NewEngine()
 	require.NoError(t, err)
@@ -104,7 +102,7 @@ func TestParent(t *testing.T) {
 		case Started:
 			c.SpawnChildFunc(childfn, "child")
 		}
-	}, "foo", WithTags("bar", "baz"))
+	}, "foo", WithID("bar/baz"))
 
 	wg.Wait()
 }
@@ -116,11 +114,11 @@ func TestGetPID(t *testing.T) {
 	wg.Add(1)
 	e.SpawnFunc(func(c *Context) {
 		if _, ok := c.Message().(Started); ok {
-			pid := c.GetPID("foo", "bar", "baz")
+			pid := c.GetPID("foo/bar")
 			require.True(t, pid.Equals(c.PID()))
 			wg.Done()
 		}
-	}, "foo", WithTags("bar", "baz"))
+	}, "foo", WithID("bar"))
 
 	wg.Wait()
 }
