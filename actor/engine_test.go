@@ -338,6 +338,32 @@ func TestRequestResponse(t *testing.T) {
 	})
 }
 
+func TestPoisonPillPrivate(t *testing.T) {
+	e, err := NewEngine()
+	require.NoError(t, err)
+	successCh := make(chan struct{}, 1)
+	failCh := make(chan struct{}, 1)
+	pid := e.SpawnFunc(func(c *Context) {
+		switch c.Message().(type) {
+		case Stopped:
+			successCh <- struct{}{}
+		case poisonPill:
+			failCh <- struct{}{}
+			time.Sleep(time.Millisecond)
+		}
+	}, "victim")
+	e.Poison(pid).Wait()
+	assert.Nil(t, e.Registry.get(pid))
+	select {
+	case <-failCh:
+		t.Fatal("poison pill seen")
+	case <-successCh:
+		return // actor was stopped without seeing a poison pill
+	case <-time.After(time.Millisecond * 20):
+		t.Fatal("timeout")
+	}
+}
+
 // 56 ns/op
 func BenchmarkSendMessageLocal(b *testing.B) {
 	e, err := NewEngine()
