@@ -65,8 +65,8 @@ func (a *Agent) Receive(c *actor.Context) {
 	case *Activation:
 		a.handleActivation(msg)
 	case activate:
-		cid := a.activate(msg.kind, msg.id)
-		c.Respond(cid)
+		pid := a.activate(msg.kind, msg.id)
+		c.Respond(pid)
 	case deactivate:
 		a.bcast(&Deactivation{PID: msg.pid})
 	case *Deactivation:

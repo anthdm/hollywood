@@ -74,10 +74,18 @@ func (c *Cluster) Start() error {
 }
 
 // Spawn an actor locally on the node with cluster awareness.
-func (c *Cluster) Spawn(p actor.Producer) *actor.PID {
-	return nil
+func (c *Cluster) Spawn(p actor.Producer, id string, opts ...actor.OptFunc) *actor.PID {
+	pid := c.engine.Spawn(p, id, opts...)
+	members := c.Members()
+	for _, member := range members {
+		c.engine.Send(member.PID(), &Activation{
+			PID: pid,
+		})
+	}
+	return pid
 }
 
+// TODO: Doc this when its more usefull.
 type ActivationConfig struct {
 	// if empty, a unique identifier will be generated.
 	ID     string

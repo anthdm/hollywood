@@ -36,6 +36,46 @@ func TestRegisterKind(t *testing.T) {
 	assert.True(t, c.HasKindLocal("inventory"))
 }
 
+func TestClusterSpawn(t *testing.T) {
+	c1Addr := getRandomLocalhostAddr()
+	c1 := makeCluster(t, c1Addr, "A", "eu-west")
+	c2 := makeCluster(t, getRandomLocalhostAddr(), "B", "eu-west", MemberAddr{
+		ListenAddr: c1Addr,
+		ID:         "A",
+	})
+
+	expectedPID := actor.NewPID(c1Addr, "player")
+
+	wg := sync.WaitGroup{}
+	wg.Add(2)
+
+	eventPID := c1.engine.SpawnFunc(func(c *actor.Context) {
+		switch msg := c.Message().(type) {
+		case MemberJoinEvent:
+			if msg.Member.ID == "B" {
+				c1.Spawn(NewPlayer, "player")
+			}
+		case ActivationEvent:
+			assert.True(t, msg.PID.Equals(expectedPID))
+			wg.Done()
+		}
+	}, "event")
+	c1.engine.Subscribe(eventPID)
+
+	eventPIDc2 := c2.engine.SpawnFunc(func(c *actor.Context) {
+		switch msg := c.Message().(type) {
+		case ActivationEvent:
+			assert.True(t, msg.PID.Equals(expectedPID))
+			wg.Done()
+		}
+	}, "event")
+	c2.engine.Subscribe(eventPIDc2)
+
+	c1.Start()
+	c2.Start()
+	wg.Wait()
+}
+
 func TestMemberJoin(t *testing.T) {
 	addr := getRandomLocalhostAddr()
 	c1 := makeCluster(t, addr, "A", "eu-west")
