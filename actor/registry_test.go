@@ -17,7 +17,7 @@ func (p fooProc) Invoke([]Envelope)        {}
 func (p fooProc) Shutdown(*sync.WaitGroup) {}
 
 func TestGetRemoveAdd(t *testing.T) {
-	e, _ := NewEngine()
+	e, _ := NewEngine(nil)
 	reg := newRegistry(e)
 	eproc := fooProc{}
 	reg.add(eproc)

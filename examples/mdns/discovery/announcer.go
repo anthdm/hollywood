@@ -17,7 +17,7 @@ type announcer struct {
 	server *zeroconf.Server
 }
 
-func newAnnouncer(cfg *discoveryOptions) *announcer {
+func newAnnouncer(cfg *options) *announcer {
 	ret := &announcer{
 		id:   cfg.id,
 		ip:   cfg.ip,

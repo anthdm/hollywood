@@ -81,10 +81,8 @@ func main() {
 		listenAt = flag.String("listen", "127.0.0.1:4000", "")
 	)
 	flag.Parse()
-	rem := remote.New(remote.Config{
-		ListenAddr: *listenAt,
-	})
-	e, err := actor.NewEngine(actor.EngineOptRemote(rem))
+	rem := remote.New(*listenAt, nil)
+	e, err := actor.NewEngine(&actor.EngineOpts{Remote: rem})
 	if err != nil {
 		panic(err)
 	}

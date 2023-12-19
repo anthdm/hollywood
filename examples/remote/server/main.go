@@ -26,8 +26,8 @@ func (f *server) Receive(ctx *actor.Context) {
 }
 
 func main() {
-	r := remote.New(remote.Config{ListenAddr: "127.0.0.1:4000"})
-	e, err := actor.NewEngine(actor.EngineOptRemote(r))
+	r := remote.New("127.0.0.1:4000", nil)
+	e, err := actor.NewEngine(&actor.EngineOpts{Remote: r})
 	if err != nil {
 		panic(err)
 	}

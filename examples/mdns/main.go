@@ -3,10 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"os"
-	"os/signal"
-	"syscall"
-
 	"github.com/anthdm/hollywood/actor"
 	"github.com/anthdm/hollywood/examples/mdns/chat"
 	"github.com/anthdm/hollywood/examples/mdns/discovery"
@@ -21,22 +17,19 @@ var (
 func main() {
 	flag.Parse()
 
-	engine := actor.NewEngine()
+	rem := remote.New(fmt.Sprintf("%s:%d", *ip, *port), nil)
+	engine, err := actor.NewEngine(&actor.EngineOpts{Remote: rem})
+	if err != nil {
+		panic(err)
+	}
 
-	r := remote.New(engine, remote.Config{
-		ListenAddr: fmt.Sprintf("%s:%d", *ip, *port),
-	})
-	engine.WithRemote(r)
-	engine.Spawn(chat.New(engine.EventStream), "chat")
+	engine.Spawn(chat.New(), "chat")
 
 	// starts mdns discovery
 	engine.Spawn(discovery.NewMdnsDiscovery(
-		engine.EventStream,
 		discovery.WithAnnounceAddr(*ip, *port),
 	), "mdns")
 
 	// Clean exit.
-	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, os.Interrupt, syscall.SIGTERM)
-	<-sig
+	select {}
 }

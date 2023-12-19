@@ -13,7 +13,7 @@ type CustomEvent struct {
 }
 
 func TestEventStreamLocal(t *testing.T) {
-	e, err := NewEngine()
+	e, err := NewEngine(nil)
 	assert.NoError(t, err)
 	wg := sync.WaitGroup{}
 	wg.Add(2)
@@ -43,7 +43,7 @@ func TestEventStreamLocal(t *testing.T) {
 }
 
 func TestEventStreamActorStartedEvent(t *testing.T) {
-	e, _ := NewEngine()
+	e, _ := NewEngine(nil)
 	wg := sync.WaitGroup{}
 
 	wg.Add(1)
@@ -61,7 +61,7 @@ func TestEventStreamActorStartedEvent(t *testing.T) {
 }
 
 func TestEventStreamActorStoppedEvent(t *testing.T) {
-	e, _ := NewEngine()
+	e, _ := NewEngine(nil)
 	wg := sync.WaitGroup{}
 
 	wg.Add(1)

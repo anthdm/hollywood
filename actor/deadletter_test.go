@@ -11,7 +11,7 @@ import (
 // TestDeadLetterCustom tests the custom deadletter handling.
 // It is using the custom deadletter receiver defined inline.
 func TestDeadLetterCustom(t *testing.T) {
-	e, err := NewEngine()
+	e, err := NewEngine(nil)
 	assert.NoError(t, err)
 	wg := &sync.WaitGroup{}
 	wg.Add(1)

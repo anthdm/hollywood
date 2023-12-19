@@ -15,13 +15,13 @@ type eventUnsub struct {
 	pid *PID
 }
 
-type EventStream struct {
+type eventStream struct {
 	subs map[*PID]bool
 }
 
-func NewEventStream() Producer {
+func newEventStream() Producer {
 	return func() Receiver {
-		return &EventStream{
+		return &eventStream{
 			subs: make(map[*PID]bool),
 		}
 	}
@@ -30,7 +30,7 @@ func NewEventStream() Producer {
 // Receive for the event stream. All system-wide events are sent here.
 // Some events are specially handled, such as eventSub, EventUnSub (for subscribing to events),
 // DeadletterSub, DeadletterUnSub, for subscribing to DeadLetterEvent
-func (e *EventStream) Receive(c *Context) {
+func (e *eventStream) Receive(c *Context) {
 	switch msg := c.Message().(type) {
 	case eventSub:
 		e.subs[msg.pid] = true

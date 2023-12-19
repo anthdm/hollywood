@@ -16,12 +16,14 @@ import (
 
 // Config holds the remote configuration.
 type Config struct {
-	ListenAddr string
-	TlsConfig  *tls.Config
-	Wg         *sync.WaitGroup
+	TlsConfig *tls.Config
+	Wg        *sync.WaitGroup
 }
 
 type Remote struct {
+	addr            string
+	tlsConfig       *tls.Config
+	wg              *sync.WaitGroup
 	engine          *actor.Engine
 	config          Config
 	streamReader    *streamReader
@@ -39,9 +41,13 @@ const (
 )
 
 // New creates a new "Remote" object given a Config.
-func New(cfg Config) *Remote {
+func New(addr string, cfg *Config) *Remote {
 	r := &Remote{
-		config: cfg,
+		addr: addr,
+	}
+	if cfg != nil {
+		r.tlsConfig = cfg.TlsConfig
+		r.wg = cfg.Wg
 	}
 	r.state.Store(stateInitialized)
 	r.streamReader = newStreamReader(r)
@@ -58,15 +64,15 @@ func (r *Remote) Start(e *actor.Engine) error {
 	var err error
 	switch r.config.TlsConfig {
 	case nil:
-		ln, err = net.Listen("tcp", r.config.ListenAddr)
+		ln, err = net.Listen("tcp", r.addr)
 	default:
 		slog.Debug("remote using TLS for listening")
-		ln, err = tls.Listen("tcp", r.config.ListenAddr, r.config.TlsConfig)
+		ln, err = tls.Listen("tcp", r.addr, r.config.TlsConfig)
 	}
 	if err != nil {
 		return fmt.Errorf("remote failed to listen: %w", err)
 	}
-	slog.Debug("listening", "addr", r.config.ListenAddr)
+	slog.Debug("listening", "addr", r.addr)
 	mux := drpcmux.New()
 	err = DRPCRegisterRemote(mux, r.streamReader)
 	if err != nil {
@@ -75,7 +81,7 @@ func (r *Remote) Start(e *actor.Engine) error {
 	s := drpcserver.New(mux)
 
 	r.streamRouterPID = r.engine.Spawn(newStreamRouter(r.engine, r.config.TlsConfig), "router", actor.WithInboxSize(1024*1024))
-	slog.Info("server started", "listenAddr", r.config.ListenAddr)
+	slog.Info("server started", "listenAddr", r.addr)
 	r.stopWg = &sync.WaitGroup{}
 	r.stopWg.Add(1)
 	r.stopCh = make(chan struct{})
@@ -124,7 +130,7 @@ func (r *Remote) Send(pid *actor.PID, msg any, sender *actor.PID) {
 
 // Address returns the listen address of the remote.
 func (r *Remote) Address() string {
-	return r.config.ListenAddr
+	return r.addr
 }
 
 func init() {

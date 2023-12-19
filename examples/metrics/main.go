@@ -86,7 +86,7 @@ func main() {
 	go func() {
 		http.ListenAndServe(*promListenAddr, promhttp.Handler())
 	}()
-	e, err := actor.NewEngine()
+	e, err := actor.NewEngine(nil)
 	if err != nil {
 		panic(err)
 	}

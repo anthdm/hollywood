@@ -17,7 +17,7 @@ func main() {
 	// this script creates a trade order, gets the trade info and then cancels the order
 
 	// create the actor engine
-	e, err := actor.NewEngine()
+	e, err := actor.NewEngine(nil)
 	if err != nil {
 		fmt.Printf("failed to create actor engine: %v", err)
 		os.Exit(1)

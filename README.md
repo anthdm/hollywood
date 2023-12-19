@@ -65,7 +65,7 @@ compiler.
 Let's go through a Hello world message. The complete example is available in the 
 [hello world](examples/helloworld) folder. Let's start in main:
 ```go
-	engine, err := actor.NewEngine()
+	engine, err := actor.NewEngine(nil)
 ```
 This creates a new engine. The engine is the core of Hollywood. It's responsible for spawning actors, sending messages
 and handling the lifecycle of actors. If Hollywood fails to create the engine it'll return an error. 

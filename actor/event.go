@@ -13,7 +13,7 @@ type EventLogger interface {
 	Log() (slog.Level, string, []any)
 }
 
-// ActorStartedEvent is broadcasted over the EventStream each time
+// ActorStartedEvent is broadcasted over the eventStream each time
 // a Receiver (Actor) is spawned and activated. This means, that at
 // the point of receiving this event the Receiver (Actor) is ready
 // to process messages.
@@ -26,7 +26,7 @@ func (e ActorStartedEvent) Log() (slog.Level, string, []any) {
 	return slog.LevelInfo, "Actor started", []any{"pid", e.PID.GetID()}
 }
 
-// ActorStoppedEvent is broadcasted over the EventStream each time
+// ActorStoppedEvent is broadcasted over the eventStream each time
 // a process is terminated.
 type ActorStoppedEvent struct {
 	PID       *PID

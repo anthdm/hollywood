@@ -3,34 +3,32 @@ package discovery
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/anthdm/hollywood/actor"
-	"github.com/anthdm/hollywood/log"
 	"github.com/grandcat/zeroconf"
 )
 
 type mdns struct {
-	id          string
-	announcer   *announcer
-	resolver    *zeroconf.Resolver
-	eventStream *actor.EventStream
+	id        string
+	announcer *announcer
+	resolver  *zeroconf.Resolver
 
 	ctx      context.Context
 	cancelFn context.CancelFunc
 }
 
-func NewMdnsDiscovery(eventStream *actor.EventStream, opts ...DiscoveryOption) actor.Producer {
+func NewMdnsDiscovery(opts ...Option) actor.Producer {
 	ctx, cancel := context.WithCancel(context.Background())
 	cfg := applyDiscoveryOptions(opts...)
 	announcer := newAnnouncer(cfg)
 	return func() actor.Receiver {
 		ret := &mdns{
-			id:          cfg.id,
-			announcer:   announcer,
-			ctx:         ctx,
-			cancelFn:    cancel,
-			eventStream: eventStream,
+			id:        cfg.id,
+			announcer: announcer,
+			ctx:       ctx,
+			cancelFn:  cancel,
 		}
 		return ret
 	}
@@ -39,11 +37,14 @@ func NewMdnsDiscovery(eventStream *actor.EventStream, opts ...DiscoveryOption) a
 func (d *mdns) Receive(ctx *actor.Context) {
 	switch msg := ctx.Message().(type) {
 	case actor.Initialized:
+		slog.Info("[DISCOVERY] initializing")
 		d.createResolver()
 	case actor.Started:
+		slog.Info("[DISCOVERY] starting discovery")
 		go d.startDiscovery(ctx)
 		d.announcer.start()
 	case actor.Stopped:
+		slog.Info("[DISCOVERY] stopping discovery")
 		d.shutdown()
 		_ = msg
 	}
@@ -78,7 +79,7 @@ func (d *mdns) startDiscovery(c *actor.Context) {
 
 	err := d.resolver.Browse(ctx, serviceName, domain, entries)
 	if err != nil {
-		log.Infow("[DISCOVERY] starting discovery failed", log.M{"err": err.Error()})
+		slog.Error("[DISCOVERY] starting discovery failed", "err", err)
 		panic(err)
 	}
 	<-ctx.Done()
@@ -95,7 +96,6 @@ func (d *mdns) sendDiscoveryEvent(entry *zeroconf.ServiceEntry) {
 		for _, addr := range entry.AddrIPv4 {
 			event.Addr = append(event.Addr, fmt.Sprintf("%s:%d", addr.String(), entry.Port))
 		}
-		log.Infow("[DISCOVERY] remote discovered", log.M{"addrs": strings.Join(event.Addr, ","), "ID": entry.Instance})
-		d.eventStream.Publish(event)
+		slog.Info("[DISCOVERY] remote discovered", "addrs", strings.Join(event.Addr, ","), "ID", entry.Instance)
 	}
 }

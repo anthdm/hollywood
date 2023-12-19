@@ -34,7 +34,7 @@ func (f *foo) Receive(ctx *actor.Context) {
 }
 
 func main() {
-	engine, err := actor.NewEngine()
+	engine, err := actor.NewEngine(nil)
 	if err != nil {
 		panic(err)
 	}
