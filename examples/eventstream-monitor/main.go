@@ -73,7 +73,7 @@ func (m *unstableActor) Receive(c *actor.Context) {
 }
 
 func main() {
-	e, _ := actor.NewEngine()
+	e, _ := actor.NewEngine(nil)
 	// Spawn a monitor actor and then an unstable actor.
 	monitor := e.Spawn(newMonitor, "monitor")
 	ua := e.Spawn(newUnstableActor, "unstable_actor", actor.WithMaxRestarts(10000))

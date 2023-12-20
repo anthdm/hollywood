@@ -134,7 +134,7 @@ func (r *RedisStore) Load(key string) ([]byte, error) {
 }
 
 func main() {
-	e, err := actor.NewEngine()
+	e, err := actor.NewEngine(nil)
 	if err != nil {
 		log.Fatal(err)
 	}

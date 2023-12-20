@@ -1,6 +1,8 @@
 package main
 
 import (
+	"log/slog"
+	"os"
 	"time"
 
 	"github.com/anthdm/hollywood/actor"
@@ -9,15 +11,19 @@ import (
 )
 
 func main() {
-	r := remote.New(remote.Config{ListenAddr: "127.0.0.1:3000"})
-	e, err := actor.NewEngine(actor.EngineOptRemote(r))
+	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug})))
+	r := remote.New("127.0.0.1:3000", nil)
+	e, err := actor.NewEngine(&actor.EngineOpts{Remote: r})
 	if err != nil {
 		panic(err)
 	}
 
-	pid := actor.NewPID("127.0.0.1:4000", "server")
+	serverPID := actor.NewPID("127.0.0.1:4000", "server/primary")
+	// The server will be started with id "primary". Hence, let's create
+	// the correct PID for it so its reachable.
 	for {
-		e.Send(pid, &msg.Message{Data: "hello!"})
+		e.Send(serverPID, &msg.Message{Data: "hello!"})
+		slog.Debug("sent message", "to", serverPID.String())
 		time.Sleep(time.Second)
 	}
 }

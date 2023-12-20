@@ -4,20 +4,17 @@ import (
 	"github.com/anthdm/hollywood/actor"
 	"github.com/anthdm/hollywood/examples/mdns/chat/types"
 	"github.com/anthdm/hollywood/examples/mdns/discovery"
-	"github.com/anthdm/hollywood/log"
+	"log/slog"
+	"reflect"
 )
 
 type server struct {
-	eventStream  *actor.EventStream
-	subscription *actor.EventSub
-	ctx          *actor.Context
+	engine *actor.Engine
 }
 
-func New(e *actor.EventStream) actor.Producer {
+func New() actor.Producer {
 	return func() actor.Receiver {
-		ret := &server{
-			eventStream: e,
-		}
+		ret := &server{}
 		return ret
 	}
 }
@@ -25,32 +22,30 @@ func New(e *actor.EventStream) actor.Producer {
 func (s *server) Receive(ctx *actor.Context) {
 	switch msg := ctx.Message().(type) {
 	case actor.Initialized:
-		s.ctx = ctx
-		s.subscription = s.eventStream.Subscribe(s.onMessage)
+		s.engine = ctx.Engine()
+		ctx.Engine().Subscribe(ctx.PID())
 	case actor.Started:
 		_ = msg
 	case actor.Stopped:
-		s.shutdown()
+		ctx.Engine().Unsubscribe(ctx.PID())
+	case *discovery.DiscoveryEvent:
+		// a new remote actor has been discovered. We can now send messages to it.
+		pid := actor.NewPID(msg.Addr[0], "chat/chat")
+		chatMsg := &types.Message{
+			Msg: "hello there",
+		}
+		slog.Info("sending hello", "to", pid.String(), "msg", chatMsg.Msg, "from", ctx.PID().String())
+		s.engine.SendWithSender(pid, chatMsg, ctx.PID())
 	case *types.Message:
 		s.handleMessage(ctx, msg)
+	case actor.DeadLetterEvent:
+		slog.Warn("dead letter", "sender", msg.Sender, "target", msg.Target, "msg", msg.Message)
+	default:
+		slog.Warn("unknown message", "type", reflect.TypeOf(msg).String(), "msg", msg)
 	}
-}
-func (s *server) onMessage(event any) {
-	switch evt := event.(type) {
-	case *discovery.DiscoveryEvent:
-		pid := actor.NewPID(evt.Addr[0], "chat")
-		s.ctx.Engine().Send(pid, &types.Message{
-			Username: evt.ID,
-			Msg:      "hello",
-		})
-	}
-}
-
-func (s *server) shutdown() {
-	s.eventStream.Unsubscribe(s.subscription)
 }
 
 // handle the incoming message by broadcasting it to all connected clients.
-func (s *server) handleMessage(ctx *actor.Context, msg *types.Message) {
-	log.Infow("new message", log.M{"msg": msg.Msg})
+func (s *server) handleMessage(_ *actor.Context, msg *types.Message) {
+	slog.Info("new message", "msg", msg.Msg)
 }
