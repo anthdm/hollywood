@@ -5,6 +5,7 @@ import (
 	"github.com/anthdm/hollywood/examples/mdns/chat/types"
 	"github.com/anthdm/hollywood/examples/mdns/discovery"
 	"log/slog"
+	"reflect"
 )
 
 type server struct {
@@ -27,18 +28,21 @@ func (s *server) Receive(ctx *actor.Context) {
 		_ = msg
 	case actor.Stopped:
 		ctx.Engine().Unsubscribe(ctx.PID())
+	case *discovery.DiscoveryEvent:
+		// a new remote actor has been discovered. We can now send messages to it.
+		pid := actor.NewPID(msg.Addr[0], "chat")
+		chatMsg := &types.Message{
+			Username: "helloer",
+			Msg:      "hello there",
+		}
+		slog.Info("sending hello", "to", pid.String(), "msg", chatMsg.Msg, "from", ctx.PID().String())
+		s.engine.SendWithSender(pid, chatMsg, ctx.PID())
 	case *types.Message:
 		s.handleMessage(ctx, msg)
-	}
-}
-func (s *server) onMessage(event any) {
-	switch evt := event.(type) {
-	case *discovery.DiscoveryEvent:
-		pid := actor.NewPID(evt.Addr[0], "chat")
-		s.engine.Send(pid, &types.Message{
-			Username: evt.ID,
-			Msg:      "hello",
-		})
+	case actor.DeadLetterEvent:
+		slog.Warn("dead letter", "sender", msg.Sender, "target", msg.Target, "msg", msg.Message)
+	default:
+		slog.Warn("unknown message", "type", reflect.TypeOf(msg).String(), "msg", msg)
 	}
 }
 

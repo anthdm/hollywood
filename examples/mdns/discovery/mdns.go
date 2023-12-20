@@ -14,6 +14,7 @@ type mdns struct {
 	id        string
 	announcer *announcer
 	resolver  *zeroconf.Resolver
+	engine    *actor.Engine
 
 	ctx      context.Context
 	cancelFn context.CancelFunc
@@ -37,15 +38,18 @@ func NewMdnsDiscovery(opts ...Option) actor.Producer {
 func (d *mdns) Receive(ctx *actor.Context) {
 	switch msg := ctx.Message().(type) {
 	case actor.Initialized:
+		d.engine = ctx.Engine()
 		slog.Info("[DISCOVERY] initializing")
+		d.ctx, d.cancelFn = context.WithCancel(context.Background())
 		d.createResolver()
 	case actor.Started:
 		slog.Info("[DISCOVERY] starting discovery")
-		go d.startDiscovery(ctx)
+		go d.startDiscovery(d.ctx)
 		d.announcer.start()
 	case actor.Stopped:
 		slog.Info("[DISCOVERY] stopping discovery")
 		d.shutdown()
+		d.cancelFn()
 		_ = msg
 	}
 }
@@ -67,16 +71,13 @@ func (d *mdns) createResolver() {
 
 // Starts multicast dns discovery process.
 // Searches matching entries with `serviceName` and `domain`.
-func (d *mdns) startDiscovery(c *actor.Context) {
-	ctx, cancel := context.WithCancel(d.ctx)
-	defer cancel()
+func (d *mdns) startDiscovery(ctx context.Context) {
 	entries := make(chan *zeroconf.ServiceEntry)
 	go func(results <-chan *zeroconf.ServiceEntry) {
 		for entry := range results {
 			d.sendDiscoveryEvent(entry)
 		}
 	}(entries)
-
 	err := d.resolver.Browse(ctx, serviceName, domain, entries)
 	if err != nil {
 		slog.Error("[DISCOVERY] starting discovery failed", "err", err)
@@ -88,14 +89,20 @@ func (d *mdns) startDiscovery(c *actor.Context) {
 // Sends discovered peer as `DiscoveryEvent` to event stream.
 func (d *mdns) sendDiscoveryEvent(entry *zeroconf.ServiceEntry) {
 	// avoid to discover myself
-	if entry.Instance != d.id {
-		event := &DiscoveryEvent{
-			ID:   entry.Instance,
-			Addr: []string{},
-		}
-		for _, addr := range entry.AddrIPv4 {
-			event.Addr = append(event.Addr, fmt.Sprintf("%s:%d", addr.String(), entry.Port))
-		}
-		slog.Info("[DISCOVERY] remote discovered", "addrs", strings.Join(event.Addr, ","), "ID", entry.Instance)
+	if entry.Instance == d.id {
+		return
 	}
+	event := &DiscoveryEvent{
+		ID:   entry.Instance,
+		Addr: []string{},
+	}
+	for _, addr := range entry.AddrIPv4 {
+		event.Addr = append(event.Addr, fmt.Sprintf("%s:%d", addr.String(), entry.Port))
+	}
+	slog.Info("[DISCOVERY] remote discovered", "addrs", strings.Join(event.Addr, ","), "ID", entry.Instance)
+	if d.engine == nil {
+		slog.Error("[DISCOVERY] engine is nil")
+		return
+	}
+	d.engine.BroadcastEvent(event)
 }
