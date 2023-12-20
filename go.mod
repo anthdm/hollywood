@@ -3,6 +3,7 @@ module github.com/anthdm/hollywood
 go 1.20
 
 require (
+	github.com/grandcat/zeroconf v1.0.0
 	github.com/planetscale/vtprotobuf v0.4.0
 	github.com/prometheus/client_golang v1.15.0
 	github.com/redis/go-redis/v9 v9.0.4
@@ -17,7 +18,6 @@ require (
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
-	github.com/grandcat/zeroconf v1.0.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.0.9 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
@@ -31,7 +31,6 @@ require (
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/deckarep/golang-set/v2 v2.5.0
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/uuid v1.5.0
 	github.com/pmezard/go-difflib v1.0.0 // indirect
