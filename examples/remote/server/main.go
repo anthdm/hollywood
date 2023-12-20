@@ -32,6 +32,6 @@ func main() {
 		panic(err)
 	}
 
-	e.Spawn(newServer, "server")
+	e.Spawn(newServer, "server", actor.WithID("myserverid"))
 	select {}
 }
