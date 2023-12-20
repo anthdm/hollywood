@@ -2,6 +2,9 @@ package actor
 
 import (
 	"log/slog"
+	"math"
+	"math/rand"
+	"strconv"
 	"time"
 
 	"github.com/anthdm/hollywood/safemap"
@@ -56,6 +59,11 @@ func (c *Context) SpawnChild(p Producer, name string, opts ...OptFunc) *PID {
 	options.Name = c.PID().ID + pidSeparator + name
 	for _, opt := range opts {
 		opt(&options)
+	}
+	// Check if we got an ID, generate otherwise
+	if len(options.ID) == 0 {
+		id := strconv.Itoa(rand.Intn(math.MaxInt))
+		options.ID = id
 	}
 	proc := newProcess(c.engine, options)
 	proc.context.parentCtx = c
