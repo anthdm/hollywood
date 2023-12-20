@@ -71,9 +71,7 @@ func (s *SelfManaged) Receive(c *actor.Context) {
 		})
 	case *Members:
 		for _, member := range msg.Members {
-			if !s.members.Contains(member) {
-				s.addMember(member)
-			}
+			s.addMember(member)
 		}
 		if s.members.Len() > 0 {
 			members := &Members{
