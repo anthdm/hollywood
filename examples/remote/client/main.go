@@ -18,7 +18,7 @@ func main() {
 		panic(err)
 	}
 
-	pid := actor.NewPID("127.0.0.1:4000", "server")
+	pid := actor.NewPID("127.0.0.1:4000", "server/primary")
 	for {
 		e.Send(pid, &msg.Message{Data: "hello!"})
 		slog.Debug("sent message", "to", pid.String())
