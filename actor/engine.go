@@ -12,6 +12,7 @@ type Remoter interface {
 	Address() string
 	Send(*PID, any, *PID)
 	Start(*Engine) error
+	Stop() *sync.WaitGroup
 }
 
 // Producer is any function that can return a Receiver

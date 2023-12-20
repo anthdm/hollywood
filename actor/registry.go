@@ -19,6 +19,7 @@ func newRegistry(e *Engine) *Registry {
 	}
 }
 
+// Remove removes the given PID from the registry.
 func (r *Registry) Remove(pid *PID) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
