@@ -15,9 +15,11 @@ func main() {
 		panic(err)
 	}
 
-	pid := actor.NewPID("127.0.0.1:4000", "server")
+	// The server will be started with id "myserverid". Hence, let's create
+	// the correct PID for it so its reachable.
+	serverPID := actor.NewPID("127.0.0.1:4000", "server/myserverid")
 	for {
-		e.Send(pid, &msg.Message{Data: "hello!"})
+		e.Send(serverPID, &msg.Message{Data: "hello!"})
 		time.Sleep(time.Second)
 	}
 }
