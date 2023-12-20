@@ -75,7 +75,7 @@ func (r *Remote) Start(e *actor.Engine) error {
 	s := drpcserver.New(mux)
 
 	r.streamRouterPID = r.engine.Spawn(newStreamRouter(r.engine, r.config.TlsConfig), "router", actor.WithInboxSize(1024*1024))
-	slog.Info("server started", "listenAddr", r.config.ListenAddr)
+	slog.Info("hollywood remote started", "listenAddr", r.config.ListenAddr)
 	r.stopWg = &sync.WaitGroup{}
 	r.stopWg.Add(1)
 	r.stopCh = make(chan struct{})

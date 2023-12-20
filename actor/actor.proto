@@ -6,3 +6,11 @@ message PID {
 	string address = 1;
 	string ID = 2;
 }
+
+message Ping {
+	PID from = 1;  
+}
+
+message Pong {
+	PID from = 1;
+}
