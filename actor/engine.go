@@ -1,6 +1,7 @@
 package actor
 
 import (
+	"fmt"
 	"math"
 	"math/rand"
 	"strconv"
@@ -32,35 +33,26 @@ type Engine struct {
 	initErrors  []error
 }
 
+type EngineOpts struct {
+	Remote Remoter
+}
+
 // NewEngine returns a new actor Engine.
-// You can pass configuration functions through the various functions starting with "EngineOpt"
-// These run after the engine is configured
-func NewEngine(opts ...func(*Engine)) (*Engine, error) {
+// No mandatory arguments, but you can pass in a EngineOpts struct to configure the engine
+func NewEngine(opts *EngineOpts) (*Engine, error) {
 	e := &Engine{}
 	e.Registry = newRegistry(e) // need to init the registry in case we want a custom deadletter
 	e.address = LocalLookupAddr
-	e.initErrors = make([]error, 0)
-	for _, o := range opts {
-		o(e)
+	if opts != nil && opts.Remote != nil {
+		e.remote = opts.Remote
+		e.address = opts.Remote.Address()
+		err := opts.Remote.Start(e)
+		if err != nil {
+			return nil, fmt.Errorf("failed to start remote: %w", err)
+		}
 	}
-	if len(e.initErrors) > 0 {
-		return nil, ErrInitFailed{Errors: e.initErrors}
-	}
-	if e.remote != nil {
-		e.address = e.remote.Address()
-	}
-	e.eventStream = e.Spawn(NewEventStream(), "eventstream")
+	e.eventStream = e.Spawn(newEventStream(), "eventstream")
 	return e, nil
-}
-
-// TODO: Doc
-func EngineOptRemote(r Remoter) func(*Engine) {
-	return func(e *Engine) {
-		e.remote = r
-		e.address = r.Address()
-		// TODO: potential error not handled here
-		r.Start(e)
-	}
 }
 
 // Spawn spawns a process that will producer by the given Producer and

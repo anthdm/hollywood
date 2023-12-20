@@ -7,14 +7,6 @@ This enables peer-to-peer discovery. It is important to note that many networks 
 Notably, multicast cannot be used in any sort of cloud, or shared infrastructure environments.
 However it works well in most office, home, or private infrastructure environments.
 
-# Quickstart
-
-> The **[examples](https://github.com/anthdm/hollywood/tree/master/examples/mdns)** folder is the best place to explore Hollywood's Service Discovery
-
-```
-make build
-```
-
 # Flow
  0. When start engine with remote configuration, mDNS starting to announce itself and searches for other nodes
  1. If node founds new engine, discovery actor publishes a `DiscoveryEvent` via `actor.EventStream`

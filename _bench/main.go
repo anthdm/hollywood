@@ -98,8 +98,8 @@ func newBenchmark(engineCount, actorsPerEngine, senders int) *Benchmark {
 }
 func (b *Benchmark) spawnEngines() error {
 	for i := 0; i < b.engineCount; i++ {
-		r := remote.New(remote.Config{ListenAddr: fmt.Sprintf("localhost:%d", 4000+i)})
-		e, err := actor.NewEngine(actor.EngineOptRemote(r))
+		r := remote.New(fmt.Sprintf("localhost:%d", 4000+i), nil)
+		e, err := actor.NewEngine(&actor.EngineOpts{Remote: r})
 		if err != nil {
 			return fmt.Errorf("failed to create engine: %w", err)
 		}

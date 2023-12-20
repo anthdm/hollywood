@@ -51,10 +51,8 @@ func main() {
 	if *listenAt == "" {
 		*listenAt = fmt.Sprintf("127.0.0.1:%d", rand.Int31n(50000)+10000)
 	}
-	rem := remote.New(remote.Config{
-		ListenAddr: *listenAt,
-	})
-	e, err := actor.NewEngine(actor.EngineOptRemote(rem))
+	rem := remote.New(*listenAt, nil)
+	e, err := actor.NewEngine(&actor.EngineOpts{Remote: rem})
 	if err != nil {
 		slog.Error("failed to create engine", "err", err)
 		os.Exit(1)
@@ -62,9 +60,9 @@ func main() {
 
 	var (
 		// the process ID of the server
-		serverPID = actor.NewPID(*connectTo, "server")
+		serverPID = actor.NewPID(*connectTo, "server/primary")
 		// Spawn our client receiver
-		clientPID = e.Spawn(newClient(*username, serverPID), "client")
+		clientPID = e.Spawn(newClient(*username, serverPID), "client", actor.WithID(*username))
 		scanner   = bufio.NewScanner(os.Stdin)
 	)
 	fmt.Println("Type 'quit' and press return to exit.")

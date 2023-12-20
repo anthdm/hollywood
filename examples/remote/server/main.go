@@ -2,6 +2,9 @@ package main
 
 import (
 	"fmt"
+	"log/slog"
+	"os"
+	"reflect"
 
 	"github.com/anthdm/hollywood/actor"
 	"github.com/anthdm/hollywood/examples/remote/msg"
@@ -17,21 +20,25 @@ func newServer() actor.Receiver {
 func (f *server) Receive(ctx *actor.Context) {
 	switch m := ctx.Message().(type) {
 	case actor.Started:
+		slog.Info("server started")
 		fmt.Println("server has started")
 	case *actor.PID:
-		fmt.Println("server has received:", m)
+		slog.Info("server got pid", "pid", m)
 	case *msg.Message:
-		fmt.Println("got message", m)
+		slog.Info("server got message", "msg", m)
+	default:
+		slog.Warn("server got unknown message", "msg", m, "type", reflect.TypeOf(m).String())
 	}
 }
 
 func main() {
-	r := remote.New(remote.Config{ListenAddr: "127.0.0.1:4000"})
-	e, err := actor.NewEngine(actor.EngineOptRemote(r))
+	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug})))
+	r := remote.New("127.0.0.1:4000", nil)
+	e, err := actor.NewEngine(&actor.EngineOpts{Remote: r})
 	if err != nil {
 		panic(err)
 	}
 
-	e.Spawn(newServer, "server", actor.WithID("myserverid"))
+	e.Spawn(newServer, "server", actor.WithID("primary"))
 	select {}
 }

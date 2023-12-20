@@ -5,16 +5,16 @@ import (
 	"time"
 )
 
-type DiscoveryOption func(*discoveryOptions)
+type Option func(*options)
 
-type discoveryOptions struct {
+type options struct {
 	id   string   // engine global ID
 	ip   []string // engine's ip to listen on
 	port int      // engine's port to accept conns
 }
 
-func applyDiscoveryOptions(opts ...DiscoveryOption) *discoveryOptions {
-	ret := &discoveryOptions{
+func applyDiscoveryOptions(opts ...Option) *options {
+	ret := &options{
 		id:   fmt.Sprintf("engine_%d", time.Now().UnixNano()),
 		ip:   make([]string, 0),
 		port: 0,
@@ -28,8 +28,8 @@ func applyDiscoveryOptions(opts ...DiscoveryOption) *discoveryOptions {
 }
 
 // Engine's IP and Port information to announce
-func WithAnnounceAddr(ip string, p int) DiscoveryOption {
-	return func(ao *discoveryOptions) {
+func WithAnnounceAddr(ip string, p int) Option {
+	return func(ao *options) {
 		ao.ip = append(ao.ip, ip)
 		ao.port = p
 	}

@@ -217,9 +217,9 @@ func TestWeird(t *testing.T) {
 
 func makeRemoteEngine(listenAddr string) (*actor.Engine, *Remote, error) {
 	var e *actor.Engine
-	r := New(Config{ListenAddr: listenAddr})
+	r := New(listenAddr, nil)
 	var err error
-	e, err = actor.NewEngine(actor.EngineOptRemote(r))
+	e, err = actor.NewEngine(&actor.EngineOpts{Remote: r})
 	if err != nil {
 		return nil, nil, fmt.Errorf("actor.NewEngine: %w", err)
 	}
