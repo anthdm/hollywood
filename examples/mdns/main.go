@@ -30,7 +30,7 @@ func main() {
 		panic(err)
 	}
 
-	engine.Spawn(chat.New(), "chat")
+	engine.Spawn(chat.New(), "chat", actor.WithID("chat"))
 	// starts mdns discovery
 	engine.Spawn(discovery.NewMdnsDiscovery(
 		discovery.WithAnnounceAddr(*ip, *port),

@@ -30,10 +30,9 @@ func (s *server) Receive(ctx *actor.Context) {
 		ctx.Engine().Unsubscribe(ctx.PID())
 	case *discovery.DiscoveryEvent:
 		// a new remote actor has been discovered. We can now send messages to it.
-		pid := actor.NewPID(msg.Addr[0], "chat")
+		pid := actor.NewPID(msg.Addr[0], "chat/chat")
 		chatMsg := &types.Message{
-			Username: "helloer",
-			Msg:      "hello there",
+			Msg: "hello there",
 		}
 		slog.Info("sending hello", "to", pid.String(), "msg", chatMsg.Msg, "from", ctx.PID().String())
 		s.engine.SendWithSender(pid, chatMsg, ctx.PID())
