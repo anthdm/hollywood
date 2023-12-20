@@ -60,9 +60,9 @@ func main() {
 
 	var (
 		// the process ID of the server
-		serverPID = actor.NewPID(*connectTo, "server")
+		serverPID = actor.NewPID(*connectTo, "server/primary")
 		// Spawn our client receiver
-		clientPID = e.Spawn(newClient(*username, serverPID), "client")
+		clientPID = e.Spawn(newClient(*username, serverPID), "client", actor.WithID(*username))
 		scanner   = bufio.NewScanner(os.Stdin)
 	)
 	fmt.Println("Type 'quit' and press return to exit.")
