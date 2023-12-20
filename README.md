@@ -43,10 +43,15 @@ make bench
 ```
 
 ```
-[BENCH HOLLYWOOD LOCAL] processed 1_000_000 messages in 83.4437ms
-[BENCH HOLLYWOOD LOCAL] processed 10_000_000 messages in 786.2787ms
-[BENCH HOLLYWOOD LOCAL] processed 100_000_000 messages in 7.8718426s
-```
+spawned 10 engines
+spawned 2000 actors per engine
+Send storm starting, will send for 10s using 20 workers
+Messages sent per second 3244217
+..
+Messages sent per second 3387478
+Concurrent senders: 20 messages sent 35116641, messages received 35116641 - duration: 10s
+messages per second: 3511664
+deadletters: 0```
 
 # Installation
 
@@ -68,7 +73,8 @@ Let's go through a Hello world message. The complete example is available in the
 	engine, err := actor.NewEngine(nil)
 ```
 This creates a new engine. The engine is the core of Hollywood. It's responsible for spawning actors, sending messages
-and handling the lifecycle of actors. If Hollywood fails to create the engine it'll return an error. 
+and handling the lifecycle of actors. If Hollywood fails to create the engine it'll return an error. For development 
+you shouldn't use to pass any options to the engine so you can pass nil. We'll look at the options later.
 
 Next we'll need to create an actor. These are some times referred to as `Receivers` after the interface they must 
 implement. Let's create a new actor that will print a message when it receives a message. 
@@ -178,7 +184,7 @@ pid := engine.Spawn(newCustomNameResponder("anthony"), "name-responder")
     e.Spawn(newFoo, "myactorname",
 		actor.WithMaxRestarts(4),
 		actor.WithInboxSize(1024 * 2),
-		actor.WithTags("bar", "1"),
+		actor.WithId("bar"),
 	)
 )
 ```
@@ -212,12 +218,10 @@ remote.New() takes a remote.Config struct. This struct contains the following fi
 You'll instantiate a new remote with the following code:
 ```go
 	var engine *actor.Engine
-	remote := remote.New(
-		remote.Config{
-			ListenAddr: "0.0.0.0:2222", 
-			TlsConfig: &tls.Config{
+	remote := remote.New("0.0.0.0:2222",
+			&remote.Config{TlsConfig: &tls.Config{
 				Certificates: []tls.Certificate{cert},
-			}
+			},
 		}		
 	})
 	var err error
@@ -248,11 +252,11 @@ Any event that fulfills the `actor.LogEvent` interface will be logged to the def
 message and the attributes of the event set by the `actor.LogEvent` `log()` method.
 
 ### List of internal system events 
-* `ActorStartedEvent`, an actor has started
-* `ActorStoppedEvent`, an actor has stopped
-* `DeadLetterEvent`, a message was not delivered to an actor
-* `ActorRestartedEvent`, an actor has restarted after a crash/panic.
-* `RemoteUnreachableEvent`, sending a message over the wire to a remote that is not reachable.
+* `actor.ActorStartedEvent`, an actor has started
+* `actor.ActorStoppedEvent`, an actor has stopped
+* `actor.DeadLetterEvent`, a message was not delivered to an actor
+* `actor.ActorRestartedEvent`, an actor has restarted after a crash/panic.
+* `actor.RemoteUnreachableEvent`, sending a message over the wire to a remote that is not reachable.
 
 ### Eventstream example
 
