@@ -18,10 +18,12 @@ func main() {
 		panic(err)
 	}
 
-	pid := actor.NewPID("127.0.0.1:4000", "server/primary")
+	serverPID := actor.NewPID("127.0.0.1:4000", "server/primary")
+	// The server will be started with id "primary". Hence, let's create
+	// the correct PID for it so its reachable.
 	for {
-		e.Send(pid, &msg.Message{Data: "hello!"})
-		slog.Debug("sent message", "to", pid.String())
+		e.Send(serverPID, &msg.Message{Data: "hello!"})
+		slog.Debug("sent message", "to", serverPID.String())
 		time.Sleep(time.Second)
 	}
 }
