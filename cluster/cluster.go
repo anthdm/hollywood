@@ -1,7 +1,7 @@
 package cluster
 
 import (
-	"fmt"
+	fmt "fmt"
 	"log/slog"
 	"reflect"
 	"time"
@@ -46,6 +46,12 @@ type Cluster struct {
 }
 
 func New(cfg Config) (*Cluster, error) {
+	if cfg.Engine == nil {
+		return nil, fmt.Errorf("engine parameter not provided")
+	}
+	if cfg.ClusterProvider == nil {
+		return nil, fmt.Errorf("cluster provider parameter not provided")
+	}
 	if cfg.ActivationStrategy == nil {
 		cfg.ActivationStrategy = DefaultActivationStrategy{}
 	}
@@ -53,7 +59,7 @@ func New(cfg Config) (*Cluster, error) {
 		cfg.ID = uuid.New().String()
 	}
 	if len(cfg.Region) == 0 {
-		return nil, fmt.Errorf("cannot start cluster without a region")
+		cfg.Region = "default"
 	}
 	return &Cluster{
 		id:                 cfg.ID,
