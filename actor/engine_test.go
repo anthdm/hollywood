@@ -36,6 +36,11 @@ func newTickReceiver(wg *sync.WaitGroup) Producer {
 	}
 }
 
+func TestSendToNilPID(t *testing.T) {
+	e, _ := NewEngine(nil)
+	e.Send(nil, "foo")
+}
+
 func TestSendRepeat(t *testing.T) {
 	var (
 		wg = &sync.WaitGroup{}
