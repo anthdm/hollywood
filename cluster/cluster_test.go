@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
-	sync "sync"
+	"sync"
 	"testing"
 
 	"github.com/anthdm/hollywood/actor"
