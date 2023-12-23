@@ -1,24 +1,10 @@
 package actor
 
 import (
-	"runtime"
 	"sync"
-	"sync/atomic"
 	"testing"
 	"time"
 )
-
-func TestScheduler(t *testing.T) {
-	var executed atomic.Bool
-	scheduler := NewScheduler(10)
-	scheduler.Schedule(func() {
-		executed.Store(true)
-	})
-	runtime.Gosched()
-	if !executed.Load() {
-		t.Errorf("Expected the function to be executed")
-	}
-}
 
 func TestInboxSendAndProcess(t *testing.T) {
 	inbox := NewInbox(10)

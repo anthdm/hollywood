@@ -286,6 +286,7 @@ func (m *ActivationRequest) CloneVT() *ActivationRequest {
 	r := &ActivationRequest{
 		Kind:         m.Kind,
 		ID:           m.ID,
+		Region:       m.Region,
 		TopologyHash: m.TopologyHash,
 	}
 	if len(m.unknownFields) > 0 {
@@ -689,6 +690,9 @@ func (this *ActivationRequest) EqualVT(that *ActivationRequest) bool {
 		return false
 	}
 	if this.ID != that.ID {
+		return false
+	}
+	if this.Region != that.Region {
 		return false
 	}
 	if this.TopologyHash != that.TopologyHash {
@@ -1336,7 +1340,14 @@ func (m *ActivationRequest) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 	if m.TopologyHash != 0 {
 		i = encodeVarint(dAtA, i, uint64(m.TopologyHash))
 		i--
-		dAtA[i] = 0x18
+		dAtA[i] = 0x20
+	}
+	if len(m.Region) > 0 {
+		i -= len(m.Region)
+		copy(dAtA[i:], m.Region)
+		i = encodeVarint(dAtA, i, uint64(len(m.Region)))
+		i--
+		dAtA[i] = 0x1a
 	}
 	if len(m.ID) > 0 {
 		i -= len(m.ID)
@@ -2039,7 +2050,14 @@ func (m *ActivationRequest) MarshalToSizedBufferVTStrict(dAtA []byte) (int, erro
 	if m.TopologyHash != 0 {
 		i = encodeVarint(dAtA, i, uint64(m.TopologyHash))
 		i--
-		dAtA[i] = 0x18
+		dAtA[i] = 0x20
+	}
+	if len(m.Region) > 0 {
+		i -= len(m.Region)
+		copy(dAtA[i:], m.Region)
+		i = encodeVarint(dAtA, i, uint64(len(m.Region)))
+		i--
+		dAtA[i] = 0x1a
 	}
 	if len(m.ID) > 0 {
 		i -= len(m.ID)
@@ -2360,6 +2378,10 @@ func (m *ActivationRequest) SizeVT() (n int) {
 		n += 1 + l + sov(uint64(l))
 	}
 	l = len(m.ID)
+	if l > 0 {
+		n += 1 + l + sov(uint64(l))
+	}
+	l = len(m.Region)
 	if l > 0 {
 		n += 1 + l + sov(uint64(l))
 	}
@@ -3697,6 +3719,38 @@ func (m *ActivationRequest) UnmarshalVT(dAtA []byte) error {
 			m.ID = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Region", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLength
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLength
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Region = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 4:
 			if wireType != 0 {
 				return fmt.Errorf("proto: wrong wireType = %d for field TopologyHash", wireType)
 			}

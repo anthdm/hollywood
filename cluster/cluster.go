@@ -53,7 +53,7 @@ func New(cfg Config) (*Cluster, error) {
 		return nil, fmt.Errorf("cluster provider parameter not provided")
 	}
 	if cfg.ActivationStrategy == nil {
-		cfg.ActivationStrategy = DefaultActivationStrategy{}
+		cfg.ActivationStrategy = DefaultActivationStrategy()
 	}
 	if len(cfg.ID) == 0 {
 		cfg.ID = uuid.New().String()
@@ -104,7 +104,12 @@ func (c *Cluster) Activate(kind string, config *ActivationConfig) *actor.PID {
 	if config == nil {
 		config = &ActivationConfig{}
 	}
-	resp, err := c.engine.Request(c.agentPID, activate{kind: kind, id: config.ID}, requestTimeout).Result()
+	msg := activate{
+		kind:   kind,
+		id:     config.ID,
+		region: config.Region,
+	}
+	resp, err := c.engine.Request(c.agentPID, msg, requestTimeout).Result()
 	if err != nil {
 		slog.Error("activation failed", "err", err)
 		return nil
@@ -200,9 +205,10 @@ func (c *Cluster) Member() *Member {
 		kinds[i] = c.kinds[i].name
 	}
 	m := &Member{
-		ID:    c.id,
-		Host:  c.engine.Address(),
-		Kinds: kinds,
+		ID:     c.id,
+		Host:   c.engine.Address(),
+		Kinds:  kinds,
+		Region: c.region,
 	}
 	return m
 }
@@ -210,4 +216,9 @@ func (c *Cluster) Member() *Member {
 // Engine returns the actor engine.
 func (c *Cluster) Engine() *actor.Engine {
 	return c.engine
+}
+
+// Region return the region of the cluster.
+func (c *Cluster) Region() string {
+	return c.region
 }
