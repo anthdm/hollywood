@@ -34,7 +34,7 @@ type process struct {
 }
 
 func newProcess(e *Engine, opts Opts) *process {
-	pid := NewPID(e.address, opts.Name+pidSeparator+opts.ID)
+	pid := NewPID(e.address, opts.Kind+pidSeparator+opts.ID)
 	ctx := newContext(e, pid)
 	p := &process{
 		pid:     pid,
@@ -185,7 +185,7 @@ func (p *process) cleanup(wg *sync.WaitGroup) {
 	// No need for a mutex here, cause this is getting called inside the
 	// the parents children foreach loop, which already locks.
 	if p.context.parentCtx != nil {
-		p.context.parentCtx.children.Delete(p.Name)
+		p.context.parentCtx.children.Delete(p.Kind)
 	}
 
 	// We are a parent if we have children running, shutdown all the children.
