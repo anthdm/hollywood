@@ -56,7 +56,8 @@ message Deactivation {
 message ActivationRequest {
 	string Kind = 1;
 	string ID = 2;
-	uint64 topologyHash = 3;
+	string Region = 3;
+	uint64 topologyHash = 4;
 }
 
 message ActivationResponse {
