@@ -33,13 +33,13 @@ type Engine struct {
 	initErrors  []error
 }
 
-type EngineOpts struct {
+type EngineConfig struct {
 	Remote Remoter
 }
 
 // NewEngine returns a new actor Engine.
-// No mandatory arguments, but you can pass in a EngineOpts struct to configure the engine
-func NewEngine(opts *EngineOpts) (*Engine, error) {
+// No mandatory arguments, but you can pass in a EngineConfig struct to configure the engine
+func NewEngine(opts *EngineConfig) (*Engine, error) {
 	e := &Engine{}
 	e.Registry = newRegistry(e) // need to init the registry in case we want a custom deadletter
 	e.address = LocalLookupAddr

@@ -34,7 +34,7 @@ func (f *server) Receive(ctx *actor.Context) {
 func main() {
 	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug})))
 	r := remote.New("127.0.0.1:4000", nil)
-	e, err := actor.NewEngine(&actor.EngineOpts{Remote: r})
+	e, err := actor.NewEngine(&actor.EngineConfig{Remote: r})
 	if err != nil {
 		panic(err)
 	}

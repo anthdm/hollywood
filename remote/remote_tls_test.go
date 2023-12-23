@@ -172,7 +172,7 @@ func makeRemoteEngineTls(listenAddr string, config *tls.Config) (*actor.Engine, 
 	var eng *actor.Engine
 	var err error
 	rem := New(listenAddr, &Config{TlsConfig: config})
-	eng, err = actor.NewEngine(&actor.EngineOpts{Remote: rem})
+	eng, err = actor.NewEngine(&actor.EngineConfig{Remote: rem})
 	if err != nil {
 		return nil, nil, fmt.Errorf("actor.NewEngine: %w", err)
 	}

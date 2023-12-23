@@ -150,7 +150,7 @@ func (a *Agent) activate(kind, id string) *actor.PID {
 			return nil
 		}
 		if !r.Success {
-			slog.Error("activation unsuccessfull", "msg", r)
+			slog.Error("activation unsuccessful", "msg", r)
 			return nil
 		}
 		activationResp = r
@@ -203,7 +203,7 @@ func (a *Agent) memberJoin(member *Member) {
 		Member: member,
 	})
 
-	slog.Info("member joined", "id", member.ID, "host", member.Host, "kinds", member.Kinds)
+	slog.Debug("member joined", "id", member.ID, "host", member.Host, "kinds", member.Kinds)
 }
 
 func (a *Agent) memberLeave(member *Member) {
@@ -219,7 +219,7 @@ func (a *Agent) memberLeave(member *Member) {
 
 	a.cluster.engine.BroadcastEvent(MemberLeaveEvent{Member: member})
 
-	slog.Info("member left", "id", member.ID, "host", member.Host, "kinds", member.Kinds)
+	slog.Debug("member left", "id", member.ID, "host", member.Host, "kinds", member.Kinds)
 }
 
 func (a *Agent) bcast(msg any) {
@@ -232,13 +232,13 @@ func (a *Agent) bcast(msg any) {
 func (a *Agent) addActivated(pid *actor.PID) {
 	if _, ok := a.activated[pid.ID]; !ok {
 		a.activated[pid.ID] = pid
-		slog.Info("new actor available on cluster", "pid", pid)
+		slog.Debug("new actor available on cluster", "pid", pid)
 	}
 }
 
 func (a *Agent) removeActivated(pid *actor.PID) {
 	delete(a.activated, pid.ID)
-	slog.Info("actor removed from cluster", "pid", pid)
+	slog.Debug("actor removed from cluster", "pid", pid)
 }
 
 func (a *Agent) hasKindLocal(name string) bool {

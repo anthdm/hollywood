@@ -63,7 +63,6 @@ func (e ActorMaxRestartsExceededEvent) Log() (slog.Level, string, []any) {
 }
 
 // ActorDuplicateIdEvent gets published if we try to register the same name twice.
-// Todo: Make a test for this.
 type ActorDuplicateIdEvent struct {
 	PID *PID
 }
@@ -72,8 +71,8 @@ func (e ActorDuplicateIdEvent) Log() (slog.Level, string, []any) {
 	return slog.LevelError, "Actor name already claimed", []any{"pid", e.PID.GetID()}
 }
 
-// TODO: Not sure if this event is super usefull. Cause most DeadLetter actors
-// we be subscribed to late to the event stream.
+// EngineRemoteMissingEvent gets published if we try to send a message to a remote actor but the remote
+// system is not available.
 type EngineRemoteMissingEvent struct {
 	Target  *PID
 	Sender  *PID

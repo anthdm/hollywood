@@ -22,7 +22,7 @@ func (i *Inventory) Receive(c *actor.Context) {
 
 func main() {
 	remote := remote.New("127.0.0.1:3001", nil)
-	e, err := actor.NewEngine(&actor.EngineOpts{Remote: remote})
+	e, err := actor.NewEngine(&actor.EngineConfig{Remote: remote})
 	if err != nil {
 		log.Fatal(err)
 	}
