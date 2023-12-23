@@ -30,7 +30,7 @@ func (i Inventory) Receive(c *actor.Context) {}
 
 func TestClusterShouldWorkWithDefaultValues(t *testing.T) {
 	remote := remote.New(getRandomLocalhostAddr(), nil)
-	e, err := actor.NewEngine(&actor.EngineOpts{Remote: remote})
+	e, err := actor.NewEngine(&actor.EngineConfig{Remote: remote})
 	assert.Nil(t, err)
 	cfg := Config{
 		ClusterProvider: NewSelfManagedProvider(),
