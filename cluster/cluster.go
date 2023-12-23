@@ -72,11 +72,11 @@ func New(cfg Config) (*Cluster, error) {
 }
 
 // Start the cluster
-func (c *Cluster) Start() error {
+func (c *Cluster) Start() {
 	c.agentPID = c.engine.Spawn(NewAgent(c), "cluster", actor.WithID(c.id))
 	c.providerPID = c.engine.Spawn(c.provider(c), "provider", actor.WithID(c.id))
 	c.isStarted = true
-	return nil
+	return
 }
 
 // Spawn an actor locally on the node with cluster awareness.
