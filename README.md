@@ -60,6 +60,8 @@ deadletters: 0
 go get github.com/anthdm/hollywood/...
 ```
 
+> Hollywood requires Golang version `1.21`
+
 # Quickstart
 
 We recommend you start out by writing a few examples that run locally. Running locally is a bit simpler as the compiler
