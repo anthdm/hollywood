@@ -51,7 +51,8 @@ Messages sent per second 3244217
 Messages sent per second 3387478
 Concurrent senders: 20 messages sent 35116641, messages received 35116641 - duration: 10s
 messages per second: 3511664
-deadletters: 0```
+deadletters: 0
+```
 
 # Installation
 
@@ -70,7 +71,7 @@ compiler.
 Let's go through a Hello world message. The complete example is available in the 
 [hello world](examples/helloworld) folder. Let's start in main:
 ```go
-	engine, err := actor.NewEngine(nil)
+engine, err := actor.NewEngine(nil)
 ```
 This creates a new engine. The engine is the core of Hollywood. It's responsible for spawning actors, sending messages
 and handling the lifecycle of actors. If Hollywood fails to create the engine it'll return an error. For development 
@@ -80,7 +81,7 @@ Next we'll need to create an actor. These are some times referred to as `Receive
 implement. Let's create a new actor that will print a message when it receives a message. 
 
 ```go
-	pid := engine.Spawn(newHelloer, "hello")
+pid := engine.Spawn(newHelloer, "hello")
 ```
 This will cause the engine to spawn an actor with the ID "hello". The actor will be created by the provided 
 function `newHelloer`. Ids must be unique. It will return a pointer to a PID. A PID is a process identifier. It's a unique identifier for the actor. Most of
@@ -90,32 +91,31 @@ but on local systems you'll mostly use the PID.
 Let's look at the `newHelloer` function and the actor it returns. 
 
 ```go
-	type helloer struct{}
-	
-	func newHelloer() actor.Receiver {
-		return &helloer{}
-	}
+type helloer struct{}
+
+func newHelloer() actor.Receiver {
+	return &helloer{}
+}
 ```
 
 Simple enough. The `newHelloer` function returns a new actor. The actor is a struct that implements the actor.Receiver.
 Lets look at the `Receive` method.
 
 ```go
+type message struct {}
 
-    type message struct {}
-
-	func (h *helloer) Receive(ctx *actor.Context) {
-		switch msg := ctx.Message().(type) {
-		case actor.Initialized:
-			fmt.Println("helloer has initialized")
-		case actor.Started:
-			fmt.Println("helloer has started")
-		case actor.Stopped:
-			fmt.Println("helloer has stopped")
-		case *message:
-			fmt.Println("hello world", msg.data)
-		}
+func (h *helloer) Receive(ctx *actor.Context) {
+	switch msg := ctx.Message().(type) {
+	case actor.Initialized:
+		fmt.Println("helloer has initialized")
+	case actor.Started:
+		fmt.Println("helloer has started")
+	case actor.Stopped:
+		fmt.Println("helloer has stopped")
+	case *message:
+		fmt.Println("hello world", msg.data)
 	}
+}
 ```
 
 You can see we define a message struct. This is the message we'll send to the actor later. The Receive method
@@ -133,7 +133,7 @@ Local messages can be of any type.
 Finally, lets send a message to the actor.
 
 ```go
-	engine.Send(pid, "hello world!")
+engine.Send(pid, "hello world!")
 ```
 
 This will send a message to the actor. Hollywood will route the message to the correct actor. The actor will then print
@@ -150,7 +150,7 @@ tunable options you can provide.
 
 ### With default configuration
 ```go
-    e.Spawn(newFoo, "myactorname")
+e.Spawn(newFoo, "myactorname")
 ```
 
 ### Passing arguments to the constructor
@@ -164,6 +164,7 @@ func newNameResponder() actor.Receiver {
 	return &nameResponder{name: "noname"}
 }
 ```
+
 To build a new actor with a name you can do the following:
 ```go
 func newCustomNameResponder(name string) actor.Producer {
@@ -171,18 +172,17 @@ func newCustomNameResponder(name string) actor.Producer {
 		return &nameResponder{name}
 	}
 }
+
 ```
 You can then spawn the actor with the following code:
 ```go
 pid := engine.Spawn(newCustomNameResponder("anthony"), "name-responder")
 ```
 
-
-
 ### With custom configuration
 ```go
-    e.Spawn(newFoo, "myactorname",
-		actor.WithMaxRestarts(4),
+e.Spawn(newFoo, "myactorname",
+	actor.WithMaxRestarts(4),
 		actor.WithInboxSize(1024 * 2),
 		actor.WithId("bar"),
 	)
@@ -190,8 +190,7 @@ pid := engine.Spawn(newCustomNameResponder("anthony"), "name-responder")
 ```
 The options should be pretty self explanatory. You can set the maximum number of restarts, which tells the engine
 how many times the given actor should be restarted in case of panic, the size of the inbox, which sets a limit on how
-and unprocessed messages the inbox can hold before it will start to block, and finally you can set a list of tags.
-Tags are used to filter actors when you want to send a message to a group of actors.
+and unprocessed messages the inbox can hold before it will start to block.
 
 ### As a stateless function 
 Actors without state can be spawned as a function, because its quick and simple.
@@ -217,19 +216,16 @@ remote.New() takes a remote.Config struct. This struct contains the following fi
 
 You'll instantiate a new remote with the following code:
 ```go
-	var engine *actor.Engine
-	remote := remote.New("0.0.0.0:2222",
-			&remote.Config{TlsConfig: &tls.Config{
-				Certificates: []tls.Certificate{cert},
-			},
-		}		
-	})
-	var err error
-	engine, err = actor.NewEngine(actor.EngineOptRemote(remote))
-
+var engine *actor.Engine
+remote := remote.New("0.0.0.0:2222",
+		&remote.Config{TlsConfig: &tls.Config{
+			Certificates: []tls.Certificate{cert},
+		},
+	}		
+})
+var err error
+engine, err = actor.NewEngine(actor.EngineOptRemote(remote))
 ```
-
-
 
 Look at the [Remote actor examples](examples/remote) and the [Chat client & Server](examples/chat) for more information.
 
@@ -257,6 +253,10 @@ message and the attributes of the event set by the `actor.LogEvent` `log()` meth
 * `actor.DeadLetterEvent`, a message was not delivered to an actor
 * `actor.ActorRestartedEvent`, an actor has restarted after a crash/panic.
 * `actor.RemoteUnreachableEvent`, sending a message over the wire to a remote that is not reachable.
+* `cluster.MemberJoinEvent`, a new member joins the cluster 
+* `cluster.MemberLeaveEvent`, a new member left the cluster 
+* `cluster.ActivationEvent`, a new actor is activated on the cluster 
+* `cluster.DeactivationEvent`, an actor is deactivated on the cluster 
 
 ### Eventstream example
 
@@ -274,8 +274,8 @@ We're using the function option pattern. All function options are in the actor p
 "EngineOpt". Currently, the only option is to provide a remote. This is done by
 
 ```go
-	r := remote.New(remote.Config{ListenAddr: addr})
-	engine, err := actor.NewEngine(actor.EngineOptRemote(r))
+r := remote.New(remote.Config{ListenAddr: addr})
+engine, err := actor.NewEngine(actor.EngineOptRemote(r))
 ```
 addr is a string with the format "host:port".
 

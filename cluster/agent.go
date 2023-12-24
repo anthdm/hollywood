@@ -17,8 +17,9 @@ type getMembers struct{}
 type getKinds struct{}
 
 type activate struct {
-	kind string
-	id   string
+	kind   string
+	id     string
+	region string
 }
 
 type deactivate struct {
@@ -65,7 +66,7 @@ func (a *Agent) Receive(c *actor.Context) {
 	case *Activation:
 		a.handleActivation(msg)
 	case activate:
-		pid := a.activate(msg.kind, msg.id)
+		pid := a.activate(msg.kind, msg.id, msg.region)
 		c.Respond(pid)
 	case deactivate:
 		a.bcast(&Deactivation{PID: msg.pid})
@@ -122,12 +123,19 @@ func (a *Agent) handleActivationRequest(msg *ActivationRequest) *ActivationRespo
 	return resp
 }
 
-func (a *Agent) activate(kind, id string) *actor.PID {
+func (a *Agent) activate(kind, id, region string) *actor.PID {
 	members := a.members.FilterByKind(kind)
-	owner := a.cluster.activationStrategy.SelectMember(members)
-	// If we cant find any member to activate this kind on, we return a nil PID.
+	if len(members) == 0 {
+		slog.Warn("could not find any members with kind", "kind", kind)
+		return nil
+	}
+	owner := a.cluster.activationStrategy.ActivateOnMember(ActivationDetails{
+		Members: members,
+		Region:  region,
+		Kind:    kind,
+	})
 	if owner == nil {
-		slog.Warn("could not find any member to activate on", "kind", kind, "id", id)
+		slog.Warn("activator did not found a member to activate on")
 		return nil
 	}
 	req := &ActivationRequest{Kind: kind, ID: id}
@@ -205,7 +213,7 @@ func (a *Agent) memberJoin(member *Member) {
 		Member: member,
 	})
 
-	slog.Info("member joined", "id", member.ID, "host", member.Host, "kinds", member.Kinds)
+	slog.Info("member joined", "id", member.ID, "host", member.Host, "kinds", member.Kinds, "region", member.Region)
 }
 
 func (a *Agent) memberLeave(member *Member) {
