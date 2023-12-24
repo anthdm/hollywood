@@ -12,7 +12,7 @@ import (
 // Member 1 of the cluster
 func main() {
 	r := remote.New("127.0.0.1:3000", nil)
-	e, err := actor.NewEngine(&actor.EngineOpts{Remote: r})
+	e, err := actor.NewEngine(&actor.EngineConfig{Remote: r})
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -30,7 +30,7 @@ func (i Inventory) Receive(c *actor.Context) {}
 
 func TestClusterShouldWorkWithDefaultValues(t *testing.T) {
 	remote := remote.New(getRandomLocalhostAddr(), nil)
-	e, err := actor.NewEngine(&actor.EngineOpts{Remote: remote})
+	e, err := actor.NewEngine(&actor.EngineConfig{Remote: remote})
 	assert.Nil(t, err)
 	cfg := Config{
 		ClusterProvider: NewSelfManagedProvider(),
@@ -197,7 +197,7 @@ func TestMemberLeave(t *testing.T) {
 	c2Addr := getRandomLocalhostAddr()
 	remote := remote.New(c2Addr, nil)
 
-	e, err := actor.NewEngine(&actor.EngineOpts{Remote: remote})
+	e, err := actor.NewEngine(&actor.EngineConfig{Remote: remote})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -270,7 +270,7 @@ func TestMembersExcept(t *testing.T) {
 
 func makeCluster(t *testing.T, addr, id, region string, members ...MemberAddr) *Cluster {
 	remote := remote.New(addr, nil)
-	e, err := actor.NewEngine(&actor.EngineOpts{Remote: remote})
+	e, err := actor.NewEngine(&actor.EngineConfig{Remote: remote})
 	if err != nil {
 		log.Fatal(err)
 	}

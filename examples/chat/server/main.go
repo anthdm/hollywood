@@ -82,7 +82,7 @@ func main() {
 	)
 	flag.Parse()
 	rem := remote.New(*listenAt, nil)
-	e, err := actor.NewEngine(&actor.EngineOpts{Remote: rem})
+	e, err := actor.NewEngine(&actor.EngineConfig{Remote: rem})
 	if err != nil {
 		panic(err)
 	}

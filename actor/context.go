@@ -56,7 +56,7 @@ func (c *Context) Respond(msg any) {
 // Hence, all children will receive the Stopped message.
 func (c *Context) SpawnChild(p Producer, name string, opts ...OptFunc) *PID {
 	options := DefaultOpts(p)
-	options.Name = c.PID().ID + pidSeparator + name
+	options.Kind = c.PID().ID + pidSeparator + name
 	for _, opt := range opts {
 		opt(&options)
 	}

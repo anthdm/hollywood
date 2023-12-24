@@ -32,13 +32,13 @@ type Engine struct {
 	eventStream *PID
 }
 
-type EngineOpts struct {
+type EngineConfig struct {
 	Remote Remoter
 }
 
 // NewEngine returns a new actor Engine.
-// No mandatory arguments, but you can pass in a EngineOpts struct to configure the engine
-func NewEngine(opts *EngineOpts) (*Engine, error) {
+// No mandatory arguments, but you can pass in a EngineConfig struct to configure the engine
+func NewEngine(opts *EngineConfig) (*Engine, error) {
 	e := &Engine{}
 	e.Registry = newRegistry(e) // need to init the registry in case we want a custom deadletter
 	e.address = LocalLookupAddr
@@ -56,9 +56,9 @@ func NewEngine(opts *EngineOpts) (*Engine, error) {
 
 // Spawn spawns a process that will producer by the given Producer and
 // can be configured with the given opts.
-func (e *Engine) Spawn(p Producer, name string, opts ...OptFunc) *PID {
+func (e *Engine) Spawn(p Producer, kind string, opts ...OptFunc) *PID {
 	options := DefaultOpts(p)
-	options.Name = name
+	options.Kind = kind
 	for _, opt := range opts {
 		opt(&options)
 	}
@@ -71,8 +71,8 @@ func (e *Engine) Spawn(p Producer, name string, opts ...OptFunc) *PID {
 	return e.SpawnProc(proc)
 }
 
-func (e *Engine) SpawnFunc(f func(*Context), id string, opts ...OptFunc) *PID {
-	return e.Spawn(newFuncReceiver(f), id, opts...)
+func (e *Engine) SpawnFunc(f func(*Context), kind string, opts ...OptFunc) *PID {
+	return e.Spawn(newFuncReceiver(f), kind, opts...)
 }
 
 // SpawnProc spawns the give Processer. This function is useful when working
@@ -111,7 +111,7 @@ func (e *Engine) SendWithSender(pid *PID, msg any, sender *PID) {
 
 // Send sends the given message to the given PID. If the message cannot be
 // delivered due to the fact that the given process is not registered.
-// The message will be send to the DeadLetter process instead.
+// The message will be sent to the DeadLetter process instead.
 func (e *Engine) Send(pid *PID, msg any) {
 	e.send(pid, msg, nil)
 }
