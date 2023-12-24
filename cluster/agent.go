@@ -126,7 +126,7 @@ func (a *Agent) handleActivationRequest(msg *ActivationRequest) *ActivationRespo
 func (a *Agent) activate(kind, id, region string) *actor.PID {
 	members := a.members.FilterByKind(kind)
 	if len(members) == 0 {
-		slog.Error("could not find any members with kind", "kind", kind)
+		slog.Warn("could not find any members with kind", "kind", kind)
 		return nil
 	}
 	owner := a.cluster.activationStrategy.ActivateOnMember(ActivationDetails{
@@ -135,7 +135,7 @@ func (a *Agent) activate(kind, id, region string) *actor.PID {
 		Kind:    kind,
 	})
 	if owner == nil {
-		slog.Error("activator did not found a member to activate on")
+		slog.Warn("activator did not found a member to activate on")
 		return nil
 	}
 	req := &ActivationRequest{Kind: kind, ID: id}
