@@ -125,8 +125,10 @@ func (a *Agent) handleActivationRequest(msg *ActivationRequest) *ActivationRespo
 func (a *Agent) activate(kind, id string) *actor.PID {
 	members := a.members.FilterByKind(kind)
 	owner := a.cluster.activationStrategy.SelectMember(members)
+	// If we cant find any member to activate this kind on, we return a nil PID.
 	if owner == nil {
-		panic("TODO")
+		slog.Warn("could not find any member to activate on", "kind", kind, "id", id)
+		return nil
 	}
 	req := &ActivationRequest{Kind: kind, ID: id}
 	activatorPID := actor.NewPID(owner.Host, "cluster/"+owner.ID)
