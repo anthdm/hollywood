@@ -209,7 +209,7 @@ func TestMemberLeave(t *testing.T) {
 		switch msg := c.Message().(type) {
 		case MemberJoinEvent:
 			if msg.Member.ID == "B" {
-				remote.Stop()
+				remote.Stop().Wait()
 			}
 		case MemberLeaveEvent:
 			assert.Equal(t, msg.Member.ID, c2.id)
