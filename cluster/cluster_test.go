@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
-	sync "sync"
+	"sync"
 	"testing"
 
 	"github.com/anthdm/hollywood/actor"
@@ -27,6 +27,20 @@ func NewInventory() actor.Receiver {
 }
 
 func (i Inventory) Receive(c *actor.Context) {}
+
+func TestClusterShouldWorkWithDefaultValues(t *testing.T) {
+	remote := remote.New(getRandomLocalhostAddr(), nil)
+	e, err := actor.NewEngine(&actor.EngineOpts{Remote: remote})
+	assert.Nil(t, err)
+	cfg := Config{
+		ClusterProvider: NewSelfManagedProvider(),
+		Engine:          e,
+	}
+	c, err := New(cfg)
+	assert.Nil(t, err)
+	assert.True(t, len(c.id) > 0)
+	assert.Equal(t, c.region, "default")
+}
 
 func TestRegisterKind(t *testing.T) {
 	c := makeCluster(t, getRandomLocalhostAddr(), "A", "eu-west")

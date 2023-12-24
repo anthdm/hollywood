@@ -6,20 +6,6 @@ import (
 	"time"
 )
 
-// TODO: this test will break from time to time. I don't think its a good idea
-// to test with goshed.
-// func TestScheduler(t *testing.T) {
-// 	var executed atomic.Bool
-// 	scheduler := NewScheduler(10)
-// 	scheduler.Schedule(func() {
-// 		executed.Store(true)
-// 	})
-// 	runtime.Gosched()
-// 	if !executed.Load() {
-// 		t.Errorf("Expected the function to be executed")
-// 	}
-// }
-
 func TestInboxSendAndProcess(t *testing.T) {
 	inbox := NewInbox(10)
 	processedMessages := make(chan Envelope, 10)

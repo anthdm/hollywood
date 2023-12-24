@@ -30,7 +30,6 @@ type Engine struct {
 	address     string
 	remote      Remoter
 	eventStream *PID
-	initErrors  []error
 }
 
 type EngineOpts struct {
@@ -126,6 +125,13 @@ func (e *Engine) BroadcastEvent(msg any) {
 }
 
 func (e *Engine) send(pid *PID, msg any, sender *PID) {
+	// TODO: We might want to log something here. Not yet decided
+	// what could make sense. Send to dead letter or as event?
+	// Dead letter would make sense cause the destination is not
+	// reachable.
+	if pid == nil {
+		return
+	}
 	if e.isLocalMessage(pid) {
 		e.SendLocal(pid, msg, sender)
 		return
@@ -255,6 +261,9 @@ func (e *Engine) Unsubscribe(pid *PID) {
 }
 
 func (e *Engine) isLocalMessage(pid *PID) bool {
+	if pid == nil {
+		return false
+	}
 	return e.address == pid.Address
 }
 
