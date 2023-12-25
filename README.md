@@ -141,7 +141,7 @@ engine.Send(pid, "hello world!")
 This will send a message to the actor. Hollywood will route the message to the correct actor. The actor will then print
 a message to the console.
 
-The **[examples](https://examples)** folder is the best place to learn and
+The **[examples](examples/)** folder is the best place to learn and
 explore Hollywood further.
 
 
