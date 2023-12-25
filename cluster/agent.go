@@ -213,7 +213,7 @@ func (a *Agent) memberJoin(member *Member) {
 		Member: member,
 	})
 
-	slog.Debug("member joined", "id", member.ID, "host", member.Host, "kinds", member.Kinds, "region", member.Region)
+	slog.Info("[CLUSTER] member joined", "id", member.ID, "host", member.Host, "kinds", member.Kinds, "region", member.Region)
 }
 
 func (a *Agent) memberLeave(member *Member) {
@@ -229,7 +229,7 @@ func (a *Agent) memberLeave(member *Member) {
 
 	a.cluster.engine.BroadcastEvent(MemberLeaveEvent{Member: member})
 
-	slog.Debug("member left", "id", member.ID, "host", member.Host, "kinds", member.Kinds)
+	slog.Info("[CLUSTER] member left", "id", member.ID, "host", member.Host, "kinds", member.Kinds)
 }
 
 func (a *Agent) bcast(msg any) {

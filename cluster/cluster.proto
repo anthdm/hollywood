@@ -21,12 +21,17 @@ message Members {
 	repeated Member members = 1;
 } 
 
+// TODO: Deprecated
 message MembersJoin {
 	repeated Member members = 1;
 }
 
 message MembersLeave {
 	repeated Member members = 1;
+}
+
+message Handshake {
+	Member Member = 1;
 }
  
 message Topology {

@@ -11,10 +11,6 @@ import (
 
 // Member 2 of the cluster
 func main() {
-	bootstrapAddr := cluster.MemberAddr{
-		ListenAddr: "127.0.0.1:3000",
-		ID:         "A",
-	}
 	r := remote.New("127.0.0.1:3001", nil)
 	e, err := actor.NewEngine(&actor.EngineConfig{Remote: r})
 	if err != nil {
@@ -24,7 +20,7 @@ func main() {
 		ID:                 "B",
 		Engine:             e,
 		Region:             "us-west",
-		ClusterProvider:    cluster.NewSelfManagedProvider(bootstrapAddr),
+		ClusterProvider:    cluster.NewSelfManagedProvider(),
 		ActivationStrategy: shared.RegionBasedActivationStrategy("eu-west"),
 	})
 	if err != nil {
