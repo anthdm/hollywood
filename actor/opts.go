@@ -17,7 +17,7 @@ type MiddlewareFunc = func(ReceiveFunc) ReceiveFunc
 
 type Opts struct {
 	Producer     Producer
-	Name         string
+	Kind         string
 	ID           string
 	MaxRestarts  int32
 	RestartDelay time.Duration

@@ -219,7 +219,7 @@ func makeRemoteEngine(listenAddr string) (*actor.Engine, *Remote, error) {
 	var e *actor.Engine
 	r := New(listenAddr, nil)
 	var err error
-	e, err = actor.NewEngine(&actor.EngineOpts{Remote: r})
+	e, err = actor.NewEngine(&actor.EngineConfig{Remote: r})
 	if err != nil {
 		return nil, nil, fmt.Errorf("actor.NewEngine: %w", err)
 	}

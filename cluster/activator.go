@@ -1,21 +1,35 @@
 package cluster
 
-import "math/rand"
+import (
+	"math/rand"
+)
 
 // ActivationStrategy is an interface that abstracts the logic on what member of the
 // cluster the actor will be activated. Members passed into this function are guaranteed
 // to have the given kind locally registered. If no member could be selected nil should be
 // returned.
 type ActivationStrategy interface {
-	SelectMember(members []*Member) *Member
+	ActivateOnMember(ActivationDetails) *Member
 }
 
-// DefaultActivationStrategy selects a random member on the cluster.
-type DefaultActivationStrategy struct{}
+// ActivationDetails holds detailed information about an activation.
+type ActivationDetails struct {
+	// Region where the actor should be activated on
+	Region string
+	// A slice of filtered members by the kind that needs to be activated
+	// Members are guaranteed to never by empty.
+	Members []*Member
+	// The kind that needs to be activated
+	Kind string
+}
 
-func (DefaultActivationStrategy) SelectMember(members []*Member) *Member {
-	if len(members) == 0 {
-		return nil
-	}
-	return members[rand.Intn(len(members))]
+type defaultActivationStrategy struct{}
+
+// DefaultActivationStrategy selects a random member in the cluster.
+func DefaultActivationStrategy() defaultActivationStrategy {
+	return defaultActivationStrategy{}
+}
+
+func (defaultActivationStrategy) ActivateOnMember(details ActivationDetails) *Member {
+	return details.Members[rand.Intn(len(details.Members))]
 }

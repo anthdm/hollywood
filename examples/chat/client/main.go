@@ -52,7 +52,7 @@ func main() {
 		*listenAt = fmt.Sprintf("127.0.0.1:%d", rand.Int31n(50000)+10000)
 	}
 	rem := remote.New(*listenAt, nil)
-	e, err := actor.NewEngine(&actor.EngineOpts{Remote: rem})
+	e, err := actor.NewEngine(&actor.EngineConfig{Remote: rem})
 	if err != nil {
 		slog.Error("failed to create engine", "err", err)
 		os.Exit(1)

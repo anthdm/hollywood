@@ -102,4 +102,4 @@ logging, metrics, tracing, etc.
 
 ## PoisonPill
 
-When an actor needs to be shutdown, a PoisonPill message is sent to the actor, which will shut down the actor. 
+When an actor needs to be shutdown, a PoisonPill message is sent to the actor, which will shut down the actor.

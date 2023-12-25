@@ -163,6 +163,7 @@ func (s *streamWriter) init() {
 	stream, err := client.Receive(context.Background())
 	if err != nil {
 		slog.Error("receive", "err", err, "remote", s.writeToAddr)
+		s.Shutdown(nil)
 		return
 	}
 

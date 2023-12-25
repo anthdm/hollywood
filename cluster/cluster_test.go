@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
-	sync "sync"
+	"sync"
 	"testing"
 
 	"github.com/anthdm/hollywood/actor"
@@ -27,6 +27,20 @@ func NewInventory() actor.Receiver {
 }
 
 func (i Inventory) Receive(c *actor.Context) {}
+
+func TestClusterShouldWorkWithDefaultValues(t *testing.T) {
+	remote := remote.New(getRandomLocalhostAddr(), nil)
+	e, err := actor.NewEngine(&actor.EngineConfig{Remote: remote})
+	assert.Nil(t, err)
+	cfg := Config{
+		ClusterProvider: NewSelfManagedProvider(),
+		Engine:          e,
+	}
+	c, err := New(cfg)
+	assert.Nil(t, err)
+	assert.True(t, len(c.id) > 0)
+	assert.Equal(t, c.region, "default")
+}
 
 func TestRegisterKind(t *testing.T) {
 	c := makeCluster(t, getRandomLocalhostAddr(), "A", "eu-west")
@@ -183,7 +197,7 @@ func TestMemberLeave(t *testing.T) {
 	c2Addr := getRandomLocalhostAddr()
 	remote := remote.New(c2Addr, nil)
 
-	e, err := actor.NewEngine(&actor.EngineOpts{Remote: remote})
+	e, err := actor.NewEngine(&actor.EngineConfig{Remote: remote})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -209,7 +223,7 @@ func TestMemberLeave(t *testing.T) {
 		switch msg := c.Message().(type) {
 		case MemberJoinEvent:
 			if msg.Member.ID == "B" {
-				remote.Stop()
+				remote.Stop().Wait()
 			}
 		case MemberLeaveEvent:
 			assert.Equal(t, msg.Member.ID, c2.id)
@@ -256,7 +270,7 @@ func TestMembersExcept(t *testing.T) {
 
 func makeCluster(t *testing.T, addr, id, region string, members ...MemberAddr) *Cluster {
 	remote := remote.New(addr, nil)
-	e, err := actor.NewEngine(&actor.EngineOpts{Remote: remote})
+	e, err := actor.NewEngine(&actor.EngineConfig{Remote: remote})
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -15,6 +15,8 @@ build:
 	go build -o bin/metrics examples/metrics/main.go
 	go build -o bin/chatserver examples/chat/server/main.go
 	go build -o bin/chatclient examples/chat/client/main.go
+	go build -o bin/cluster examples/cluster/member_1/main.go
+	go build -o bin/cluster examples/cluster/member_2/main.go
 
 bench:
 	go run ./_bench/.
