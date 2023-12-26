@@ -109,10 +109,8 @@ func (r *Remote) Stop() *sync.WaitGroup {
 		slog.Warn("remote already stopped but stop was called", "state", r.state.Load())
 		return &sync.WaitGroup{} // return empty waitgroup so the caller can still wait without panicking.
 	}
-	slog.Debug("stopping remote")
 	r.state.Store(stateStopped)
 	r.stopCh <- struct{}{}
-	slog.Debug("stop signal sent")
 	return r.stopWg
 }
 

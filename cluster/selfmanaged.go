@@ -13,7 +13,11 @@ import (
 	"github.com/grandcat/zeroconf"
 )
 
-const memberPingInterval = time.Second * 5
+const (
+	serviceName        = "_actor.hollywood_"
+	domain             = "local."
+	memberPingInterval = time.Second * 2
+)
 
 type MemberAddr struct {
 	ListenAddr string
@@ -27,11 +31,10 @@ type memberLeave struct {
 type memberPing struct{}
 
 type SelfManaged struct {
-	cluster        *Cluster
-	bootstrapAddrs []MemberAddr
-	members        *MemberSet
-	memberPinger   actor.SendRepeater
-	eventSubPID    *actor.PID
+	cluster      *Cluster
+	members      *MemberSet
+	memberPinger actor.SendRepeater
+	eventSubPID  *actor.PID
 
 	pid *actor.PID
 
@@ -39,16 +42,18 @@ type SelfManaged struct {
 
 	resolver  *zeroconf.Resolver
 	announcer *zeroconf.Server
+
+	ctx    context.Context
+	cancel context.CancelFunc
 }
 
-func NewSelfManagedProvider(addrs ...MemberAddr) Producer {
+func NewSelfManagedProvider() Producer {
 	return func(c *Cluster) actor.Producer {
 		return func() actor.Receiver {
 			return &SelfManaged{
-				cluster:        c,
-				bootstrapAddrs: addrs,
-				members:        NewMemberSet(),
-				membersAlive:   NewMemberSet(),
+				cluster:      c,
+				members:      NewMemberSet(),
+				membersAlive: NewMemberSet(),
 			}
 		}
 	}
@@ -57,12 +62,7 @@ func NewSelfManagedProvider(addrs ...MemberAddr) Producer {
 func (s *SelfManaged) Receive(c *actor.Context) {
 	switch msg := c.Message().(type) {
 	case actor.Started:
-		go func() {
-			for {
-				time.Sleep(time.Second * 5)
-				fmt.Println(s.members.Slice())
-			}
-		}()
+		s.ctx, s.cancel = context.WithCancel(context.Background())
 		s.pid = c.PID()
 		s.members.Add(s.cluster.Member())
 		members := &Members{
@@ -74,6 +74,8 @@ func (s *SelfManaged) Receive(c *actor.Context) {
 	case actor.Stopped:
 		s.memberPinger.Stop()
 		s.cluster.engine.Unsubscribe(s.eventSubPID)
+		s.announcer.Shutdown()
+		s.cancel()
 	case *Handshake:
 		s.addMember(msg.Member)
 		s.cluster.engine.Send(c.Sender(), s.cluster.Member())
@@ -156,14 +158,14 @@ func (s *SelfManaged) start(c *actor.Context) {
 
 	server, err := zeroconf.RegisterProxy(
 		s.cluster.id,
-		"_hollywood_",
-		"local.",
+		serviceName,
+		domain,
 		port,
-		"member1",
+		fmt.Sprintf("member_%s", s.cluster.id),
 		[]string{host},
 		[]string{"txtv=0", "lo=1", "la=2"}, nil)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 	s.announcer = server
 
@@ -185,12 +187,12 @@ func (s *SelfManaged) startDiscovery() {
 				s.cluster.engine.SendWithSender(memberPID, hs, self)
 			}
 		}
+		slog.Info("[CLUSTER] stopping discovery", "id", s.cluster.ID())
 	}(entries)
 
-	ctx := context.Background()
-	err := s.resolver.Browse(ctx, "_hollywood_", "local.", entries)
+	err := s.resolver.Browse(s.ctx, serviceName, domain, entries)
 	if err != nil {
-		slog.Error("[DISCOVERY] starting discovery failed", "err", err)
+		slog.Error("[CLUSTER] discovery failed", "err", err)
 		panic(err)
 	}
 }

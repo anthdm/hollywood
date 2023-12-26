@@ -4,6 +4,7 @@ import (
 	fmt "fmt"
 	"log/slog"
 	"reflect"
+	"sync"
 	"time"
 
 	"github.com/anthdm/hollywood/actor"
@@ -76,7 +77,15 @@ func (c *Cluster) Start() {
 	c.agentPID = c.engine.Spawn(NewAgent(c), "cluster", actor.WithID(c.id))
 	c.providerPID = c.engine.Spawn(c.provider(c), "provider", actor.WithID(c.id))
 	c.isStarted = true
-	return
+}
+
+// Stop will shutdown the cluster poisoning all its actors and stops the underlying
+// remote.
+func (c *Cluster) Stop() *sync.WaitGroup {
+	wg := sync.WaitGroup{}
+	c.engine.Poison(c.agentPID, &wg)
+	c.engine.Poison(c.providerPID, &wg)
+	return &wg
 }
 
 // Spawn an actor locally on the node with cluster awareness.
@@ -193,11 +202,6 @@ func (c *Cluster) GetActivated(id string) *actor.PID {
 	return nil
 }
 
-// PID returns the reachable actor process id, which is the Agent actor.
-func (c *Cluster) PID() *actor.PID {
-	return c.agentPID
-}
-
 // Member returns the member info of this node.
 func (c *Cluster) Member() *Member {
 	kinds := make([]string, len(c.kinds))
@@ -221,4 +225,19 @@ func (c *Cluster) Engine() *actor.Engine {
 // Region return the region of the cluster.
 func (c *Cluster) Region() string {
 	return c.region
+}
+
+// ID returns the ID of the cluster.
+func (c *Cluster) ID() string {
+	return c.id
+}
+
+// Address returns the host/address of the cluster.
+func (c *Cluster) Address() string {
+	return c.agentPID.Address
+}
+
+// PID returns the reachable actor process id, which is the Agent actor.
+func (c *Cluster) PID() *actor.PID {
+	return c.agentPID
 }

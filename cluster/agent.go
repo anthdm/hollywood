@@ -59,6 +59,7 @@ func NewAgent(c *Cluster) actor.Producer {
 func (a *Agent) Receive(c *actor.Context) {
 	switch msg := c.Message().(type) {
 	case actor.Started:
+	case actor.Stopped:
 	case *ActorTopology:
 		a.handleActorTopology(msg)
 	case *Members:

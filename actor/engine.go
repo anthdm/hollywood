@@ -32,6 +32,7 @@ type Engine struct {
 	eventStream *PID
 }
 
+// EngineConfig holds the configuration of the engine.
 type EngineConfig struct {
 	Remote Remoter
 }
@@ -71,6 +72,7 @@ func (e *Engine) Spawn(p Producer, kind string, opts ...OptFunc) *PID {
 	return e.SpawnProc(proc)
 }
 
+// SpawnFunc spawns the given function as a stateless receiver/actor.
 func (e *Engine) SpawnFunc(f func(*Context), kind string, opts ...OptFunc) *PID {
 	return e.Spawn(newFuncReceiver(f), kind, opts...)
 }
