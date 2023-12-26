@@ -9,6 +9,21 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestSubscribingChildToEventCausesNoRaceCon(t *testing.T) {
+	e, err := NewEngine(nil)
+	assert.Nil(t, err)
+	parent := e.SpawnFunc(func(c *Context) {
+		childPID := c.SpawnChildFunc(func(c *Context) {
+			switch msg := c.Message().(type) {
+			case ActorStoppedEvent:
+				_ = msg
+			}
+		}, "event")
+		e.Subscribe(childPID)
+	}, "parent")
+	e.Poison(parent).Wait()
+}
+
 func TestContextSendRepeat(t *testing.T) {
 	var (
 		wg = &sync.WaitGroup{}

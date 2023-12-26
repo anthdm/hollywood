@@ -79,8 +79,7 @@ func (c *Cluster) Start() {
 	c.isStarted = true
 }
 
-// Stop will shutdown the cluster poisoning all its actors and stops the underlying
-// remote.
+// Stop will shutdown the cluster poisoning all its actors.
 func (c *Cluster) Stop() *sync.WaitGroup {
 	wg := sync.WaitGroup{}
 	c.engine.Poison(c.agentPID, &wg)
