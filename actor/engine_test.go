@@ -369,7 +369,7 @@ func TestPoisonPillPrivate(t *testing.T) {
 	}
 }
 
-// 56 ns/op
+// 45.84 ns/op 25 B/op => 13th Gen Intel(R) Core(TM) i9-13900KF
 func BenchmarkSendMessageLocal(b *testing.B) {
 	e, err := NewEngine(nil)
 	require.NoError(b, err)
