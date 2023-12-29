@@ -10,24 +10,28 @@ import (
 	"github.com/anthdm/hollywood/safemap"
 )
 
+// Context struct represents the execution context of a process in the actor system.
+// It contains essential data required for a process's operation and interaction with other processes.
 type Context struct {
-	pid      *PID
-	sender   *PID
-	engine   *Engine
-	receiver Receiver
-	message  any
-	// the context of the parent, if this is the context of a child.
-	// we need this so we can remove the child from the parent Context
-	// when the child dies.
+	pid      *PID     // pid is the process identifier of the current context.
+	sender   *PID     // sender is the PID of the process that sent the current message.
+	engine   *Engine  // engine is a reference to the Engine that this context is part of.
+	receiver Receiver // receiver is the message receiver associated with this context.
+	message  any      // message is the current message being processed.
+	// parentCtx is the context of the parent process (if this is a child process's context).
+	// It is used to manage the lifecycle of child processes within a parent context.
 	parentCtx *Context
-	children  *safemap.SafeMap[string, *PID]
+	// children is a map of child process identifiers, allowing the context to keep track of its children.
+	children *safemap.SafeMap[string, *PID]
 }
 
+// newContext creates and returns a new instance of Context for a given Engine and PID.
+// It initializes a new context with a process identifier and an empty map for child processes.
 func newContext(e *Engine, pid *PID) *Context {
 	return &Context{
-		engine:   e,
-		pid:      pid,
-		children: safemap.New[string, *PID](),
+		engine:   e,                           // Set the Engine reference.
+		pid:      pid,                         // Set the process identifier.
+		children: safemap.New[string, *PID](), // Initialize an empty map for child PIDs.
 	}
 }
 

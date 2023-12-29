@@ -76,7 +76,9 @@ of actor names to actor references. The registry is used to route messages to ac
 
 ## Scheduler
 
-TODO: Describe the scheduler
+The Scheduler in this system is an essential component that manages the execution of tasks for actors. 
+It is designed to provide efficient and controlled processing of actions within the actor system. 
+The Scheduler interface and its implementation ensure that tasks are handled in a manner that optimizes throughput and concurrency.
 
 ## Envelope
 
@@ -89,7 +91,9 @@ A process is an abstraction over the actor. Todo: Describe the process.
 
 ## Processer
 
-Todo: Not really sure.
+The Processer interface is central to defining the behavior of processes within the actor system. 
+It standardizes the essential functionalities that every process must implement, 
+ensuring uniformity and predictability in process operations. Key methods of the Processer interface include:
 
 ## PID
 

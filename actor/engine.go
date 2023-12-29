@@ -9,10 +9,15 @@ import (
 	"time"
 )
 
+// Remoter is an interface that defines methods for remote communication with actors.
 type Remoter interface {
+	// Address returns the address of the remote entity.
 	Address() string
+	// Send sends a message to the specified PID with an optional sender PID.
 	Send(*PID, any, *PID)
+	// Start starts the remote communication with the provided engine and returns an error if any.
 	Start(*Engine) error
+	// Stop stops the remote communication and returns a sync.WaitGroup to wait for the stop operation to complete.
 	Stop() *sync.WaitGroup
 }
 
@@ -32,6 +37,7 @@ type Engine struct {
 	eventStream *PID
 }
 
+// EngineConfig is a struct that represents the configuration for the actor engine.
 type EngineConfig struct {
 	Remote Remoter
 }
@@ -71,6 +77,8 @@ func (e *Engine) Spawn(p Producer, kind string, opts ...OptFunc) *PID {
 	return e.SpawnProc(proc)
 }
 
+// SpawnFunc is a method of the Engine that spawns a process with the given functional message receiver, kind, and options.
+// It returns the PID of the spawned process.
 func (e *Engine) SpawnFunc(f func(*Context), kind string, opts ...OptFunc) *PID {
 	return e.Spawn(newFuncReceiver(f), kind, opts...)
 }
@@ -155,13 +163,22 @@ type SendRepeater struct {
 	cancelch chan struct{}
 }
 
+// start is a method of the SendRepeater struct that starts the repeating message sending.
+// It creates a new ticker with the interval of the SendRepeater and starts a goroutine that sends a message to the target of the SendRepeater every time the ticker ticks.
+// The goroutine stops sending messages and returns when the cancelch channel of the SendRepeater is closed.
 func (sr SendRepeater) start() {
+	// Create a new ticker with the interval of the SendRepeater.
 	ticker := time.NewTicker(sr.interval)
+	// Start a goroutine.
 	go func() {
+		// Loop indefinitely.
 		for {
+			// Select on the ticker's channel and the cancelch channel of the SendRepeater.
 			select {
+			// If the ticker's channel is ready, send a message to the target of the SendRepeater.
 			case <-ticker.C:
 				sr.engine.SendWithSender(sr.target, sr.msg, sr.self)
+			// If the cancelch channel of the SendRepeater is ready, stop the ticker and return from the goroutine.
 			case <-sr.cancelch:
 				ticker.Stop()
 				return
@@ -205,6 +222,11 @@ func (e *Engine) Poison(pid *PID, wg ...*sync.WaitGroup) *sync.WaitGroup {
 	return e.sendPoisonPill(pid, true, wg...)
 }
 
+// sendPoisonPill is a method of the Engine that sends a poisonPill message to the process associated with the given PID.
+// It takes the PID, a boolean indicating whether the poisonPill should be sent gracefully, and an optional WaitGroup.
+// It returns a WaitGroup.
+// If a WaitGroup is provided, it adds 1 to it. If the process associated with the PID is not found, it broadcasts a DeadLetterEvent.
+// Otherwise, it sends the poisonPill message to the process and returns the WaitGroup.
 func (e *Engine) sendPoisonPill(pid *PID, graceful bool, wg ...*sync.WaitGroup) *sync.WaitGroup {
 	var _wg *sync.WaitGroup
 	if len(wg) > 0 {
@@ -260,6 +282,8 @@ func (e *Engine) Unsubscribe(pid *PID) {
 	e.Send(e.eventStream, eventUnsub{pid: pid})
 }
 
+// isLocalMessage is a method of the Engine that checks if the message with the given PID is local.
+// It returns a boolean indicating whether the message is local.
 func (e *Engine) isLocalMessage(pid *PID) bool {
 	if pid == nil {
 		return false
@@ -271,6 +295,8 @@ type funcReceiver struct {
 	f func(*Context)
 }
 
+// newFuncReceiver is a function that creates a new functional message receiver.
+// It takes a function that accepts a *Context and returns a Producer function that returns a Receiver.
 func newFuncReceiver(f func(*Context)) Producer {
 	return func() Receiver {
 		return &funcReceiver{
@@ -279,6 +305,7 @@ func newFuncReceiver(f func(*Context)) Producer {
 	}
 }
 
+// Receive is a method of the funcReceiver that receives a message and calls the stored function with the given context.
 func (r *funcReceiver) Receive(c *Context) {
 	r.f(c)
 }

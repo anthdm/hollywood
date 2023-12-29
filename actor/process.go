@@ -8,49 +8,71 @@ import (
 	"time"
 )
 
+// Envelope is a struct that encapsulates a message and its sender.
+// It's used to handle message passing in the system.
 type Envelope struct {
-	Msg    any
-	Sender *PID
+	Msg    any  // Msg holds the message content, can be of any type.
+	Sender *PID // Sender is a pointer to the PID (process identifier) of the message sender.
 }
 
-// Processer is an interface the abstracts the way a process behaves.
+// Processer is an interface that abstracts the behavior of a process.
+// It defines a set of methods that any process should implement.
 type Processer interface {
-	Start()
-	PID() *PID
-	Send(*PID, any, *PID)
-	Invoke([]Envelope)
-	Shutdown(*sync.WaitGroup)
+	Start()                   // Start initiates the process.
+	PID() *PID                // PID returns a pointer to the process identifier.
+	Send(*PID, any, *PID)     // Send handles sending a message to a process.
+	Invoke([]Envelope)        // Invoke processes a batch of Envelopes.
+	Shutdown(*sync.WaitGroup) // Shutdown handles the process shutdown, coordinating with the provided WaitGroup.
 }
 
+// process is a struct that implements the Processer interface.
+// It represents the internal state and behavior of a process.
 type process struct {
-	Opts
+	Opts // Embeds Opts struct, inheriting its fields.
 
-	inbox    Inboxer
-	context  *Context
-	pid      *PID
-	restarts int32
+	inbox    Inboxer  // inbox is an interface to handle incoming messages.
+	context  *Context // context stores the context of the process, used for various operations within the process.
+	pid      *PID     // pid is a pointer to the process identifier.
+	restarts int32    // restarts tracks the number of times the process has been restarted.
 
-	mbuffer []Envelope
+	mbuffer []Envelope // mbuffer is a slice that stores Envelopes, used for message buffering.
 }
 
+// newProcess creates a new instance of a process.
+// It initializes the process with the provided Engine and options.
 func newProcess(e *Engine, opts Opts) *process {
+	// pid creates a new process identifier using Engine's address, the kind of the process, and its ID.
 	pid := NewPID(e.address, opts.Kind+pidSeparator+opts.ID)
+
+	// ctx initializes a new context for the process, essential for its operations and state management.
 	ctx := newContext(e, pid)
+
+	// p is a pointer to the new process being created with the specified pid, inbox, options, context, and message buffer.
 	p := &process{
 		pid:     pid,
-		inbox:   NewInbox(opts.InboxSize),
-		Opts:    opts,
-		context: ctx,
-		mbuffer: nil,
+		inbox:   NewInbox(opts.InboxSize), // Initializes the inbox with the specified size from the options.
+		Opts:    opts,                     // Sets the process options.
+		context: ctx,                      // Sets the process context.
+		mbuffer: nil,                      // Initializes the message buffer as nil.
 	}
+
+	// Start the inbox to begin processing messages.
 	p.inbox.Start(p)
+
+	// Return the pointer to the newly created process.
 	return p
 }
 
+// applyMiddleware is a function that applies a series of middleware functions to a ReceiveFunc.
+// Middleware functions can modify or extend the behavior of the ReceiveFunc.
 func applyMiddleware(rcv ReceiveFunc, middleware ...MiddlewareFunc) ReceiveFunc {
+	// Iterate over the middleware slice in reverse order.
 	for i := len(middleware) - 1; i >= 0; i-- {
+		// Apply the middleware function to the ReceiveFunc.
 		rcv = middleware[i](rcv)
 	}
+
+	// Return the modified ReceiveFunc after all middleware have been applied.
 	return rcv
 }
 
@@ -114,26 +136,40 @@ func (p *process) invokeMsg(msg Envelope) {
 	}
 }
 
+// Start is a method of the process type. It initializes and starts the process's execution.
 func (p *process) Start() {
+	// recv holds the ReceiveFunc produced by the process's Producer.
 	recv := p.Producer()
 	p.context.receiver = recv
+
+	// defer a function to handle any panic that may occur in the process.
 	defer func() {
+		// recover from panic if any occurs.
 		if v := recover(); v != nil {
+			// Set the process's message to Stopped and invoke the receiver's Receive method.
 			p.context.message = Stopped{}
 			p.context.receiver.Receive(p.context)
+
+			// Attempt to restart the process based on the panic value.
 			p.tryRestart(v)
 		}
 	}()
+
+	// Initialize the process by setting its message to Initialized and applying middleware.
 	p.context.message = Initialized{}
 	applyMiddleware(recv.Receive, p.Opts.Middleware...)(p.context)
 
+	// Set the process's message to Started, apply middleware, and start the receiver.
 	p.context.message = Started{}
 	applyMiddleware(recv.Receive, p.Opts.Middleware...)(p.context)
+
+	// Broadcast an ActorStartedEvent to the engine, marking the start of the process.
 	p.context.engine.BroadcastEvent(ActorStartedEvent{PID: p.pid, Timestamp: time.Now()})
-	// If we have messages in our buffer, invoke them.
+
+	// If there are messages in the process's buffer, invoke them.
 	if len(p.mbuffer) > 0 {
 		p.Invoke(p.mbuffer)
-		p.mbuffer = nil
+		p.mbuffer = nil // Clear the message buffer after invocation.
 	}
 }
 
@@ -205,8 +241,20 @@ func (p *process) cleanup(wg *sync.WaitGroup) {
 	}
 }
 
-func (p *process) PID() *PID { return p.pid }
+// PID is a method of the process type. It returns the process identifier.
+func (p *process) PID() *PID {
+	return p.pid // Returns the PID (Process Identifier) of the process.
+}
+
+// Send is a method of the process type for sending a message.
+// It places an Envelope containing the message and sender into the process's inbox.
 func (p *process) Send(_ *PID, msg any, sender *PID) {
+	// Send an Envelope with the message and sender to the process's inbox.
 	p.inbox.Send(Envelope{Msg: msg, Sender: sender})
 }
-func (p *process) Shutdown(wg *sync.WaitGroup) { p.cleanup(wg) }
+
+// Shutdown is a method of the process type that initiates the process's shutdown procedure.
+// It takes a WaitGroup to coordinate the shutdown with other goroutines.
+func (p *process) Shutdown(wg *sync.WaitGroup) {
+	p.cleanup(wg) // Calls the cleanup method with the WaitGroup to handle shutdown logistics.
+}

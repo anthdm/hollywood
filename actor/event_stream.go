@@ -15,10 +15,12 @@ type eventUnsub struct {
 	pid *PID
 }
 
+// eventStream is a struct representing an event stream with subscriptions.
 type eventStream struct {
 	subs map[*PID]bool
 }
 
+// newEventStream is a function that returns a new event stream producer.
 func newEventStream() Producer {
 	return func() Receiver {
 		return &eventStream{
