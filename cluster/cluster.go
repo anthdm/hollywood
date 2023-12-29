@@ -51,7 +51,7 @@ type Cluster struct {
 }
 
 // New creates and initializes a new Cluster based on the provided Config.
-// It returns a pointer to the Cluster and an error if any configuration issue occurs.
+// It returns a pointer to the Cluster or an error if any configuration issue occurs.
 func New(cfg Config) (*Cluster, error) {
 	// Validate that the engine parameter is provided.
 	if cfg.Engine == nil {

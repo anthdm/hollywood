@@ -32,7 +32,6 @@ func newStreamReader(r *Remote) *streamReader {
 // It continuously receives envelopes from the stream until an error occurs or the context is canceled.
 // For each received envelope, it deserializes the messages and sends them to their respective targets.
 func (r *streamReader) Receive(stream DRPCRemote_ReceiveStream) error {
-	// Log a debug message when the method returns.
 	defer slog.Debug("streamreader terminated")
 
 	// Continuously receive envelopes from the stream.
@@ -54,7 +53,6 @@ func (r *streamReader) Receive(stream DRPCRemote_ReceiveStream) error {
 			tname := envelope.TypeNames[msg.TypeNameIndex]
 			payload, err := r.deserializer.Deserialize(msg.Data, tname)
 
-			// If an error occurs during deserialization, log an error message and return the error.
 			if err != nil {
 				slog.Error("streamReader deserialize", "err", err)
 				return err
@@ -69,6 +67,5 @@ func (r *streamReader) Receive(stream DRPCRemote_ReceiveStream) error {
 		}
 	}
 
-	// If the loop finishes without errors, return nil.
 	return nil
 }

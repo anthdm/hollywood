@@ -62,14 +62,14 @@ type VTUnmarshaler interface {
 type ProtoSerializer struct{}
 
 // Serialize is a method that serializes a protobuf message into a byte slice.
-// It takes a message of any type and returns a byte slice and an error.
+// It takes a message of any type and returns a byte slice or an error.
 func (ProtoSerializer) Serialize(msg any) ([]byte, error) {
 	// Use the protobuf library's Marshal function to serialize the message.
 	return proto.Marshal(msg.(proto.Message))
 }
 
 // Deserialize is a method that deserializes a byte slice into a protobuf message given the type name.
-// It takes a byte slice and a type name as parameters and returns a message of any type and an error.
+// It takes a byte slice and a type name as parameters and returns a message of any type or an error.
 func (ProtoSerializer) Deserialize(data []byte, tname string) (any, error) {
 	// Convert the type name into a protobuf full name.
 	pname := protoreflect.FullName(tname)
@@ -103,14 +103,14 @@ func (VTProtoSerializer) TypeName(msg any) string {
 }
 
 // Serialize is a method that serializes a message into a byte slice using the VTMarshaler interface.
-// It takes a message of any type and returns a byte slice and an error.
+// It takes a message of any type and returns a byte slice or an error.
 func (VTProtoSerializer) Serialize(msg any) ([]byte, error) {
 	// Use the VTMarshaler's MarshalVT function to serialize the message.
 	return msg.(VTMarshaler).MarshalVT()
 }
 
 // Deserialize is a method that deserializes a byte slice into a message using the VTUnmarshaler interface.
-// It takes a byte slice and a type name as parameters and returns a message of any type and an error.
+// It takes a byte slice and a type name as parameters and returns a message of any type or an error.
 func (VTProtoSerializer) Deserialize(data []byte, mtype string) (any, error) {
 	// Get the type from the registry.
 	v, err := registryGetType(mtype)

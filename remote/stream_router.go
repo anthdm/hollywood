@@ -24,8 +24,7 @@ type terminateStream struct {
 // streamRouter is a struct that routes messages to streams.
 // It contains an actor engine, a map of streams, a PID, and a TLS configuration.
 type streamRouter struct {
-	engine *actor.Engine
-	// streams is a map of remote address to stream writer pid.
+	engine    *actor.Engine
 	streams   map[string]*actor.PID
 	pid       *actor.PID
 	tlsConfig *tls.Config
@@ -37,7 +36,6 @@ type streamRouter struct {
 // This returned function is of type actor.Producer, which is a function that returns an actor.Receiver.
 func newStreamRouter(e *actor.Engine, tlsConfig *tls.Config) actor.Producer {
 	return func() actor.Receiver {
-		// Create a new streamRouter with an empty streams map, the provided engine, and the provided TLS configuration.
 		return &streamRouter{
 			streams:   make(map[string]*actor.PID),
 			engine:    e,
@@ -51,13 +49,10 @@ func newStreamRouter(e *actor.Engine, tlsConfig *tls.Config) actor.Producer {
 // Depending on the type of the message, it performs different actions.
 func (s *streamRouter) Receive(ctx *actor.Context) {
 	switch msg := ctx.Message().(type) {
-	// If the message is of type actor.Started, it sets the streamRouter's pid to the context's PID.
 	case actor.Started:
 		s.pid = ctx.PID()
-	// If the message is of type *streamDeliver, it calls the deliverStream method with the message.
 	case *streamDeliver:
 		s.deliverStream(msg)
-	// If the message is of type terminateStream, it calls the handleTerminateStream method with the message.
 	case terminateStream:
 		s.handleTerminateStream(msg)
 	}
@@ -68,11 +63,8 @@ func (s *streamRouter) Receive(ctx *actor.Context) {
 // It finds the stream writer PID associated with the address in the message, deletes it from the streams map,
 // and logs a debug message indicating that the stream is being terminated.
 func (s *streamRouter) handleTerminateStream(msg terminateStream) {
-	// Get the stream writer PID associated with the address in the message.
 	streamWriterPID := s.streams[msg.address]
-	// Delete the stream writer PID from the streams map.
 	delete(s.streams, msg.address)
-	// Log a debug message indicating that the stream is being terminated.
 	slog.Debug("terminating stream",
 		"remote", msg.address,
 		"pid", streamWriterPID,

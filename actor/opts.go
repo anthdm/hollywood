@@ -39,11 +39,11 @@ type OptFunc func(*Opts)
 // It initializes the Opts struct with default values.
 func DefaultOpts(p Producer) Opts {
 	return Opts{
-		Producer:     p,                   // Sets the Producer
-		MaxRestarts:  defaultMaxRestarts,  // Sets the maximum number of restarts to a default value
-		InboxSize:    defaultInboxSize,    // Sets the inbox size to a default value
-		RestartDelay: defaultRestartDelay, // Sets the restart delay to a default value
-		Middleware:   []MiddlewareFunc{},  // Initializes an empty slice for MiddlewareFunc
+		Producer:     p,
+		MaxRestarts:  defaultMaxRestarts,
+		InboxSize:    defaultInboxSize,
+		RestartDelay: defaultRestartDelay,
+		Middleware:   []MiddlewareFunc{},
 	}
 }
 
@@ -51,34 +51,34 @@ func DefaultOpts(p Producer) Opts {
 // It appends one or more MiddlewareFunc to the Middleware slice in the Opts.
 func WithMiddleware(mw ...MiddlewareFunc) OptFunc {
 	return func(opts *Opts) {
-		opts.Middleware = append(opts.Middleware, mw...) // Append the provided middleware to the existing slice
+		opts.Middleware = append(opts.Middleware, mw...)
 	}
 }
 
 // WithRestartDelay returns an OptFunc that sets the RestartDelay in Opts.
 func WithRestartDelay(d time.Duration) OptFunc {
 	return func(opts *Opts) {
-		opts.RestartDelay = d // Sets the restart delay to the provided duration
+		opts.RestartDelay = d
 	}
 }
 
 // WithInboxSize returns an OptFunc that sets the InboxSize in Opts.
 func WithInboxSize(size int) OptFunc {
 	return func(opts *Opts) {
-		opts.InboxSize = size // Sets the inbox size to the provided value
+		opts.InboxSize = size
 	}
 }
 
 // WithMaxRestarts returns an OptFunc that sets the MaxRestarts in Opts.
 func WithMaxRestarts(n int) OptFunc {
 	return func(opts *Opts) {
-		opts.MaxRestarts = int32(n) // Sets the maximum number of restarts to the provided value
+		opts.MaxRestarts = int32(n)
 	}
 }
 
 // WithID returns an OptFunc that sets the ID in Opts.
 func WithID(id string) OptFunc {
 	return func(opts *Opts) {
-		opts.ID = id // Sets the ID to the provided string
+		opts.ID = id
 	}
 }

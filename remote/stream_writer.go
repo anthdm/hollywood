@@ -51,20 +51,13 @@ type streamWriter struct {
 // It returns an actor.Processer, which is an interface that the streamWriter struct implements.
 func newStreamWriter(e *actor.Engine, rpid *actor.PID, address string, tlsConfig *tls.Config) actor.Processer {
 	return &streamWriter{
-		// writeToAddr is set to the provided address.
 		writeToAddr: address,
-		// engine is set to the provided actor engine.
-		engine: e,
-		// routerPID is set to the provided router PID.
-		routerPID: rpid,
-		// inbox is initialized with a new Inbox with a size of streamWriterBatchSize.
-		inbox: actor.NewInbox(streamWriterBatchSize),
-		// pid is created with a new PID using the address of the engine and a string composed of "stream" and the provided address.
-		pid: actor.NewPID(e.Address(), "stream"+"/"+address),
-		// serializer is initialized with a new ProtoSerializer.
-		serializer: ProtoSerializer{},
-		// tlsConfig is set to the provided TLS configuration.
-		tlsConfig: tlsConfig,
+		engine:      e,
+		routerPID:   rpid,
+		inbox:       actor.NewInbox(streamWriterBatchSize),
+		pid:         actor.NewPID(e.Address(), "stream"+"/"+address),
+		serializer:  ProtoSerializer{},
+		tlsConfig:   tlsConfig,
 	}
 }
 
@@ -95,7 +88,6 @@ func (s *streamWriter) Invoke(msgs []actor.Envelope) {
 
 	// Iterate over the messages.
 	for i := 0; i < len(msgs); i++ {
-		// Extract the streamDeliver message, typeID, senderID, and targetID from each envelope.
 		var (
 			stream   = msgs[i].Msg.(*streamDeliver)
 			typeID   int32
@@ -114,7 +106,6 @@ func (s *streamWriter) Invoke(msgs []actor.Envelope) {
 			continue
 		}
 
-		// Create a new Message and add it to the messages slice.
 		messages[i] = &Message{
 			Data:          b,
 			TypeNameIndex: typeID,
@@ -217,7 +208,6 @@ func (s *streamWriter) init() {
 		"remote", s.writeToAddr,
 	)
 
-	// If the connection is closed, log the event and shutdown the streamWriter.
 	go func() {
 		<-s.conn.Closed()
 		slog.Debug("lost connection",
@@ -233,15 +223,11 @@ func (s *streamWriter) init() {
 func (s *streamWriter) Shutdown(wg *sync.WaitGroup) {
 	// Send a terminateStream message to the router.
 	s.engine.Send(s.routerPID, terminateStream{address: s.writeToAddr})
-	// Close the stream if it's not nil.
 	if s.stream != nil {
 		s.stream.Close()
 	}
-	// Stop the inbox.
 	s.inbox.Stop()
-	// Remove the streamWriter from the engine's registry.
 	s.engine.Registry.Remove(s.PID())
-	// Signal the wait group if it's not nil.
 	if wg != nil {
 		wg.Done()
 	}
@@ -250,9 +236,7 @@ func (s *streamWriter) Shutdown(wg *sync.WaitGroup) {
 // Start is a method that starts the streamWriter.
 // It starts the inbox and initializes the streamWriter.
 func (s *streamWriter) Start() {
-	// Start the inbox with the streamWriter as the processor.
 	s.inbox.Start(s)
-	// Initialize the streamWriter.
 	s.init()
 }
 
