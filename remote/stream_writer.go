@@ -14,42 +14,75 @@ import (
 	"storj.io/drpc/drpcconn"
 )
 
+// Constants for streamWriter
 const (
-	connIdleTimeout       = time.Minute * 10
+	// connIdleTimeout is the duration after which the connection will be closed if idle.
+	connIdleTimeout = time.Minute * 10
+	// streamWriterBatchSize is the size of the batch that the stream writer can handle.
 	streamWriterBatchSize = 1024
 )
 
+// streamWriter is a struct that handles writing to a stream.
 type streamWriter struct {
+	// writeToAddr is the address to which the stream writer will write.
 	writeToAddr string
-	rawconn     net.Conn
-	conn        *drpcconn.Conn
-	stream      DRPCRemote_ReceiveStream
-	engine      *actor.Engine
-	routerPID   *actor.PID
-	pid         *actor.PID
-	inbox       actor.Inboxer
-	serializer  Serializer
-	tlsConfig   *tls.Config
+	// rawconn is the raw network connection used by the stream writer.
+	rawconn net.Conn
+	// conn is the DRPC connection used by the stream writer.
+	conn *drpcconn.Conn
+	// stream is the DRPC stream that the stream writer will write to.
+	stream DRPCRemote_ReceiveStream
+	// engine is the actor engine that powers the stream writer.
+	engine *actor.Engine
+	// routerPID is the PID of the router actor.
+	routerPID *actor.PID
+	// pid is the PID of the stream writer itself.
+	pid *actor.PID
+	// inbox is the inbox that the stream writer uses to receive messages.
+	inbox actor.Inboxer
+	// serializer is the serializer used to serialize messages before they are written to the stream.
+	serializer Serializer
+	// tlsConfig is the TLS configuration used for secure connections.
+	tlsConfig *tls.Config
 }
 
+// newStreamWriter is a function that creates a new instance of a streamWriter.
+// It takes an actor engine, a router PID, an address string, and a TLS configuration as parameters.
+// It returns an actor.Processer, which is an interface that the streamWriter struct implements.
 func newStreamWriter(e *actor.Engine, rpid *actor.PID, address string, tlsConfig *tls.Config) actor.Processer {
 	return &streamWriter{
+		// writeToAddr is set to the provided address.
 		writeToAddr: address,
-		engine:      e,
-		routerPID:   rpid,
-		inbox:       actor.NewInbox(streamWriterBatchSize),
-		pid:         actor.NewPID(e.Address(), "stream"+"/"+address),
-		serializer:  ProtoSerializer{},
-		tlsConfig:   tlsConfig,
+		// engine is set to the provided actor engine.
+		engine: e,
+		// routerPID is set to the provided router PID.
+		routerPID: rpid,
+		// inbox is initialized with a new Inbox with a size of streamWriterBatchSize.
+		inbox: actor.NewInbox(streamWriterBatchSize),
+		// pid is created with a new PID using the address of the engine and a string composed of "stream" and the provided address.
+		pid: actor.NewPID(e.Address(), "stream"+"/"+address),
+		// serializer is initialized with a new ProtoSerializer.
+		serializer: ProtoSerializer{},
+		// tlsConfig is set to the provided TLS configuration.
+		tlsConfig: tlsConfig,
 	}
 }
 
+// PID is a method that returns the PID (Process ID) of the streamWriter.
 func (s *streamWriter) PID() *actor.PID { return s.pid }
+
+// Send is a method that sends a message to the streamWriter's inbox.
+// It takes a sender PID and a message as parameters.
+// The sender PID is the PID of the actor that sends the message.
+// The message is wrapped in an actor.Envelope before it is sent to the inbox.
 func (s *streamWriter) Send(_ *actor.PID, msg any, sender *actor.PID) {
 	s.inbox.Send(actor.Envelope{Msg: msg, Sender: sender})
 }
 
+// Invoke is a method that processes a batch of messages encapsulated in actor.Envelope.
+// It serializes the messages, wraps them in a new Envelope, and sends them over the stream.
 func (s *streamWriter) Invoke(msgs []actor.Envelope) {
+	// Initialize lookup maps and slices for type names, senders, targets, and messages.
 	var (
 		typeLookup   = make(map[string]int32)
 		typeNames    = make([]string, 0)
@@ -60,23 +93,28 @@ func (s *streamWriter) Invoke(msgs []actor.Envelope) {
 		messages     = make([]*Message, len(msgs))
 	)
 
+	// Iterate over the messages.
 	for i := 0; i < len(msgs); i++ {
+		// Extract the streamDeliver message, typeID, senderID, and targetID from each envelope.
 		var (
 			stream   = msgs[i].Msg.(*streamDeliver)
 			typeID   int32
 			senderID int32
 			targetID int32
 		)
+		// Lookup or add new type name, sender, and target.
 		typeID, typeNames = lookupTypeName(typeLookup, s.serializer.TypeName(stream.msg), typeNames)
 		senderID, senders = lookupPIDs(senderLookup, stream.sender, senders)
 		targetID, targets = lookupPIDs(targetLookup, stream.target, targets)
 
+		// Serialize the message.
 		b, err := s.serializer.Serialize(stream.msg)
 		if err != nil {
 			slog.Error("serialize", "err", err)
 			continue
 		}
 
+		// Create a new Message and add it to the messages slice.
 		messages[i] = &Message{
 			Data:          b,
 			TypeNameIndex: typeID,
@@ -85,6 +123,7 @@ func (s *streamWriter) Invoke(msgs []actor.Envelope) {
 		}
 	}
 
+	// Create a new Envelope with the senders, targets, type names, and messages.
 	env := &Envelope{
 		Senders:   senders,
 		Targets:   targets,
@@ -92,6 +131,7 @@ func (s *streamWriter) Invoke(msgs []actor.Envelope) {
 		Messages:  messages,
 	}
 
+	// Send the Envelope over the stream.
 	if err := s.stream.Send(env); err != nil {
 		if errors.Is(err, io.EOF) {
 			_ = s.conn.Close()
@@ -101,13 +141,16 @@ func (s *streamWriter) Invoke(msgs []actor.Envelope) {
 			"err", err,
 		)
 	}
-	// refresh the connection deadline.
+	// Refresh the connection deadline.
 	err := s.rawconn.SetDeadline(time.Now().Add(connIdleTimeout))
 	if err != nil {
 		slog.Error("failed to set context deadline", "err", err)
 	}
 }
 
+// init is a method that initializes the streamWriter.
+// It tries to establish a connection to the remote address.
+// If it fails to connect after a certain number of retries, it shuts down the streamWriter and broadcasts a RemoteUnreachableEvent.
 func (s *streamWriter) init() {
 	var (
 		rawconn    net.Conn
@@ -117,7 +160,7 @@ func (s *streamWriter) init() {
 	)
 	for i := 0; i < maxRetries; i++ {
 		// Here we try to connect to the remote address.
-		// Todo: can we make an Event here in case of failure?
+		// @TODO: can we make an Event here in case of failure?
 		switch s.tlsConfig {
 		case nil:
 			rawconn, err = net.Dial("tcp", s.writeToAddr)
@@ -174,6 +217,7 @@ func (s *streamWriter) init() {
 		"remote", s.writeToAddr,
 	)
 
+	// If the connection is closed, log the event and shutdown the streamWriter.
 	go func() {
 		<-s.conn.Closed()
 		slog.Debug("lost connection",
@@ -183,23 +227,38 @@ func (s *streamWriter) init() {
 	}()
 }
 
+// Shutdown is a method that gracefully shuts down the streamWriter.
+// It sends a terminateStream message to the router, closes the stream if it's not nil,
+// stops the inbox, removes the streamWriter from the engine's registry, and signals the wait group if it's not nil.
 func (s *streamWriter) Shutdown(wg *sync.WaitGroup) {
+	// Send a terminateStream message to the router.
 	s.engine.Send(s.routerPID, terminateStream{address: s.writeToAddr})
+	// Close the stream if it's not nil.
 	if s.stream != nil {
 		s.stream.Close()
 	}
+	// Stop the inbox.
 	s.inbox.Stop()
+	// Remove the streamWriter from the engine's registry.
 	s.engine.Registry.Remove(s.PID())
+	// Signal the wait group if it's not nil.
 	if wg != nil {
 		wg.Done()
 	}
 }
 
+// Start is a method that starts the streamWriter.
+// It starts the inbox and initializes the streamWriter.
 func (s *streamWriter) Start() {
+	// Start the inbox with the streamWriter as the processor.
 	s.inbox.Start(s)
+	// Initialize the streamWriter.
 	s.init()
 }
 
+// lookupPIDs is a function that checks if a PID is in the map.
+// If the PID is not in the map, it adds the PID to the map and the slice, and returns the new ID and the updated slice.
+// If the PID is in the map, it returns the existing ID and the original slice.
 func lookupPIDs(m map[uint64]int32, pid *actor.PID, pids []*actor.PID) (int32, []*actor.PID) {
 	if pid == nil {
 		return 0, pids
@@ -216,6 +275,9 @@ func lookupPIDs(m map[uint64]int32, pid *actor.PID, pids []*actor.PID) (int32, [
 
 }
 
+// lookupTypeName is a function that checks if a type name is in the map.
+// If the type name is not in the map, it adds the type name to the map and the slice, and returns the new ID and the updated slice.
+// If the type name is in the map, it returns the existing ID and the original slice.
 func lookupTypeName(m map[string]int32, name string, types []string) (int32, []string) {
 	max := int32(len(m))
 	id, ok := m[name]
