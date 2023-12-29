@@ -30,7 +30,10 @@ func (m *Member) PID() *actor.PID {
 	return actor.NewPID(m.Host, "cluster/"+m.ID)
 }
 
+// Equals compares the current Member with another Member to determine if they are equal.
+// Two members are considered equal if they have the same Host and ID.
 func (m *Member) Equals(other *Member) bool {
+	// Check if both the Host and ID of the two members are the same.
 	return m.Host == other.Host && m.ID == other.ID
 }
 
