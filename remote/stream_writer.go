@@ -14,7 +14,6 @@ import (
 	"storj.io/drpc/drpcconn"
 )
 
-// Constants for streamWriter
 const (
 	// connIdleTimeout is the duration after which the connection will be closed if idle.
 	connIdleTimeout = time.Minute * 10
