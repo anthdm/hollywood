@@ -719,7 +719,7 @@ func (x *ActivationResponse) GetTopologyHash() uint64 {
 	return 0
 }
 
-var File_cluster_cluster_proto protoreflect.FileDescriptor
+var file_cluster_proto protoreflect.FileDescriptor
 
 var file_cluster_proto_rawDesc = []byte{
 	0x0a, 0x15, 0x63, 0x6c, 0x75, 0x73, 0x74, 0x65, 0x72, 0x2f, 0x63, 0x6c, 0x75, 0x73, 0x74, 0x65,
@@ -843,7 +843,7 @@ var file_cluster_proto_depIdxs = []int32{
 
 func init() { file_cluster_proto_init() }
 func file_cluster_proto_init() {
-	if File_cluster_cluster_proto != nil {
+	if file_cluster_proto != nil {
 		return
 	}
 	if !protoimpl.UnsafeEnabled {
@@ -1006,7 +1006,7 @@ func file_cluster_proto_init() {
 		DependencyIndexes: file_cluster_proto_depIdxs,
 		MessageInfos:      file_cluster_proto_msgTypes,
 	}.Build()
-	File_cluster_cluster_proto = out.File
+	file_cluster_proto = out.File
 	file_cluster_proto_rawDesc = nil
 	file_cluster_proto_goTypes = nil
 	file_cluster_proto_depIdxs = nil
