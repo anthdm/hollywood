@@ -1,67 +1,86 @@
+// Define the syntax version for this protobuf file, which is proto3.
 syntax = "proto3";
+
+// Specify the package name for the protobuf definitions.
 package cluster;
+
+// Specify the Go package path for the generated code from this protobuf file.
 option go_package = "github.com/anthdm/hollywood/cluster";
+
+// Import the actor.proto file to use its definitions.
 import "actor.proto";
 
+// Define a message representing a Cluster Identifier (CID) with actor PID and additional cluster-related information.
 message CID {
-	actor.PID PID = 1;
-	string ID = 2;
-	string kind = 3;
-	string region = 4;
+	actor.PID PID = 1;      // The PID of the actor from the imported actor.proto.
+	string ID = 2;          // A unique identifier for the entity within the cluster.
+	string kind = 3;        // The kind/type of the entity.
+	string region = 4;      // The geographic or logical region where the entity is hosted.
 }
 
+// Define a message representing a member of the cluster.
 message Member {
-	string ID = 1;
-	string host = 2;
-	string region = 3;
-	repeated string kinds = 4;
+	string ID = 1;                // The unique identifier of the member.
+	string host = 2;              // The host address of the member.
+	string region = 3;            // The region where the member is located.
+	repeated string kinds = 4;    // A list of kinds/types of entities that this member can host.
 }
 
+// Define a message representing a list of cluster members.
 message Members {
-	repeated Member members = 1;
+	repeated Member members = 1;  // A list of members in the cluster.
 } 
 
+// Define a message representing a group of members joining the cluster.
 message MembersJoin {
-	repeated Member members = 1;
+	repeated Member members = 1;  // A list of members that have joined the cluster.
 }
 
+// Define a message representing a group of members leaving the cluster.
 message MembersLeave {
-	repeated Member members = 1;
+	repeated Member members = 1;  // A list of members that have left the cluster.
 }
  
+// Define a message representing the topology of the cluster, including changes in membership.
 message Topology {
-	uint64 hash = 1;
-	repeated Member members = 2;
-	repeated Member left = 3;
-	repeated Member joined = 4;
-	repeated Member blocked = 5;
+	uint64 hash = 1;              // A hash representing the current state or version of the topology.
+	repeated Member members = 2;  // Current members of the cluster.
+	repeated Member left = 3;     // Members that have recently left the cluster.
+	repeated Member joined = 4;   // Members that have recently joined the cluster.
+	repeated Member blocked = 5;  // Members that are currently blocked or unreachable.
 }
 
+// Define a message representing information about an actor in the cluster.
 message ActorInfo {
-	actor.PID PID = 2;
+	actor.PID PID = 2;            // The PID of the actor.
 }
 
+// Define a message representing the topology of actors within the cluster.
 message ActorTopology {
-	repeated ActorInfo actors = 1; 
+	repeated ActorInfo actors = 1; // A list of actors and their information.
 }
 
+// Define a message for signaling the activation of an actor.
 message Activation {
-	actor.PID PID = 1;
+	actor.PID PID = 1;            // The PID of the activated actor.
 }
 
+// Define a message for signaling the deactivation of an actor.
 message Deactivation {
-	actor.PID PID = 1;
+	actor.PID PID = 1;            // The PID of the deactivated actor.
 }
 
+// Define a message for requesting the activation of an actor.
 message ActivationRequest {
-	string Kind = 1;
-	string ID = 2;
-	string Region = 3;
-	uint64 topologyHash = 4;
+	string Kind = 1;              // The kind/type of the actor to be activated.
+	string ID = 2;                // The unique identifier of the actor.
+	string Region = 3;            // The region where the actor should be activated.
+	uint64 topologyHash = 4;      // A hash representing the topology at the time of the request.
 }
 
+// Define a message representing the response to an activation request.
 message ActivationResponse {
-	actor.PID PID = 1;
-	bool success = 2;
-	uint64 topologyHash = 3;
+	actor.PID PID = 1;            // The PID of the actor that was activated.
+	bool success = 2;             // A flag indicating whether the activation was successful.
+	uint64 topologyHash = 3;      // A hash representing the topology at the time of the response.
 }

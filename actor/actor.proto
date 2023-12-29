@@ -1,16 +1,24 @@
+// Define the syntax version for this protobuf file, which is proto3.
 syntax = "proto3";
+
+// Specify the package name for the protobuf definitions.
 package actor;
+
+// Specify the Go package path for the generated code from this protobuf file.
 option go_package = "github.com/anthdm/hollywood/actor";
 
+// Define a message representing a Process Identifier (PID) in the actor system.
 message PID {
-	string address = 1;
-	string ID = 2;
+	string address = 1; // The address of the actor (could be a network address or a unique identifier).
+	string ID = 2;      // A unique identifier for the actor within the actor system.
 }
 
+// Define a message representing a Ping, used for health checking or connectivity testing in the system.
 message Ping {
-	PID from = 1;  
+	PID from = 1;  // The PID of the actor sending the Ping message.
 }
 
+// Define a message representing a Pong, which is typically a response to a Ping.
 message Pong {
-	PID from = 1;
+	PID from = 1; // The PID of the actor sending the Pong message.
 }
