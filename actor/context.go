@@ -29,9 +29,9 @@ type Context struct {
 // It initializes a new context with a process identifier and an empty map for child processes.
 func newContext(e *Engine, pid *PID) *Context {
 	return &Context{
-		engine:   e,                           // Set the Engine reference.
-		pid:      pid,                         // Set the process identifier.
-		children: safemap.New[string, *PID](), // Initialize an empty map for child PIDs.
+		engine:   e,
+		pid:      pid,
+		children: safemap.New[string, *PID](),
 	}
 }
 

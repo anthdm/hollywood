@@ -41,18 +41,15 @@ type process struct {
 // newProcess creates a new instance of a process.
 // It initializes the process with the provided Engine and options.
 func newProcess(e *Engine, opts Opts) *process {
-	// pid creates a new process identifier using Engine's address, the kind of the process, and its ID.
+
 	pid := NewPID(e.address, opts.Kind+pidSeparator+opts.ID)
-
 	ctx := newContext(e, pid)
-
-	// p is a pointer to the new process being created with the specified pid, inbox, options, context, and message buffer.
 	p := &process{
 		pid:     pid,
-		inbox:   NewInbox(opts.InboxSize), // Initializes the inbox with the specified size from the options.
-		Opts:    opts,                     // Sets the process options.
-		context: ctx,                      // Sets the process context.
-		mbuffer: nil,                      // Initializes the message buffer as nil.
+		inbox:   NewInbox(opts.InboxSize),
+		Opts:    opts,
+		context: ctx,
+		mbuffer: nil,
 	}
 
 	// Start the inbox to begin processing messages.
