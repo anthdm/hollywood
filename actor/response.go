@@ -22,7 +22,7 @@ type Response struct {
 func NewResponse(e *Engine, timeout time.Duration) *Response {
 	return &Response{
 		engine:  e,
-		result:  make(chan any, 1), // Initializes the result channel with a buffer size of 1.
+		result:  make(chan any, 1),
 		timeout: timeout,
 		pid:     NewPID(e.address, "response"+pidSeparator+strconv.Itoa(rand.Intn(math.MaxInt32))),
 	}
@@ -34,14 +34,14 @@ func (r *Response) Result() (any, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), r.timeout)
 	defer func() {
 		cancel()
-		r.engine.Registry.Remove(r.pid) // Remove the response from the registry after handling.
+		r.engine.Registry.Remove(r.pid)
 	}()
 
 	select {
 	case resp := <-r.result:
 		return resp, nil
 	case <-ctx.Done():
-		return nil, ctx.Err() // Return nil and an error if the context's deadline is exceeded.
+		return nil, ctx.Err()
 	}
 }
 

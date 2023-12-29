@@ -75,28 +75,22 @@ func (a *Agent) Receive(c *actor.Context) {
 		// Handle the Started message (no action required).
 
 	case *ActorTopology:
-		// Handle an ActorTopology message.
 		a.handleActorTopology(msg)
 
 	case *Members:
-		// Handle a Members message which contains information about cluster members.
 		a.handleMembers(msg.Members)
 
 	case *Activation:
-		// Handle an Activation message to activate an entity.
 		a.handleActivation(msg)
 
 	case activate:
-		// Handle an activate message, which requests activation of a specific entity.
 		pid := a.activate(msg.kind, msg.id, msg.region)
-		c.Respond(pid) // Respond with the PID of the activated entity.
+		c.Respond(pid)
 
 	case deactivate:
-		// Handle a deactivate message by broadcasting a Deactivation message.
 		a.bcast(&Deactivation{PID: msg.pid})
 
 	case *Deactivation:
-		// Handle a Deactivation message to deactivate an entity.
 		a.handleDeactivation(msg)
 
 	case *ActivationRequest:
@@ -107,7 +101,6 @@ func (a *Agent) Receive(c *actor.Context) {
 		c.Respond(a.members.Slice())
 
 	case getKinds:
-		// Handle a getKinds message by responding with a slice of kinds.
 		kinds := make([]string, len(a.kinds))
 		i := 0
 		for kind := range a.kinds {
@@ -117,7 +110,6 @@ func (a *Agent) Receive(c *actor.Context) {
 		c.Respond(kinds)
 
 	case getActive:
-		// Handle a getActive message by responding with the PID of the requested active entity.
 		pid := a.activated[msg.id]
 		c.Respond(pid)
 	}
@@ -135,7 +127,6 @@ func (a *Agent) handleActorTopology(msg *ActorTopology) {
 // handleDeactivation processes a Deactivation message.
 // It removes the deactivated actor from the agent's state and notifies the cluster of the deactivation.
 func (a *Agent) handleDeactivation(msg *Deactivation) {
-	// Remove the actor's PID from the activated list.
 	a.removeActivated(msg.PID)
 
 	// Send a Poison message to the actor's PID to shut it down.
