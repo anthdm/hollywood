@@ -4,7 +4,7 @@ import (
 	"github.com/zeebo/xxh3"
 )
 
-// Constants for the PID separator.
+// The PID separator.
 const pidSeparator = "/"
 
 // NewPID is a function that returns a new Process ID given an address and an id.

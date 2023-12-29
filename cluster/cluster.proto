@@ -1,13 +1,9 @@
-// Define the syntax version for this protobuf file, which is proto3.
 syntax = "proto3";
 
-// Specify the package name for the protobuf definitions.
 package cluster;
 
-// Specify the Go package path for the generated code from this protobuf file.
 option go_package = "github.com/anthdm/hollywood/cluster";
 
-// Import the actor.proto file to use its definitions.
 import "actor.proto";
 
 // Define a message representing a Cluster Identifier (CID) with actor PID and additional cluster-related information.

@@ -31,15 +31,15 @@ func NewResponse(e *Engine, timeout time.Duration) *Response {
 // Result waits for the response message within the specified timeout and returns it.
 // If the timeout is exceeded, it returns an error.
 func (r *Response) Result() (any, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), r.timeout) // Create a context with timeout.
+	ctx, cancel := context.WithTimeout(context.Background(), r.timeout)
 	defer func() {
-		cancel()                        // Cancel the context when the function returns.
+		cancel()
 		r.engine.Registry.Remove(r.pid) // Remove the response from the registry after handling.
 	}()
 
 	select {
 	case resp := <-r.result:
-		return resp, nil // Return the response received on the result channel.
+		return resp, nil
 	case <-ctx.Done():
 		return nil, ctx.Err() // Return nil and an error if the context's deadline is exceeded.
 	}
@@ -53,11 +53,6 @@ func (r *Response) Send(_ *PID, msg any, _ *PID) {
 // PID returns the unique identifier of the response.
 func (r *Response) PID() *PID { return r.pid }
 
-// Shutdown is a placeholder function for the Response, it has no operation.
 func (r *Response) Shutdown(_ *sync.WaitGroup) {}
-
-// Start is a placeholder function for the Response, it has no operation.
-func (r *Response) Start() {}
-
-// Invoke is a placeholder function for the Response, it has no operation.
-func (r *Response) Invoke([]Envelope) {}
+func (r *Response) Start()                     {}
+func (r *Response) Invoke([]Envelope)          {}

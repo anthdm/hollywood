@@ -4,7 +4,6 @@ import (
 	"sync"
 )
 
-// LocalLookupAddr is a constant used as an address for local process lookups.
 const LocalLookupAddr = "local"
 
 // Registry is a struct that holds a mapping of process identifiers to their respective Processers.
@@ -26,19 +25,19 @@ func newRegistry(e *Engine) *Registry {
 
 // Remove deletes a Processer from the registry using its PID.
 func (r *Registry) Remove(pid *PID) {
-	r.mu.Lock()              // Lock the mutex for writing.
-	defer r.mu.Unlock()      // Ensure the mutex is unlocked after this function.
-	delete(r.lookup, pid.ID) // Remove the Processer from the lookup map by its ID.
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	delete(r.lookup, pid.ID)
 }
 
 // get returns the processer for the given PID, if it exists.
 // If it doesn't exist, nil is returned so the caller must check for that
 // and direct the message to the deadletter processer instead.
 func (r *Registry) get(pid *PID) Processer {
-	r.mu.RLock()         // Lock the mutex for reading.
-	defer r.mu.RUnlock() // Ensure the mutex is unlocked after this function.
+	r.mu.RLock()
+	defer r.mu.RUnlock()
 	if proc, ok := r.lookup[pid.ID]; ok {
-		return proc // Return the found Processer.
+		return proc
 	}
 	return nil // Return nil if no Processer is found.
 }
@@ -53,8 +52,8 @@ func (r *Registry) getByID(id string) Processer {
 // add adds a new Processer to the registry.
 // If a duplicate ID is detected, it broadcasts an ActorDuplicateIdEvent and does not add the Processer.
 func (r *Registry) add(proc Processer) {
-	r.mu.Lock()         // Lock the mutex for writing.
-	id := proc.PID().ID // Get the ID of the Processer's PID.
+	r.mu.Lock()
+	id := proc.PID().ID
 	if _, ok := r.lookup[id]; ok {
 		r.mu.Unlock()                                                   // Unlock the mutex if a duplicate is found.
 		r.engine.BroadcastEvent(ActorDuplicateIdEvent{PID: proc.PID()}) // Broadcast a duplicate ID event.

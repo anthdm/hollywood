@@ -169,13 +169,9 @@ type SendRepeater struct {
 func (sr SendRepeater) start() {
 	// Create a new ticker with the interval of the SendRepeater.
 	ticker := time.NewTicker(sr.interval)
-	// Start a goroutine.
 	go func() {
-		// Loop indefinitely.
 		for {
-			// Select on the ticker's channel and the cancelch channel of the SendRepeater.
 			select {
-			// If the ticker's channel is ready, send a message to the target of the SendRepeater.
 			case <-ticker.C:
 				sr.engine.SendWithSender(sr.target, sr.msg, sr.self)
 			// If the cancelch channel of the SendRepeater is ready, stop the ticker and return from the goroutine.

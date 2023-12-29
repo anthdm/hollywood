@@ -40,7 +40,7 @@ type CID struct {
 func (x *CID) Reset() {
 	*x = CID{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_cluster_cluster_proto_msgTypes[0]
+		mi := &file_cluster_proto_msgTypes[0]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -53,7 +53,7 @@ func (x *CID) String() string {
 func (*CID) ProtoMessage() {}
 
 func (x *CID) ProtoReflect() protoreflect.Message {
-	mi := &file_cluster_cluster_proto_msgTypes[0]
+	mi := &file_cluster_proto_msgTypes[0]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -112,7 +112,7 @@ type Member struct {
 func (x *Member) Reset() {
 	*x = Member{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_cluster_cluster_proto_msgTypes[1]
+		mi := &file_cluster_proto_msgTypes[1]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -125,7 +125,7 @@ func (x *Member) String() string {
 func (*Member) ProtoMessage() {}
 
 func (x *Member) ProtoReflect() protoreflect.Message {
-	mi := &file_cluster_cluster_proto_msgTypes[1]
+	mi := &file_cluster_proto_msgTypes[1]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -181,7 +181,7 @@ type Members struct {
 func (x *Members) Reset() {
 	*x = Members{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_cluster_cluster_proto_msgTypes[2]
+		mi := &file_cluster_proto_msgTypes[2]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -194,7 +194,7 @@ func (x *Members) String() string {
 func (*Members) ProtoMessage() {}
 
 func (x *Members) ProtoReflect() protoreflect.Message {
-	mi := &file_cluster_cluster_proto_msgTypes[2]
+	mi := &file_cluster_proto_msgTypes[2]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -229,7 +229,7 @@ type MembersJoin struct {
 func (x *MembersJoin) Reset() {
 	*x = MembersJoin{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_cluster_cluster_proto_msgTypes[3]
+		mi := &file_cluster_proto_msgTypes[3]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -242,7 +242,7 @@ func (x *MembersJoin) String() string {
 func (*MembersJoin) ProtoMessage() {}
 
 func (x *MembersJoin) ProtoReflect() protoreflect.Message {
-	mi := &file_cluster_cluster_proto_msgTypes[3]
+	mi := &file_cluster_proto_msgTypes[3]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -277,7 +277,7 @@ type MembersLeave struct {
 func (x *MembersLeave) Reset() {
 	*x = MembersLeave{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_cluster_cluster_proto_msgTypes[4]
+		mi := &file_cluster_proto_msgTypes[4]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -290,7 +290,7 @@ func (x *MembersLeave) String() string {
 func (*MembersLeave) ProtoMessage() {}
 
 func (x *MembersLeave) ProtoReflect() protoreflect.Message {
-	mi := &file_cluster_cluster_proto_msgTypes[4]
+	mi := &file_cluster_proto_msgTypes[4]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -329,7 +329,7 @@ type Topology struct {
 func (x *Topology) Reset() {
 	*x = Topology{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_cluster_cluster_proto_msgTypes[5]
+		mi := &file_cluster_proto_msgTypes[5]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -342,7 +342,7 @@ func (x *Topology) String() string {
 func (*Topology) ProtoMessage() {}
 
 func (x *Topology) ProtoReflect() protoreflect.Message {
-	mi := &file_cluster_cluster_proto_msgTypes[5]
+	mi := &file_cluster_proto_msgTypes[5]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -405,7 +405,7 @@ type ActorInfo struct {
 func (x *ActorInfo) Reset() {
 	*x = ActorInfo{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_cluster_cluster_proto_msgTypes[6]
+		mi := &file_cluster_proto_msgTypes[6]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -418,7 +418,7 @@ func (x *ActorInfo) String() string {
 func (*ActorInfo) ProtoMessage() {}
 
 func (x *ActorInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_cluster_cluster_proto_msgTypes[6]
+	mi := &file_cluster_proto_msgTypes[6]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -453,7 +453,7 @@ type ActorTopology struct {
 func (x *ActorTopology) Reset() {
 	*x = ActorTopology{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_cluster_cluster_proto_msgTypes[7]
+		mi := &file_cluster_proto_msgTypes[7]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -466,7 +466,7 @@ func (x *ActorTopology) String() string {
 func (*ActorTopology) ProtoMessage() {}
 
 func (x *ActorTopology) ProtoReflect() protoreflect.Message {
-	mi := &file_cluster_cluster_proto_msgTypes[7]
+	mi := &file_cluster_proto_msgTypes[7]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -501,7 +501,7 @@ type Activation struct {
 func (x *Activation) Reset() {
 	*x = Activation{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_cluster_cluster_proto_msgTypes[8]
+		mi := &file_cluster_proto_msgTypes[8]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -514,7 +514,7 @@ func (x *Activation) String() string {
 func (*Activation) ProtoMessage() {}
 
 func (x *Activation) ProtoReflect() protoreflect.Message {
-	mi := &file_cluster_cluster_proto_msgTypes[8]
+	mi := &file_cluster_proto_msgTypes[8]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -549,7 +549,7 @@ type Deactivation struct {
 func (x *Deactivation) Reset() {
 	*x = Deactivation{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_cluster_cluster_proto_msgTypes[9]
+		mi := &file_cluster_proto_msgTypes[9]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -562,7 +562,7 @@ func (x *Deactivation) String() string {
 func (*Deactivation) ProtoMessage() {}
 
 func (x *Deactivation) ProtoReflect() protoreflect.Message {
-	mi := &file_cluster_cluster_proto_msgTypes[9]
+	mi := &file_cluster_proto_msgTypes[9]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -600,7 +600,7 @@ type ActivationRequest struct {
 func (x *ActivationRequest) Reset() {
 	*x = ActivationRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_cluster_cluster_proto_msgTypes[10]
+		mi := &file_cluster_proto_msgTypes[10]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -613,7 +613,7 @@ func (x *ActivationRequest) String() string {
 func (*ActivationRequest) ProtoMessage() {}
 
 func (x *ActivationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_cluster_cluster_proto_msgTypes[10]
+	mi := &file_cluster_proto_msgTypes[10]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -671,7 +671,7 @@ type ActivationResponse struct {
 func (x *ActivationResponse) Reset() {
 	*x = ActivationResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_cluster_cluster_proto_msgTypes[11]
+		mi := &file_cluster_proto_msgTypes[11]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -684,7 +684,7 @@ func (x *ActivationResponse) String() string {
 func (*ActivationResponse) ProtoMessage() {}
 
 func (x *ActivationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_cluster_cluster_proto_msgTypes[11]
+	mi := &file_cluster_proto_msgTypes[11]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -806,7 +806,7 @@ func file_cluster_cluster_proto_rawDescGZIP() []byte {
 	return file_cluster_cluster_proto_rawDescData
 }
 
-var file_cluster_cluster_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
+var file_cluster_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
 var file_cluster_cluster_proto_goTypes = []interface{}{
 	(*CID)(nil),                // 0: cluster.CID
 	(*Member)(nil),             // 1: cluster.Member
@@ -849,7 +849,7 @@ func file_cluster_cluster_proto_init() {
 		return
 	}
 	if !protoimpl.UnsafeEnabled {
-		file_cluster_cluster_proto_msgTypes[0].Exporter = func(v interface{}, i int) interface{} {
+		file_cluster_proto_msgTypes[0].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*CID); i {
 			case 0:
 				return &v.state
@@ -861,7 +861,7 @@ func file_cluster_cluster_proto_init() {
 				return nil
 			}
 		}
-		file_cluster_cluster_proto_msgTypes[1].Exporter = func(v interface{}, i int) interface{} {
+		file_cluster_proto_msgTypes[1].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*Member); i {
 			case 0:
 				return &v.state
@@ -873,7 +873,7 @@ func file_cluster_cluster_proto_init() {
 				return nil
 			}
 		}
-		file_cluster_cluster_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
+		file_cluster_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*Members); i {
 			case 0:
 				return &v.state
@@ -885,7 +885,7 @@ func file_cluster_cluster_proto_init() {
 				return nil
 			}
 		}
-		file_cluster_cluster_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
+		file_cluster_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*MembersJoin); i {
 			case 0:
 				return &v.state
@@ -897,7 +897,7 @@ func file_cluster_cluster_proto_init() {
 				return nil
 			}
 		}
-		file_cluster_cluster_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
+		file_cluster_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*MembersLeave); i {
 			case 0:
 				return &v.state
@@ -909,7 +909,7 @@ func file_cluster_cluster_proto_init() {
 				return nil
 			}
 		}
-		file_cluster_cluster_proto_msgTypes[5].Exporter = func(v interface{}, i int) interface{} {
+		file_cluster_proto_msgTypes[5].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*Topology); i {
 			case 0:
 				return &v.state
@@ -921,7 +921,7 @@ func file_cluster_cluster_proto_init() {
 				return nil
 			}
 		}
-		file_cluster_cluster_proto_msgTypes[6].Exporter = func(v interface{}, i int) interface{} {
+		file_cluster_proto_msgTypes[6].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ActorInfo); i {
 			case 0:
 				return &v.state
@@ -933,7 +933,7 @@ func file_cluster_cluster_proto_init() {
 				return nil
 			}
 		}
-		file_cluster_cluster_proto_msgTypes[7].Exporter = func(v interface{}, i int) interface{} {
+		file_cluster_proto_msgTypes[7].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ActorTopology); i {
 			case 0:
 				return &v.state
@@ -945,7 +945,7 @@ func file_cluster_cluster_proto_init() {
 				return nil
 			}
 		}
-		file_cluster_cluster_proto_msgTypes[8].Exporter = func(v interface{}, i int) interface{} {
+		file_cluster_proto_msgTypes[8].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*Activation); i {
 			case 0:
 				return &v.state
@@ -957,7 +957,7 @@ func file_cluster_cluster_proto_init() {
 				return nil
 			}
 		}
-		file_cluster_cluster_proto_msgTypes[9].Exporter = func(v interface{}, i int) interface{} {
+		file_cluster_proto_msgTypes[9].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*Deactivation); i {
 			case 0:
 				return &v.state
@@ -969,7 +969,7 @@ func file_cluster_cluster_proto_init() {
 				return nil
 			}
 		}
-		file_cluster_cluster_proto_msgTypes[10].Exporter = func(v interface{}, i int) interface{} {
+		file_cluster_proto_msgTypes[10].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ActivationRequest); i {
 			case 0:
 				return &v.state
@@ -981,7 +981,7 @@ func file_cluster_cluster_proto_init() {
 				return nil
 			}
 		}
-		file_cluster_cluster_proto_msgTypes[11].Exporter = func(v interface{}, i int) interface{} {
+		file_cluster_proto_msgTypes[11].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ActivationResponse); i {
 			case 0:
 				return &v.state
@@ -1006,7 +1006,7 @@ func file_cluster_cluster_proto_init() {
 		},
 		GoTypes:           file_cluster_cluster_proto_goTypes,
 		DependencyIndexes: file_cluster_cluster_proto_depIdxs,
-		MessageInfos:      file_cluster_cluster_proto_msgTypes,
+		MessageInfos:      file_cluster_proto_msgTypes,
 	}.Build()
 	File_cluster_cluster_proto = out.File
 	file_cluster_cluster_proto_rawDesc = nil

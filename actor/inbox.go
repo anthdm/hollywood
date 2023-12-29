@@ -7,13 +7,11 @@ import (
 	"github.com/anthdm/hollywood/ringbuffer"
 )
 
-// Constants for default throughput and message batch size.
 const (
 	defaultThroughput = 300
 	messageBatchSize  = 1024 * 4
 )
 
-// Constants representing the states of the scheduler.
 const (
 	idle int32 = iota
 	running
@@ -94,7 +92,6 @@ func (in *Inbox) process() {
 // It iterates through the messages in the ring buffer, invoking the processer for each batch of messages based on the scheduler's throughput.
 // If the processer status is stopped, the method stops processing.
 func (in *Inbox) run() {
-	// Initialize variables i and t
 	i, t := 0, in.scheduler.Throughput()
 	// Continue processing messages until the processer status is stopped
 	for atomic.LoadInt32(&in.procStatus) != stopped {
@@ -110,7 +107,7 @@ func (in *Inbox) run() {
 			// Invoke the processer with the retrieved messages
 			in.proc.Invoke(msgs)
 		} else {
-			// If no messages are retrieved, return
+			// If no messages are retrieved
 			return
 		}
 	}

@@ -36,7 +36,6 @@ type Remote struct {
 	state           atomic.Uint32   // The state of the remote system.
 }
 
-// Constants representing the different states a Remote can be in.
 const (
 	stateInvalid     uint32 = iota // The initial state of a Remote.
 	stateInitialized               // The state of a Remote after it has been initialized.
@@ -71,13 +70,13 @@ func (r *Remote) Start(e *actor.Engine) error {
 	if r.state.Load() != stateInitialized {
 		return fmt.Errorf("remote already started")
 	}
-	// Set the state of the Remote to stateRunning.
+
 	r.state.Store(stateRunning)
-	// Set the engine field to the provided Engine.
+
 	r.engine = e
 	var ln net.Listener
 	var err error
-	// Listen on the address of the Remote.
+
 	switch r.config.TlsConfig {
 	case nil:
 		ln, err = net.Listen("tcp", r.addr)
@@ -89,27 +88,22 @@ func (r *Remote) Start(e *actor.Engine) error {
 		return fmt.Errorf("remote failed to listen: %w", err)
 	}
 	slog.Debug("listening", "addr", r.addr)
-	// Create a new DRPC mux.
+
 	mux := drpcmux.New()
-	// Register the Remote with the DRPC server.
+
 	err = DRPCRegisterRemote(mux, r.streamReader)
 	if err != nil {
 		return fmt.Errorf("failed to register remote: %w", err)
 	}
-	// Create a new DRPC server.
+
 	s := drpcserver.New(mux)
 
-	// Spawn a new streamRouter.
 	r.streamRouterPID = r.engine.Spawn(newStreamRouter(r.engine, r.config.TlsConfig), "router", actor.WithInboxSize(1024*1024))
 	slog.Debug("server started", "listenAddr", r.addr)
-	// Initialize the stopWg field with a new WaitGroup and add 1 to it.
 	r.stopWg = &sync.WaitGroup{}
 	r.stopWg.Add(1)
-	// Initialize the stopCh field with a new channel.
 	r.stopCh = make(chan struct{})
-	// Create a new context with a cancel function.
 	ctx, cancel := context.WithCancel(context.Background())
-	// Start a goroutine that serves the DRPC server until the stopCh channel is closed.
 	go func() {
 		defer r.stopWg.Done()
 		err := s.Serve(ctx, ln)
@@ -119,7 +113,7 @@ func (r *Remote) Start(e *actor.Engine) error {
 			slog.Debug("drpcserver stopped")
 		}
 	}()
-	// Start a goroutine that waits for the stopCh channel to be closed and then cancels the context.
+
 	go func() {
 		<-r.stopCh
 		cancel()

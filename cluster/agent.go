@@ -8,15 +8,12 @@ import (
 	"golang.org/x/exp/maps"
 )
 
-// getActive is a message type used to request the active status of an entity based on its ID.
 type getActive struct {
-	id string // id represents the unique identifier of the entity being queried.
+	id string
 }
 
-// getMembers is a message type used to request a list of members in the cluster.
 type getMembers struct{}
 
-// getKinds is a message type used to request the kinds of entities present in the cluster.
 type getKinds struct{}
 
 // activate is a message type used to request the activation of an entity in the cluster.
@@ -48,7 +45,7 @@ type Agent struct {
 // NewAgent is a function that creates and returns a new agent for the cluster.
 // It initializes the agent with the kinds of entities it manages and returns a Producer that creates a Receiver.
 func NewAgent(c *Cluster) actor.Producer {
-	// Initialize maps to store kinds of entities and their local variants.
+
 	kinds := make(map[string]bool)
 	localKinds := make(map[string]kind)
 
@@ -61,11 +58,11 @@ func NewAgent(c *Cluster) actor.Producer {
 	// Return a Producer function that, when called, creates and returns a new Agent as a Receiver.
 	return func() actor.Receiver {
 		return &Agent{
-			members:    NewMemberSet(),              // Initialize a new MemberSet for tracking cluster members.
-			cluster:    c,                           // Set the cluster reference.
-			kinds:      kinds,                       // Set the kinds map.
-			localKinds: localKinds,                  // Set the localKinds map.
-			activated:  make(map[string]*actor.PID), // Initialize the activated map for tracking active actors.
+			members:    NewMemberSet(),
+			cluster:    c,
+			kinds:      kinds,
+			localKinds: localKinds,
+			activated:  make(map[string]*actor.PID),
 		}
 	}
 }
@@ -75,7 +72,7 @@ func NewAgent(c *Cluster) actor.Producer {
 func (a *Agent) Receive(c *actor.Context) {
 	switch msg := c.Message().(type) {
 	case actor.Started:
-		// Handle the Started message (usually no action required).
+		// Handle the Started message (no action required).
 
 	case *ActorTopology:
 		// Handle an ActorTopology message.
@@ -103,12 +100,10 @@ func (a *Agent) Receive(c *actor.Context) {
 		a.handleDeactivation(msg)
 
 	case *ActivationRequest:
-		// Handle an ActivationRequest message.
 		resp := a.handleActivationRequest(msg)
-		c.Respond(resp) // Respond with the result of the activation request.
+		c.Respond(resp)
 
 	case getMembers:
-		// Respond with a slice of current cluster members upon a getMembers message.
 		c.Respond(a.members.Slice())
 
 	case getKinds:
@@ -131,7 +126,6 @@ func (a *Agent) Receive(c *actor.Context) {
 // handleActorTopology processes an ActorTopology message.
 // It updates the agent's state based on the topology information received.
 func (a *Agent) handleActorTopology(msg *ActorTopology) {
-	// Iterate over the actors provided in the topology message.
 	for _, actorInfo := range msg.Actors {
 		// Add each actor's PID to the activated list of the agent.
 		a.addActivated(actorInfo.PID)
@@ -163,9 +157,9 @@ func (a *Agent) handleActivation(msg *Activation) {
 // handleActivationRequest processes an ActivationRequest message.
 // It checks if the requested kind is available locally and, if so, activates it.
 func (a *Agent) handleActivationRequest(msg *ActivationRequest) *ActivationResponse {
+
 	// Check if the requested kind is registered locally on this node.
 	if !a.hasKindLocal(msg.Kind) {
-		// Log an error if the kind is not registered and return a response indicating failure.
 		slog.Error("received activation request but kind not registered locally on this node", "kind", msg.Kind)
 		return &ActivationResponse{Success: false}
 	}
@@ -190,7 +184,6 @@ func (a *Agent) activate(kind, id, region string) *actor.PID {
 	// Filter the members of the cluster by the specified kind.
 	members := a.members.FilterByKind(kind)
 	if len(members) == 0 {
-		// Warn if no members of the specified kind are found.
 		slog.Warn("could not find any members with kind", "kind", kind)
 		return nil
 	}
@@ -202,7 +195,6 @@ func (a *Agent) activate(kind, id, region string) *actor.PID {
 		Kind:    kind,
 	})
 	if owner == nil {
-		// Warn if the activation strategy doesn't find a suitable member.
 		slog.Warn("activator did not found a member to activate on")
 		return nil
 	}
@@ -228,12 +220,10 @@ func (a *Agent) activate(kind, id, region string) *actor.PID {
 		}
 		r, ok := resp.(*ActivationResponse)
 		if !ok {
-			// Log an error if the response is not of type *ActivationResponse.
 			slog.Error("expected *ActivationResponse", "msg", reflect.TypeOf(resp))
 			return nil
 		}
 		if !r.Success {
-			// Log an error if the activation is not successful.
 			slog.Error("activation unsuccessful", "msg", r)
 			return nil
 		}
@@ -245,7 +235,7 @@ func (a *Agent) activate(kind, id, region string) *actor.PID {
 		PID: activationResp.PID,
 	})
 
-	return activationResp.PID // Return the PID of the activated actor.
+	return activationResp.PID
 }
 
 // handleMembers processes a list of cluster members, determining which members have joined or left.
@@ -257,14 +247,12 @@ func (a *Agent) handleMembers(members []*Member) {
 	// Determine which members have left by excluding the new list from existing members.
 	left := a.members.Except(members)
 
-	// Iterate through the joined members and handle each member's joining.
 	for _, member := range joined {
-		a.memberJoin(member) // Handle actions to be taken when a member joins.
+		a.memberJoin(member)
 	}
 
-	// Iterate through the members that have left and handle each member's departure.
 	for _, member := range left {
-		a.memberLeave(member) // Handle actions to be taken when a member leaves.
+		a.memberLeave(member)
 	}
 }
 
@@ -300,7 +288,6 @@ func (a *Agent) memberJoin(member *Member) {
 		Member: member,
 	})
 
-	// Log the details of the member that joined.
 	slog.Debug("member joined", "id", member.ID, "host", member.Host, "kinds", member.Kinds, "region", member.Region)
 }
 
@@ -323,17 +310,14 @@ func (a *Agent) memberLeave(member *Member) {
 	// Broadcast a MemberLeaveEvent to the cluster, notifying other components of the member's departure.
 	a.cluster.engine.BroadcastEvent(MemberLeaveEvent{Member: member})
 
-	// Log the details of the member that left for debugging purposes.
 	slog.Debug("member left", "id", member.ID, "host", member.Host, "kinds", member.Kinds)
 }
 
 // bcast broadcasts a message to all members of the cluster.
 func (a *Agent) bcast(msg any) {
-	// Iterate over each member in the cluster.
 	a.members.ForEach(func(member *Member) bool {
-		// Send the message to the PID (Process Identifier) of each member.
 		a.cluster.engine.Send(member.PID(), msg)
-		return true // Continue iteration for all members.
+		return true
 	})
 }
 
@@ -343,7 +327,6 @@ func (a *Agent) addActivated(pid *actor.PID) {
 	if _, ok := a.activated[pid.ID]; !ok {
 		// If not, add the PID to the activated list.
 		a.activated[pid.ID] = pid
-		// Log that a new actor is now available in the cluster.
 		slog.Debug("new actor available on cluster", "pid", pid)
 	}
 }
@@ -352,13 +335,11 @@ func (a *Agent) addActivated(pid *actor.PID) {
 func (a *Agent) removeActivated(pid *actor.PID) {
 	// Delete the actor's PID from the activated list.
 	delete(a.activated, pid.ID)
-	// Log that an actor has been removed from the cluster.
 	slog.Debug("actor removed from cluster", "pid", pid)
 }
 
 // hasKindLocal checks if a given kind name is registered locally on this node.
 func (a *Agent) hasKindLocal(name string) bool {
-	// Check if the kind name exists in the localKinds map.
 	_, ok := a.localKinds[name]
 	return ok // Return true if the kind is registered locally, false otherwise.
 }
@@ -368,15 +349,13 @@ func (a *Agent) rebuildKinds() {
 	// Clear the existing kinds map to prepare for rebuilding.
 	maps.Clear(a.kinds)
 
-	// Iterate over each member in the cluster.
 	a.members.ForEach(func(m *Member) bool {
-		// Iterate through the kinds associated with the member.
 		for _, kind := range m.Kinds {
 			// Add each kind to the kinds map if it's not already present.
 			if _, ok := a.kinds[kind]; !ok {
 				a.kinds[kind] = true
 			}
 		}
-		return true // Continue iteration for all members.
+		return true
 	})
 }

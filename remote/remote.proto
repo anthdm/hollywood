@@ -1,13 +1,9 @@
-// Define the syntax version for this protobuf file, which is proto3.
 syntax = "proto3";
 
-// Specify the package name for the protobuf definitions.
 package remote;
 
-// Specify the Go package path for the generated code from this protobuf file.
 option go_package = "github.com/anthdm/hollywood/remote";
 
-// Import the actor.proto file to use its definitions.
 import "actor.proto";
 
 // Define the Remote service with an RPC method for receiving message envelopes.

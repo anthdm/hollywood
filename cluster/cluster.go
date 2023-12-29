@@ -11,7 +11,6 @@ import (
 )
 
 // requestTimeout defines the default timeout duration for requests within the cluster.
-// It is set to 50 milliseconds.
 var requestTimeout = time.Millisecond * 50
 
 // Producer is a function that can produce an actor.Producer.
@@ -71,22 +70,21 @@ func New(cfg Config) (*Cluster, error) {
 
 	// Generate a unique ID if not provided in the configuration.
 	if len(cfg.ID) == 0 {
-		cfg.ID = uuid.New().String() // Generate a new UUID as the ID.
+		cfg.ID = uuid.New().String()
 	}
 
 	// Set a default region if not provided in the configuration.
 	if len(cfg.Region) == 0 {
-		cfg.Region = "default" // Set 'default' as the default region.
+		cfg.Region = "default"
 	}
 
-	// Create and return a new Cluster instance with the provided configuration.
 	return &Cluster{
-		id:                 cfg.ID,                 // Set the cluster's ID.
-		region:             cfg.Region,             // Set the cluster's region.
-		provider:           cfg.ClusterProvider,    // Set the cluster's provider.
-		engine:             cfg.Engine,             // Set the cluster's engine.
-		kinds:              []kind{},               // Initialize an empty slice for kinds.
-		activationStrategy: cfg.ActivationStrategy, // Set the cluster's activation strategy.
+		id:                 cfg.ID,
+		region:             cfg.Region,
+		provider:           cfg.ClusterProvider,
+		engine:             cfg.Engine,
+		kinds:              []kind{},
+		activationStrategy: cfg.ActivationStrategy,
 	}, nil
 }
 
@@ -150,7 +148,6 @@ func (c *Cluster) Activate(kind string, config *ActivationConfig) *actor.PID {
 		return nil
 	}
 
-	// Return the PID of the activated actor.
 	return pid
 }
 
@@ -217,10 +214,9 @@ func (c *Cluster) HasKind(name string) bool {
 // GetActivated requests the activation status of an actor by its ID within the cluster.
 // It returns the actor's PID if the actor is activated, or nil if not activated or in case of an error.
 func (c *Cluster) GetActivated(id string) *actor.PID {
+
 	// Send a request to the agent PID to get the active status of an actor with the specified ID.
 	resp, err := c.engine.Request(c.agentPID, getActive{id: id}, requestTimeout).Result()
-
-	// Check for any errors in the request. Return nil if an error occurred.
 	if err != nil {
 		return nil
 	}

@@ -10,7 +10,7 @@ type MemberSet struct {
 func NewMemberSet(members ...*Member) *MemberSet {
 	m := make(map[string]*Member)
 	for _, member := range members {
-		m[member.ID] = member // Add each member to the map.
+		m[member.ID] = member
 	}
 	return &MemberSet{
 		members: m,
@@ -35,25 +35,25 @@ func (s *MemberSet) GetByHost(host string) *Member {
 
 // Add adds a new member to the MemberSet.
 func (s *MemberSet) Add(member *Member) {
-	s.members[member.ID] = member // Add the member to the map.
+	s.members[member.ID] = member
 }
 
 // Contains checks if a member is present in the MemberSet.
 func (s *MemberSet) Contains(member *Member) bool {
 	_, ok := s.members[member.ID]
-	return ok // Return true if the member is found.
+	return ok
 }
 
 // Remove removes a member from the MemberSet.
 func (s *MemberSet) Remove(member *Member) {
-	delete(s.members, member.ID) // Remove the member from the map.
+	delete(s.members, member.ID)
 }
 
 // RemoveByHost removes a member with the specified host from the MemberSet.
 func (s *MemberSet) RemoveByHost(host string) {
 	member := s.GetByHost(host)
 	if member != nil {
-		s.Remove(member) // Remove the found member.
+		s.Remove(member)
 	}
 }
 
@@ -72,7 +72,7 @@ func (s *MemberSet) Slice() []*Member {
 func (s *MemberSet) ForEach(fun func(m *Member) bool) {
 	for _, s := range s.members {
 		if !fun(s) {
-			break // Break the loop if the function returns false.
+			break
 		}
 	}
 }

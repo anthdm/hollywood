@@ -16,11 +16,6 @@ type poisonPill struct {
 	graceful bool            // graceful indicates whether the shutdown should be graceful.
 }
 
-// Initialized is an empty struct used as a signal to indicate that an actor or process has been initialized.
 type Initialized struct{}
-
-// Started is an empty struct used as a signal to indicate that an actor or process has started.
 type Started struct{}
-
-// Stopped is an empty struct used as a signal to indicate that an actor or process has stopped.
 type Stopped struct{}

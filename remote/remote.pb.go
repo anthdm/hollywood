@@ -40,7 +40,7 @@ type Envelope struct {
 func (x *Envelope) Reset() {
 	*x = Envelope{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_remote_remote_proto_msgTypes[0]
+		mi := &file_remote_proto_msgTypes[0]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -53,7 +53,7 @@ func (x *Envelope) String() string {
 func (*Envelope) ProtoMessage() {}
 
 func (x *Envelope) ProtoReflect() protoreflect.Message {
-	mi := &file_remote_remote_proto_msgTypes[0]
+	mi := &file_remote_proto_msgTypes[0]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -112,7 +112,7 @@ type Message struct {
 func (x *Message) Reset() {
 	*x = Message{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_remote_remote_proto_msgTypes[1]
+		mi := &file_remote_proto_msgTypes[1]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -125,7 +125,7 @@ func (x *Message) String() string {
 func (*Message) ProtoMessage() {}
 
 func (x *Message) ProtoReflect() protoreflect.Message {
-	mi := &file_remote_remote_proto_msgTypes[1]
+	mi := &file_remote_proto_msgTypes[1]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -181,7 +181,7 @@ type TestMessage struct {
 func (x *TestMessage) Reset() {
 	*x = TestMessage{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_remote_remote_proto_msgTypes[2]
+		mi := &file_remote_proto_msgTypes[2]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -194,7 +194,7 @@ func (x *TestMessage) String() string {
 func (*TestMessage) ProtoMessage() {}
 
 func (x *TestMessage) ProtoReflect() protoreflect.Message {
-	mi := &file_remote_remote_proto_msgTypes[2]
+	mi := &file_remote_proto_msgTypes[2]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -265,7 +265,7 @@ func file_remote_remote_proto_rawDescGZIP() []byte {
 	return file_remote_remote_proto_rawDescData
 }
 
-var file_remote_remote_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_remote_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_remote_remote_proto_goTypes = []interface{}{
 	(*Envelope)(nil),    // 0: remote.Envelope
 	(*Message)(nil),     // 1: remote.Message
@@ -291,7 +291,7 @@ func file_remote_remote_proto_init() {
 		return
 	}
 	if !protoimpl.UnsafeEnabled {
-		file_remote_remote_proto_msgTypes[0].Exporter = func(v interface{}, i int) interface{} {
+		file_remote_proto_msgTypes[0].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*Envelope); i {
 			case 0:
 				return &v.state
@@ -303,7 +303,7 @@ func file_remote_remote_proto_init() {
 				return nil
 			}
 		}
-		file_remote_remote_proto_msgTypes[1].Exporter = func(v interface{}, i int) interface{} {
+		file_remote_proto_msgTypes[1].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*Message); i {
 			case 0:
 				return &v.state
@@ -315,7 +315,7 @@ func file_remote_remote_proto_init() {
 				return nil
 			}
 		}
-		file_remote_remote_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
+		file_remote_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*TestMessage); i {
 			case 0:
 				return &v.state
@@ -340,7 +340,7 @@ func file_remote_remote_proto_init() {
 		},
 		GoTypes:           file_remote_remote_proto_goTypes,
 		DependencyIndexes: file_remote_remote_proto_depIdxs,
-		MessageInfos:      file_remote_remote_proto_msgTypes,
+		MessageInfos:      file_remote_proto_msgTypes,
 	}.Build()
 	File_remote_remote_proto = out.File
 	file_remote_remote_proto_rawDesc = nil

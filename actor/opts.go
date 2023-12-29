@@ -10,7 +10,6 @@ const (
 )
 
 // defaultRestartDelay is a constant representing the default time delay before restarting a process.
-// It's set to 500 milliseconds.
 var defaultRestartDelay = 500 * time.Millisecond
 
 // ReceiveFunc is a type definition for a function that takes a pointer to a Context object.

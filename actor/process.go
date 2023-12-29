@@ -44,7 +44,6 @@ func newProcess(e *Engine, opts Opts) *process {
 	// pid creates a new process identifier using Engine's address, the kind of the process, and its ID.
 	pid := NewPID(e.address, opts.Kind+pidSeparator+opts.ID)
 
-	// ctx initializes a new context for the process, essential for its operations and state management.
 	ctx := newContext(e, pid)
 
 	// p is a pointer to the new process being created with the specified pid, inbox, options, context, and message buffer.
@@ -59,14 +58,13 @@ func newProcess(e *Engine, opts Opts) *process {
 	// Start the inbox to begin processing messages.
 	p.inbox.Start(p)
 
-	// Return the pointer to the newly created process.
 	return p
 }
 
 // applyMiddleware is a function that applies a series of middleware functions to a ReceiveFunc.
 // Middleware functions can modify or extend the behavior of the ReceiveFunc.
 func applyMiddleware(rcv ReceiveFunc, middleware ...MiddlewareFunc) ReceiveFunc {
-	// Iterate over the middleware slice in reverse order.
+
 	for i := len(middleware) - 1; i >= 0; i-- {
 		// Apply the middleware function to the ReceiveFunc.
 		rcv = middleware[i](rcv)
@@ -243,7 +241,7 @@ func (p *process) cleanup(wg *sync.WaitGroup) {
 
 // PID is a method of the process type. It returns the process identifier.
 func (p *process) PID() *PID {
-	return p.pid // Returns the PID (Process Identifier) of the process.
+	return p.pid
 }
 
 // Send is a method of the process type for sending a message.
@@ -256,5 +254,5 @@ func (p *process) Send(_ *PID, msg any, sender *PID) {
 // Shutdown is a method of the process type that initiates the process's shutdown procedure.
 // It takes a WaitGroup to coordinate the shutdown with other goroutines.
 func (p *process) Shutdown(wg *sync.WaitGroup) {
-	p.cleanup(wg) // Calls the cleanup method with the WaitGroup to handle shutdown logistics.
+	p.cleanup(wg)
 }

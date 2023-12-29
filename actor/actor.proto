@@ -1,10 +1,7 @@
-// Define the syntax version for this protobuf file, which is proto3.
 syntax = "proto3";
 
-// Specify the package name for the protobuf definitions.
 package actor;
 
-// Specify the Go package path for the generated code from this protobuf file.
 option go_package = "github.com/anthdm/hollywood/actor";
 
 // Define a message representing a Process Identifier (PID) in the actor system.

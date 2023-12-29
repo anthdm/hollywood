@@ -7,7 +7,6 @@ import (
 )
 
 // memberPingInterval defines the interval at which member ping messages are sent.
-// It is set to 5 seconds.
 const memberPingInterval = time.Second * 5
 
 // MemberAddr represents the address and ID of a cluster member.
@@ -41,16 +40,15 @@ type SelfManaged struct {
 // NewSelfManagedProvider creates a Producer that returns a new SelfManaged instance.
 // This function is used for initializing a SelfManaged provider with given bootstrap addresses.
 func NewSelfManagedProvider(addrs ...MemberAddr) Producer {
-	// The function returns a Producer, which itself returns an actor.Producer.
 	return func(c *Cluster) actor.Producer {
-		// The returned actor.Producer, when invoked, creates and returns a SelfManaged actor.Receiver.
+
 		return func() actor.Receiver {
 			// Initialize and return a SelfManaged instance with the provided cluster and bootstrap addresses.
 			return &SelfManaged{
-				cluster:        c,              // Set the cluster reference.
-				bootstrapAddrs: addrs,          // Set the bootstrap addresses.
-				members:        NewMemberSet(), // Initialize an empty MemberSet for current members.
-				membersAlive:   NewMemberSet(), // Initialize an empty MemberSet for alive members.
+				cluster:        c,
+				bootstrapAddrs: addrs,
+				members:        NewMemberSet(),
+				membersAlive:   NewMemberSet(),
 			}
 		}
 	}
@@ -62,27 +60,27 @@ func (s *SelfManaged) Receive(c *actor.Context) {
 	switch msg := c.Message().(type) {
 	case actor.Started:
 		// Handle the Started message: set up the SelfManaged instance when it starts.
-		s.pid = c.PID()                   // Store the PID of the SelfManaged instance.
-		s.members.Add(s.cluster.Member()) // Add the current cluster member to the members set.
-		// Create a Members message with the current members and send it to the cluster's PID.
+		s.pid = c.PID()
+		s.members.Add(s.cluster.Member())
+
 		members := &Members{
 			Members: s.members.Slice(),
 		}
 		s.cluster.engine.Send(s.cluster.PID(), members)
 		// Start a repeater to send memberPing messages at regular intervals.
 		s.memberPinger = c.SendRepeat(c.PID(), memberPing{}, memberPingInterval)
-		// Start additional setup procedures.
+
 		s.start(c)
 
 	case actor.Stopped:
 		// Handle the Stopped message: perform cleanup when the SelfManaged instance stops.
-		s.memberPinger.Stop()                       // Stop the member pinger.
-		s.cluster.engine.Unsubscribe(s.eventSubPID) // Unsubscribe from cluster events.
+		s.memberPinger.Stop()
+		s.cluster.engine.Unsubscribe(s.eventSubPID)
 
 	case *MembersJoin:
 		// Handle MembersJoin messages: add new members to the cluster.
 		for _, member := range msg.Members {
-			s.addMember(member) // Add each new member to the SelfManaged instance's members set.
+			s.addMember(member)
 		}
 		// Send an updated Members message to all members in the cluster.
 		ourMembers := &Members{
@@ -94,11 +92,11 @@ func (s *SelfManaged) Receive(c *actor.Context) {
 		})
 
 	case *Members:
-		// Handle Members messages: update the list of members.
+
 		for _, member := range msg.Members {
-			s.addMember(member) // Add each member to the SelfManaged instance's members set.
+			s.addMember(member)
 		}
-		// If there are members, send an updated Members message to the cluster's PID.
+
 		if s.members.Len() > 0 {
 			members := &Members{
 				Members: s.members.Slice(),
@@ -119,9 +117,8 @@ func (s *SelfManaged) Receive(c *actor.Context) {
 		})
 
 	case memberLeave:
-		// Handle memberLeave messages: remove a member that has left the cluster.
 		member := s.members.GetByHost(msg.ListenAddr)
-		s.removeMember(member) // Remove the member from the SelfManaged instance's members set.
+		s.removeMember(member)
 	}
 }
 
@@ -137,7 +134,6 @@ func (s *SelfManaged) addMember(member *Member) {
 // removeMember handles the removal of a member from the cluster.
 // It updates the cluster state after the member has been removed.
 func (s *SelfManaged) removeMember(member *Member) {
-	// Check if the member is in the SelfManaged instance's member set.
 	if s.members.Contains(member) {
 		// If the member is found, remove it from the member set.
 		s.members.Remove(member)
@@ -170,21 +166,16 @@ func (s *SelfManaged) start(c *actor.Context) {
 			// This indicates that a remote member is unreachable and should be considered as having left the cluster.
 			ctx.Send(s.pid, memberLeave{ListenAddr: msg.ListenAddr})
 		}
-	}, "event") // The child actor is named "event".
+	}, "event")
 
-	// Subscribe the event child actor to cluster events.
 	s.cluster.engine.Subscribe(s.eventSubPID)
 
-	// Create a MembersJoin message with the current members.
 	members := &MembersJoin{
 		Members: s.members.Slice(),
 	}
 
-	// Iterate over the bootstrap addresses and send the MembersJoin message to each member.
 	for _, ma := range s.bootstrapAddrs {
-		// Create a PID for the member at the bootstrap address.
 		memberPID := actor.NewPID(ma.ListenAddr, "provider/"+ma.ID)
-		// Send the MembersJoin message to the member PID.
 		s.cluster.engine.Send(memberPID, members)
 	}
 }
