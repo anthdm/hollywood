@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"math/rand"
 	"os"
 	"path"
 	"regexp"
@@ -162,15 +161,6 @@ func main() {
 	wg := &sync.WaitGroup{}
 	e.Poison(pid, wg)
 	wg.Wait()
-}
-
-func makeRandomString(n int) string {
-	abc := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-	var res string
-	for i := 0; i < n; i++ {
-		res += string(abc[rand.Intn(len(abc))])
-	}
-	return res
 }
 
 var safeRx = regexp.MustCompile(`[^a-zA-Z0-9]`)
