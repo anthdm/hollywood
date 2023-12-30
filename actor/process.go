@@ -153,6 +153,7 @@ func (p *process) Start() {
 	// Initialize the process by setting its message to Initialized and applying middleware.
 	p.context.message = Initialized{}
 	applyMiddleware(recv.Receive, p.Opts.Middleware...)(p.context)
+	p.context.engine.BroadcastEvent(ActorInitializedEvent{PID: p.pid, Timestamp: time.Now()})
 
 	// Set the process's message to Started, apply middleware, and start the receiver.
 	p.context.message = Started{}

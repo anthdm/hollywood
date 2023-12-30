@@ -250,6 +250,7 @@ Any event that fulfills the `actor.LogEvent` interface will be logged to the def
 message and the attributes of the event set by the `actor.LogEvent` `log()` method.
 
 ### List of internal system events 
+* `actor.ActorInitializedEvent`, an actor has been initialized but did not processed its `actor.Started message`
 * `actor.ActorStartedEvent`, an actor has started
 * `actor.ActorStoppedEvent`, an actor has stopped
 * `actor.DeadLetterEvent`, a message was not delivered to an actor

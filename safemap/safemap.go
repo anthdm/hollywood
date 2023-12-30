@@ -3,44 +3,45 @@ package safemap
 import "sync"
 
 type SafeMap[K comparable, V any] struct {
-	data sync.Map
+	mu   sync.RWMutex
+	data map[K]V
 }
 
 func New[K comparable, V any]() *SafeMap[K, V] {
 	return &SafeMap[K, V]{
-		data: sync.Map{},
+		data: make(map[K]V),
 	}
 }
 
 func (s *SafeMap[K, V]) Set(k K, v V) {
-	s.data.Store(k, v)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.data[k] = v
 }
 
 func (s *SafeMap[K, V]) Get(k K) (V, bool) {
-	val, ok := s.data.Load(k)
-	var zero V
-	if !ok {
-		return zero, false
-	}
-	return val.(V), ok
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	val, ok := s.data[k]
+	return val, ok
 }
 
 func (s *SafeMap[K, V]) Delete(k K) {
-	s.data.Delete(k)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.data, k)
 }
 
 func (s *SafeMap[K, V]) Len() int {
-	count := 0
-	s.data.Range(func(_, _ interface{}) bool {
-		count++
-		return true
-	})
-	return count
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return len(s.data)
 }
 
 func (s *SafeMap[K, V]) ForEach(f func(K, V)) {
-	s.data.Range(func(key, value interface{}) bool {
-		f(key.(K), value.(V))
-		return true
-	})
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	for k, v := range s.data {
+		f(k, v)
+	}
 }

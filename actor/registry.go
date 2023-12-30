@@ -23,6 +23,16 @@ func newRegistry(e *Engine) *Registry {
 	}
 }
 
+// GetPID returns the process id associated for the given kind and its id.
+// GetPID returns nil if the process was not found.
+func (r *Registry) GetPID(kind, id string) *PID {
+	proc := r.getByID(kind + pidSeparator + id)
+	if proc != nil {
+		return proc.PID()
+	}
+	return nil
+}
+
 // Remove deletes a Processer from the registry using its PID.
 func (r *Registry) Remove(pid *PID) {
 	r.mu.Lock()
