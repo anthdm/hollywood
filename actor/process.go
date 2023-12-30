@@ -186,13 +186,9 @@ func (p *process) cleanup(wg *sync.WaitGroup) {
 	}
 
 	if p.context.children.Len() > 0 {
-		childsWg := &sync.WaitGroup{}
 		children := p.context.Children()
 		for _, pid := range children {
-			childsWg.Add(1)
-			proc := p.context.engine.Registry.get(pid)
-			proc.Shutdown(childsWg)
-			childsWg.Wait()
+			p.context.engine.Poison(pid).Wait()
 		}
 	}
 
