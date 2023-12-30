@@ -195,7 +195,6 @@ func (e *Engine) SendRepeat(pid *PID, msg any, interval time.Duration) SendRepea
 
 // Stop will send a non-graceful poisonPill message to the process that is associated with the given PID.
 // The process will shut down immediately, once it has processed the poisonPill messsage.
-// If given a WaitGroup, it blocks till the process is completely shutdown.
 func (e *Engine) Stop(pid *PID, wg ...*sync.WaitGroup) *sync.WaitGroup {
 	return e.sendPoisonPill(pid, false, wg...)
 }

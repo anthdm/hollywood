@@ -22,6 +22,11 @@ type Processer interface {
 	Shutdown(*sync.WaitGroup)
 }
 
+const (
+	procStateRunning int32 = iota
+	procStateStopped
+)
+
 type process struct {
 	Opts
 
@@ -176,29 +181,26 @@ func (p *process) tryRestart(v any) {
 }
 
 func (p *process) cleanup(wg *sync.WaitGroup) {
+	if p.context.parentCtx != nil {
+		p.context.parentCtx.children.Delete(p.Kind)
+	}
+
+	if p.context.children.Len() > 0 {
+		childsWg := &sync.WaitGroup{}
+		children := p.context.Children()
+		for _, pid := range children {
+			childsWg.Add(1)
+			proc := p.context.engine.Registry.get(pid)
+			proc.Shutdown(childsWg)
+			childsWg.Wait()
+		}
+	}
+
 	p.inbox.Stop()
 	p.context.engine.Registry.Remove(p.pid)
 	p.context.message = Stopped{}
 	applyMiddleware(p.context.receiver.Receive, p.Opts.Middleware...)(p.context)
 
-	// We are a child if the parent context is not nil
-	// No need for a mutex here, cause this is getting called inside the
-	// the parents children foreach loop, which already locks.
-	if p.context.parentCtx != nil {
-		p.context.parentCtx.children.Delete(p.Kind)
-	}
-
-	// We are a parent if we have children running, shutdown all the children.
-	if p.context.children.Len() > 0 {
-		children := p.context.Children()
-		for _, pid := range children {
-			if wg != nil {
-				wg.Add(1)
-			}
-			proc := p.context.engine.Registry.get(pid)
-			proc.Shutdown(wg)
-		}
-	}
 	p.context.engine.BroadcastEvent(ActorStoppedEvent{PID: p.pid, Timestamp: time.Now()})
 	if wg != nil {
 		wg.Done()
