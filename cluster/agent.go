@@ -149,7 +149,7 @@ func (a *Agent) activate(kind, id, region string) *actor.PID {
 		// Remote activation
 
 		// TODO: topology hash
-		resp, err := a.cluster.engine.Request(activatorPID, req, requestTimeout).Result()
+		resp, err := a.cluster.engine.Request(activatorPID, req, a.cluster.requestTimeout).Result()
 		if err != nil {
 			slog.Error("failed activation request", "err", err)
 			return nil
