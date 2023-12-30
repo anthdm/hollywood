@@ -1,15 +1,16 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"log"
+	"os"
+	"path"
+	"regexp"
 	"sync"
 	"time"
 
 	"github.com/anthdm/hollywood/actor"
-	"github.com/redis/go-redis/v9"
 )
 
 type Storer interface {
@@ -17,7 +18,7 @@ type Storer interface {
 	Load(key string) ([]byte, error)
 }
 
-func WithPersistance(store Storer) func(actor.ReceiveFunc) actor.ReceiveFunc {
+func WithPersistence(store Storer) func(actor.ReceiveFunc) actor.ReceiveFunc {
 	return func(next actor.ReceiveFunc) actor.ReceiveFunc {
 		return func(c *actor.Context) {
 			switch c.Message().(type) {
@@ -114,23 +115,31 @@ func (p *PlayerState) State() ([]byte, error) {
 	return json.Marshal(state)
 }
 
-type RedisStore struct {
-	client *redis.Client
+type fileStore struct {
+	path string
 }
 
-func newRedisStore(c *redis.Client) *RedisStore {
-	return &RedisStore{
-		client: c,
+func newFileStore() *fileStore {
+	// make a tmp dir:
+	tmpdir := "/tmp/persistenceexample"
+	err := os.Mkdir(tmpdir, 0755)
+	if err != nil && !os.IsExist(err) {
+		log.Fatal(err)
+	}
+	return &fileStore{
+		path: tmpdir,
 	}
 }
 
-func (r *RedisStore) Store(key string, state []byte) error {
-	return r.client.Set(context.TODO(), key, state, 0).Err()
+// Store the state in a file name key
+func (r *fileStore) Store(key string, state []byte) error {
+	key = safeFileName(key)
+	return os.WriteFile(path.Join(r.path, key), state, 0755)
 }
 
-func (r *RedisStore) Load(key string) ([]byte, error) {
-	val, err := r.client.Get(context.TODO(), key).Result()
-	return []byte(val), err
+func (r *fileStore) Load(key string) ([]byte, error) {
+	key = safeFileName(key)
+	return os.ReadFile(path.Join(r.path, key))
 }
 
 func main() {
@@ -139,13 +148,12 @@ func main() {
 		log.Fatal(err)
 	}
 	var (
-		redisClient = redis.NewClient(&redis.Options{
-			Addr:     "localhost:6379",
-			Password: "", // no password set
-			DB:       0,  // use default DB
-		})
-		store = newRedisStore(redisClient)
-		pid   = e.Spawn(newPlayerState(100, "James"), "playerState", actor.WithMiddleware(WithPersistance(store)))
+		store = newFileStore()
+		pid   = e.Spawn(
+			newPlayerState(100, "James"),
+			"playerState",
+			actor.WithMiddleware(WithPersistence(store)),
+			actor.WithID("james"))
 	)
 	time.Sleep(time.Second * 1)
 	e.Send(pid, TakeDamage{Amount: 9})
@@ -153,4 +161,12 @@ func main() {
 	wg := &sync.WaitGroup{}
 	e.Poison(pid, wg)
 	wg.Wait()
+}
+
+var safeRx = regexp.MustCompile(`[^a-zA-Z0-9]`)
+
+// safeFileName replaces all characters azAZ09 with _
+func safeFileName(s string) string {
+	res := safeRx.ReplaceAllString(s, "_")
+	return res
 }
