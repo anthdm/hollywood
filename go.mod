@@ -3,6 +3,7 @@ module github.com/anthdm/hollywood
 go 1.21
 
 require (
+	github.com/DataDog/gostackparse v0.7.0
 	github.com/grandcat/zeroconf v1.0.0
 	github.com/planetscale/vtprotobuf v0.4.0
 	github.com/prometheus/client_golang v1.15.0

@@ -124,7 +124,7 @@ func TestRestarts(t *testing.T) {
 			if msg.data != 10 {
 				panic("I failed to process this message")
 			} else {
-				fmt.Println("finally processed all my messsages after borking.", msg.data)
+				fmt.Println("finally processed all my messages after borking", msg.data)
 				wg.Done()
 			}
 		}
