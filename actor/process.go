@@ -126,6 +126,7 @@ func (p *process) Start() {
 	}()
 	p.context.message = Initialized{}
 	applyMiddleware(recv.Receive, p.Opts.Middleware...)(p.context)
+	p.context.engine.BroadcastEvent(ActorInitializedEvent{PID: p.pid, Timestamp: time.Now()})
 
 	p.context.message = Started{}
 	applyMiddleware(recv.Receive, p.Opts.Middleware...)(p.context)
