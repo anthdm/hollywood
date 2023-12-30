@@ -10,7 +10,7 @@ import (
 	"github.com/google/uuid"
 )
 
-var requestTimeout = time.Millisecond * 50
+var requestTimeout = time.Second
 
 // Producer is a function that can produce an actor.Producer.
 // Pretty simple, but yet powerfull tool to construct receivers
