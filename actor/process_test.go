@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/stretchr/testify/require"
-	"sync"
 	"testing"
+	"time"
 )
 
 // Test_CleanTrace tests that the stack trace is cleaned up correctly and that the function
@@ -16,8 +16,7 @@ func Test_CleanTrace(t *testing.T) {
 	type triggerPanic struct {
 		data int
 	}
-	wg := sync.WaitGroup{}
-	wg.Add(1)
+	stopCh := make(chan struct{})
 	pid := e.SpawnFunc(func(c *Context) {
 		fmt.Printf("Got message type %T\n", c.Message())
 		switch c.Message().(type) {
@@ -32,15 +31,17 @@ func Test_CleanTrace(t *testing.T) {
 			// check that the second line is the panicWrapper function:
 			if bytes.Contains(lines[1], []byte("panicWrapper")) {
 				fmt.Println("stack trace contains panicWrapper at the right line")
-				wg.Done()
-			} else {
-				t.Error("stack trace does not contain panicWrapper at the right line")
-				t.Fail()
+				stopCh <- struct{}{}
 			}
 		}
 	}, "foo", WithMaxRestarts(1))
 	e.Send(pid, triggerPanic{1})
-	wg.Wait()
+	select {
+	case <-stopCh:
+		fmt.Println("test passed")
+	case <-time.After(time.Second):
+		t.Error("test timed out. stack trace likely did not contain panicWrapper at the right line")
+	}
 }
 
 func panicWrapper() {
