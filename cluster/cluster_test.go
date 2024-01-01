@@ -139,7 +139,7 @@ func TestActivate(t *testing.T) {
 			if msg.Member.ID == "B" {
 				// Because c1 doesnt have player registered locally we can only spawned
 				// the player on c2
-				pid := c1.Activate("player", &ActivationConfig{ID: "1"})
+				pid := c1.Activate("player", NewActivationConfig().WithID("1"))
 				assert.True(t, pid.Equals(expectedPID))
 			}
 			wg.Done()
@@ -172,7 +172,7 @@ func TestDeactivate(t *testing.T) {
 		switch msg := c.Message().(type) {
 		case MemberJoinEvent:
 			if msg.Member.ID == "B" {
-				pid := c1.Activate("player", &ActivationConfig{ID: "1"})
+				pid := c1.Activate("player", NewActivationConfig().WithID("1"))
 				assert.True(t, pid.Equals(expectedPID))
 			}
 		case ActivationEvent:

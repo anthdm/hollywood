@@ -103,7 +103,9 @@ func (config Config) WithRegion(region string) Config {
 	return config
 }
 
-// Cluster...
+// Cluster allows you to write distributed actors. It combines Engine, Remote, and
+// Provider which allows members of the cluster to send messages to eachother in a
+// self discovering environment.
 type Cluster struct {
 	config      Config
 	engine      *actor.Engine
@@ -113,6 +115,7 @@ type Cluster struct {
 	kinds       []kind
 }
 
+// New returns a new cluster given a Config.
 func New(config Config) (*Cluster, error) {
 	if config.engine == nil {
 		remote := remote.New(config.listenAddr, nil)
@@ -157,23 +160,42 @@ func (c *Cluster) Spawn(p actor.Producer, id string, opts ...actor.OptFunc) *act
 	return pid
 }
 
-// TODO: Doc this when its more usefull.
 type ActivationConfig struct {
-	// if empty, a unique identifier will be generated.
-	ID     string
-	Region string
+	id     string
+	region string
+}
+
+// NewActivationConfig returns a new default config.
+func NewActivationConfig() ActivationConfig {
+	return ActivationConfig{
+		id:     fmt.Sprintf("%d", rand.Intn(math.MaxInt)),
+		region: "default",
+	}
+}
+
+// WithID set's the id of the actor that will be activated on the cluster.
+//
+// Defaults to a random identifier.
+func (config ActivationConfig) WithID(id string) ActivationConfig {
+	config.id = id
+	return config
+}
+
+// WithRegion set's the region on where this actor (potentially) will be spawned
+//
+// Defaults to a "default".
+func (config ActivationConfig) WithRegion(region string) ActivationConfig {
+	config.region = region
+	return config
 }
 
 // Activate actives the given actor kind with an optional id. If there is no id
 // given, the engine will create an unique id automatically.
-func (c *Cluster) Activate(kind string, config *ActivationConfig) *actor.PID {
-	if config == nil {
-		config = &ActivationConfig{}
-	}
+func (c *Cluster) Activate(kind string, config ActivationConfig) *actor.PID {
 	msg := activate{
 		kind:   kind,
-		id:     config.ID,
-		region: config.Region,
+		id:     config.id,
+		region: config.region,
 	}
 	resp, err := c.engine.Request(c.agentPID, msg, c.config.requestTimeout).Result()
 	if err != nil {
@@ -248,6 +270,7 @@ func (c *Cluster) HasKind(name string) bool {
 	return false
 }
 
+// TODO: Weird
 func (c *Cluster) GetActivated(id string) *actor.PID {
 	resp, err := c.engine.Request(c.agentPID, getActive{id: id}, c.config.requestTimeout).Result()
 	if err != nil {
