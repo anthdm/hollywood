@@ -3,79 +3,102 @@ package cluster
 import (
 	fmt "fmt"
 	"log/slog"
+	"math"
+	"math/rand"
 	"reflect"
 	"sync"
 	"time"
 
 	"github.com/anthdm/hollywood/actor"
-	"github.com/google/uuid"
+	"github.com/anthdm/hollywood/remote"
 )
 
 var requestTimeout = time.Millisecond * 50
 
-// Producer is a function that can produce an actor.Producer.
-// Pretty simple, but yet powerfull tool to construct receivers
-// depending on Cluster.
+// Producer is a function that produces an actor.Producer given a *cluster.Cluster.
+// Pretty simple, but yet powerfull tool to construct receivers that are depending on Cluster.
 type Producer func(c *Cluster) actor.Producer
 
 // Config holds the cluster configuration
 type Config struct {
-	// The individual ID of this specific node
-	ID string
-	// The region this node is hosted
-	Region string
+	listenAddr         string
+	id                 string
+	region             string
+	activationStrategy ActivationStrategy
+	engine             *actor.Engine
+	provider           Producer
+}
 
-	ActivationStrategy ActivationStrategy
-	Engine             *actor.Engine
-	ClusterProvider    Producer
+func NewConfig() Config {
+	return Config{
+		listenAddr:         getRandomListenAddr(),
+		id:                 fmt.Sprintf("%d", rand.Intn(math.MaxInt)),
+		region:             "default",
+		activationStrategy: NewDefaultActivationStrategy(),
+		provider:           NewSelfManagedProvider(NewSelfManagedConfig()),
+	}
+}
+
+func (config Config) WithProvider(p Producer) Config {
+	config.provider = p
+	return config
+}
+
+func (config Config) WithEngine(e *actor.Engine) Config {
+	config.engine = e
+	return config
+}
+
+func (config Config) WithActivationStrategy(s ActivationStrategy) Config {
+	config.activationStrategy = s
+	return config
+}
+
+func (config Config) WithListenAddr(addr string) Config {
+	config.listenAddr = addr
+	return config
+}
+
+func (config Config) WithID(id string) Config {
+	config.id = id
+	return config
+}
+
+func (config Config) WithRegion(region string) Config {
+	config.region = region
+	return config
 }
 
 type Cluster struct {
-	id     string
-	region string
-
-	provider    Producer
+	config      Config
 	engine      *actor.Engine
 	agentPID    *actor.PID
 	providerPID *actor.PID
-
-	isStarted bool
-
-	activationStrategy ActivationStrategy
-
-	kinds []kind
+	isStarted   bool
+	kinds       []kind
 }
 
-func New(cfg Config) (*Cluster, error) {
-	if cfg.Engine == nil {
-		return nil, fmt.Errorf("engine parameter not provided")
+func New(config Config) (*Cluster, error) {
+	if config.engine == nil {
+		remote := remote.New(config.listenAddr, nil)
+		e, err := actor.NewEngine(&actor.EngineConfig{Remote: remote})
+		if err != nil {
+			return nil, err
+		}
+		config.engine = e
 	}
-	if cfg.ClusterProvider == nil {
-		return nil, fmt.Errorf("cluster provider parameter not provided")
+	c := &Cluster{
+		config: config,
+		engine: config.engine,
+		kinds:  make([]kind, 0),
 	}
-	if cfg.ActivationStrategy == nil {
-		cfg.ActivationStrategy = DefaultActivationStrategy()
-	}
-	if len(cfg.ID) == 0 {
-		cfg.ID = uuid.New().String()
-	}
-	if len(cfg.Region) == 0 {
-		cfg.Region = "default"
-	}
-	return &Cluster{
-		id:                 cfg.ID,
-		region:             cfg.Region,
-		provider:           cfg.ClusterProvider,
-		engine:             cfg.Engine,
-		kinds:              []kind{},
-		activationStrategy: cfg.ActivationStrategy,
-	}, nil
+	return c, nil
 }
 
 // Start the cluster
 func (c *Cluster) Start() {
-	c.agentPID = c.engine.Spawn(NewAgent(c), "cluster", actor.WithID(c.id))
-	c.providerPID = c.engine.Spawn(c.provider(c), "provider", actor.WithID(c.id))
+	c.agentPID = c.engine.Spawn(NewAgent(c), "cluster", actor.WithID(c.config.id))
+	c.providerPID = c.engine.Spawn(c.config.provider(c), "provider", actor.WithID(c.config.id))
 	c.isStarted = true
 }
 
@@ -208,10 +231,10 @@ func (c *Cluster) Member() *Member {
 		kinds[i] = c.kinds[i].name
 	}
 	m := &Member{
-		ID:     c.id,
+		ID:     c.config.id,
 		Host:   c.engine.Address(),
 		Kinds:  kinds,
-		Region: c.region,
+		Region: c.config.region,
 	}
 	return m
 }
@@ -223,12 +246,12 @@ func (c *Cluster) Engine() *actor.Engine {
 
 // Region return the region of the cluster.
 func (c *Cluster) Region() string {
-	return c.region
+	return c.config.region
 }
 
 // ID returns the ID of the cluster.
 func (c *Cluster) ID() string {
-	return c.id
+	return c.config.id
 }
 
 // Address returns the host/address of the cluster.
@@ -239,4 +262,8 @@ func (c *Cluster) Address() string {
 // PID returns the reachable actor process id, which is the Agent actor.
 func (c *Cluster) PID() *actor.PID {
 	return c.agentPID
+}
+
+func getRandomListenAddr() string {
+	return fmt.Sprintf("127.0.0.1:%d", rand.Intn(50000)+10000)
 }

@@ -130,7 +130,7 @@ func (a *Agent) activate(kind, id, region string) *actor.PID {
 		slog.Warn("could not find any members with kind", "kind", kind)
 		return nil
 	}
-	owner := a.cluster.activationStrategy.ActivateOnMember(ActivationDetails{
+	owner := a.cluster.config.activationStrategy.ActivateOnMember(ActivationDetails{
 		Members: members,
 		Region:  region,
 		Kind:    kind,

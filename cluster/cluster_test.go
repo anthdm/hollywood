@@ -28,18 +28,19 @@ func NewInventory() actor.Receiver {
 
 func (i Inventory) Receive(c *actor.Context) {}
 
+func TestFooBarBaz(t *testing.T) {
+	config := NewConfig()
+	cluster, err := New(config)
+	assert.Nil(t, err)
+	_ = cluster
+}
+
 func TestClusterShouldWorkWithDefaultValues(t *testing.T) {
-	remote := remote.New(getRandomLocalhostAddr(), nil)
-	e, err := actor.NewEngine(&actor.EngineConfig{Remote: remote})
+	config := NewConfig()
+	c, err := New(config)
 	assert.Nil(t, err)
-	cfg := Config{
-		ClusterProvider: NewSelfManagedProvider(NewSelfManagedConfig()),
-		Engine:          e,
-	}
-	c, err := New(cfg)
-	assert.Nil(t, err)
-	assert.True(t, len(c.id) > 0)
-	assert.Equal(t, c.region, "default")
+	assert.True(t, len(c.config.id) > 0)
+	assert.Equal(t, c.config.region, "default")
 }
 
 func TestRegisterKind(t *testing.T) {
@@ -197,19 +198,17 @@ func TestDeactivate(t *testing.T) {
 func TestMemberLeave(t *testing.T) {
 	c1Addr := getRandomLocalhostAddr()
 	c2Addr := getRandomLocalhostAddr()
-	remote := remote.New(c2Addr, nil)
 
+	remote := remote.New(c2Addr, nil)
 	e, err := actor.NewEngine(&actor.EngineConfig{Remote: remote})
 	if err != nil {
 		log.Fatal(err)
 	}
-	cfg := Config{
-		ClusterProvider: NewSelfManagedProvider(NewSelfManagedConfig()),
-		ID:              "B",
-		Region:          "eu-east",
-		Engine:          e,
-	}
-	c2, err := New(cfg)
+	config := NewConfig().
+		WithID("B").
+		WithRegion("eu-east").
+		WithEngine(e)
+	c2, err := New(config)
 	assert.Nil(t, err)
 
 	c1 := makeCluster(t, c1Addr, "A", "eu-west")
@@ -225,7 +224,7 @@ func TestMemberLeave(t *testing.T) {
 				remote.Stop().Wait()
 			}
 		case MemberLeaveEvent:
-			assert.Equal(t, msg.Member.ID, c2.id)
+			assert.Equal(t, msg.Member.ID, c2.ID())
 			wg.Done()
 		}
 	}, "event")
@@ -271,18 +270,11 @@ func TestMembersExcept(t *testing.T) {
 }
 
 func makeCluster(t *testing.T, addr, id, region string) *Cluster {
-	remote := remote.New(addr, nil)
-	e, err := actor.NewEngine(&actor.EngineConfig{Remote: remote})
-	if err != nil {
-		log.Fatal(err)
-	}
-	cfg := Config{
-		ClusterProvider: NewSelfManagedProvider(NewSelfManagedConfig()),
-		ID:              id,
-		Region:          region,
-		Engine:          e,
-	}
-	c, err := New(cfg)
+	config := NewConfig().
+		WithID(id).
+		WithListenAddr(addr).
+		WithRegion(region)
+	c, err := New(config)
 	assert.Nil(t, err)
 	return c
 }

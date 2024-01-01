@@ -184,11 +184,11 @@ func (s *SelfManaged) initAutoDiscovery() {
 	}
 
 	server, err := zeroconf.RegisterProxy(
-		s.cluster.id,
+		s.cluster.ID(),
 		serviceName,
 		domain,
 		port,
-		fmt.Sprintf("member_%s", s.cluster.id),
+		fmt.Sprintf("member_%s", s.cluster.ID()),
 		[]string{host},
 		[]string{"txtv=0", "lo=1", "la=2"}, nil)
 	if err != nil {
@@ -201,14 +201,14 @@ func (s *SelfManaged) startAutoDiscovery() {
 	entries := make(chan *zeroconf.ServiceEntry)
 	go func(results <-chan *zeroconf.ServiceEntry) {
 		for entry := range results {
-			if entry.Instance != s.cluster.id {
+			if entry.Instance != s.cluster.ID() {
 				host := fmt.Sprintf("%s:%d", entry.AddrIPv4[0], entry.Port)
 				hs := &Handshake{
 					Member: s.cluster.Member(),
 				}
 				// create the reachable PID for this member.
 				memberPID := actor.NewPID(host, "provider/"+entry.Instance)
-				self := actor.NewPID(s.cluster.agentPID.Address, "provider/"+s.cluster.id)
+				self := actor.NewPID(s.cluster.agentPID.Address, "provider/"+s.cluster.ID())
 				s.cluster.engine.SendWithSender(memberPID, hs, self)
 			}
 		}
