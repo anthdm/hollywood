@@ -31,6 +31,7 @@ type Config struct {
 	requestTimeout     time.Duration
 }
 
+// NewConfig returns a Config that is initialized with default values.
 func NewConfig() Config {
 	return Config{
 		listenAddr:         getRandomListenAddr(),
@@ -42,41 +43,67 @@ func NewConfig() Config {
 	}
 }
 
+// WithRequestTimeout set's the maximum duration of how long a request
+// can take between members of the cluster.
+//
+// Defaults to 1 second to support communication between nodes in
+// other regions.
 func (config Config) WithRequestTimeout(d time.Duration) Config {
 	config.requestTimeout = d
 	return config
 }
 
+// WithProvider set's the cluster provider.
+//
+// Defaults to the SelfManagedProvider.
 func (config Config) WithProvider(p Producer) Config {
 	config.provider = p
 	return config
 }
 
+// WithEngine set's the internal actor engine that will be used
+// to power the actors running on the node.
+//
+// If no engine is given the cluster will instanciate a new
+// engine and remote.
 func (config Config) WithEngine(e *actor.Engine) Config {
 	config.engine = e
 	return config
 }
 
+// TODO: Still not convinced about the name "ActivationStrategy".
+// TODO: Document this more.
+// WithActivationStrategy
 func (config Config) WithActivationStrategy(s ActivationStrategy) Config {
 	config.activationStrategy = s
 	return config
 }
 
+// WithListenAddr set's the listen address of the underlying remote.
+//
+// Defaults to a random port number.
 func (config Config) WithListenAddr(addr string) Config {
 	config.listenAddr = addr
 	return config
 }
 
+// WithID set's the ID of this node.
+//
+// Defaults to a random generated ID.
 func (config Config) WithID(id string) Config {
 	config.id = id
 	return config
 }
 
+// WithRegion set's the region where the member will be hosted.
+//
+// Defaults to "default"
 func (config Config) WithRegion(region string) Config {
 	config.region = region
 	return config
 }
 
+// Cluster...
 type Cluster struct {
 	config      Config
 	engine      *actor.Engine
