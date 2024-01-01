@@ -34,7 +34,7 @@ large number of concurrent users and complex interactions.
 - High performance dRPC as the transport layer
 - Optimized proto buffers without reflection
 - Lightweight and highly customizable
-- Cluster support with DNS auto discovery for nodes that are on the same network
+- Cluster support for writing distributed self discovering actors 
 
 # Benchmarks
 
