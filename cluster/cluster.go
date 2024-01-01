@@ -10,8 +10,6 @@ import (
 	"github.com/google/uuid"
 )
 
-var requestTimeout = time.Millisecond * 50
-
 // Producer is a function that can produce an actor.Producer.
 // Pretty simple, but yet powerfull tool to construct receivers
 // depending on Cluster.
@@ -27,11 +25,13 @@ type Config struct {
 	ActivationStrategy ActivationStrategy
 	Engine             *actor.Engine
 	ClusterProvider    Producer
+	RequestTimeout     time.Duration
 }
 
 type Cluster struct {
-	id     string
-	region string
+	id             string
+	region         string
+	requestTimeout time.Duration
 
 	provider    Producer
 	engine      *actor.Engine
@@ -61,6 +61,9 @@ func New(cfg Config) (*Cluster, error) {
 	if len(cfg.Region) == 0 {
 		cfg.Region = "default"
 	}
+	if cfg.RequestTimeout == 0 {
+		cfg.RequestTimeout = time.Second
+	}
 	return &Cluster{
 		id:                 cfg.ID,
 		region:             cfg.Region,
@@ -68,6 +71,7 @@ func New(cfg Config) (*Cluster, error) {
 		engine:             cfg.Engine,
 		kinds:              []kind{},
 		activationStrategy: cfg.ActivationStrategy,
+		requestTimeout:     cfg.RequestTimeout,
 	}, nil
 }
 
@@ -109,7 +113,7 @@ func (c *Cluster) Activate(kind string, config *ActivationConfig) *actor.PID {
 		id:     config.ID,
 		region: config.Region,
 	}
-	resp, err := c.engine.Request(c.agentPID, msg, requestTimeout).Result()
+	resp, err := c.engine.Request(c.agentPID, msg, c.requestTimeout).Result()
 	if err != nil {
 		slog.Error("activation failed", "err", err)
 		return nil
@@ -155,7 +159,7 @@ func (c *Cluster) HasKindLocal(name string) bool {
 
 // Members returns all the members that are part of the cluster.
 func (c *Cluster) Members() []*Member {
-	resp, err := c.engine.Request(c.agentPID, getMembers{}, requestTimeout).Result()
+	resp, err := c.engine.Request(c.agentPID, getMembers{}, c.requestTimeout).Result()
 	if err != nil {
 		return []*Member{}
 	}
@@ -168,7 +172,7 @@ func (c *Cluster) Members() []*Member {
 // HasKind returns true whether the given kind is available for activation on
 // the cluster.
 func (c *Cluster) HasKind(name string) bool {
-	resp, err := c.engine.Request(c.agentPID, getKinds{}, requestTimeout).Result()
+	resp, err := c.engine.Request(c.agentPID, getKinds{}, c.requestTimeout).Result()
 	if err != nil {
 		return false
 	}
@@ -183,7 +187,7 @@ func (c *Cluster) HasKind(name string) bool {
 }
 
 func (c *Cluster) GetActivated(id string) *actor.PID {
-	resp, err := c.engine.Request(c.agentPID, getActive{id: id}, requestTimeout).Result()
+	resp, err := c.engine.Request(c.agentPID, getActive{id: id}, c.requestTimeout).Result()
 	if err != nil {
 		return nil
 	}

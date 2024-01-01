@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"time"
 
 	"github.com/anthdm/hollywood/actor"
 	"github.com/anthdm/hollywood/cluster"
@@ -26,6 +27,7 @@ func main() {
 		Region:             "us-west",
 		ClusterProvider:    cluster.NewSelfManagedProvider(bootstrapAddr),
 		ActivationStrategy: shared.RegionBasedActivationStrategy("eu-west"),
+		RequestTimeout:     time.Second,
 	})
 	if err != nil {
 		log.Fatal(err)
