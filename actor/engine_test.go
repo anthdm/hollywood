@@ -36,6 +36,16 @@ func newTickReceiver(wg *sync.WaitGroup) Producer {
 	}
 }
 
+func TestRegistryGetPID(t *testing.T) {
+	e, _ := NewEngine(nil)
+	expectedPID1 := e.SpawnFunc(func(c *Context) {}, "foo", WithID("1"))
+	expectedPID2 := e.SpawnFunc(func(c *Context) {}, "foo", WithID("2"))
+	pid := e.Registry.GetPID("foo", "1")
+	assert.True(t, pid.Equals(expectedPID1))
+	pid = e.Registry.GetPID("foo", "2")
+	assert.True(t, pid.Equals(expectedPID2))
+}
+
 func TestSendToNilPID(t *testing.T) {
 	e, _ := NewEngine(nil)
 	e.Send(nil, "foo")
@@ -124,7 +134,7 @@ func TestRestarts(t *testing.T) {
 			if msg.data != 10 {
 				panic("I failed to process this message")
 			} else {
-				fmt.Println("finally processed all my messsages after borking.", msg.data)
+				fmt.Println("finally processed all my messages after borking", msg.data)
 				wg.Done()
 			}
 		}

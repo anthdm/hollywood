@@ -8,23 +8,17 @@ import (
 	"golang.org/x/exp/maps"
 )
 
-type getActive struct {
-	id string
-}
-
-type getMembers struct{}
-
-type getKinds struct{}
-
-type activate struct {
-	kind   string
-	id     string
-	region string
-}
-
-type deactivate struct {
-	pid *actor.PID
-}
+type (
+	activate struct {
+		kind   string
+		id     string
+		region string
+	}
+	getMembers struct{}
+	getKinds   struct{}
+	deactivate struct{ pid *actor.PID }
+	getActive  struct{ id string }
+)
 
 type Agent struct {
 	members *MemberSet
@@ -150,7 +144,7 @@ func (a *Agent) activate(kind, id, region string) *actor.PID {
 		// Remote activation
 
 		// TODO: topology hash
-		resp, err := a.cluster.engine.Request(activatorPID, req, requestTimeout).Result()
+		resp, err := a.cluster.engine.Request(activatorPID, req, a.cluster.config.requestTimeout).Result()
 		if err != nil {
 			slog.Error("failed activation request", "err", err)
 			return nil
