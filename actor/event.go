@@ -23,7 +23,7 @@ type ActorStartedEvent struct {
 }
 
 func (e ActorStartedEvent) Log() (slog.Level, string, []any) {
-	return slog.LevelInfo, "Actor started", []any{"pid", e.PID}
+	return slog.LevelDebug, "Actor started", []any{"pid", e.PID}
 }
 
 // ActorInitializedEvent is broadcasted over the eventStream before an actor
@@ -45,7 +45,7 @@ type ActorStoppedEvent struct {
 }
 
 func (e ActorStoppedEvent) Log() (slog.Level, string, []any) {
-	return slog.LevelInfo, "Actor stopped", []any{"pid", e.PID}
+	return slog.LevelDebug, "Actor stopped", []any{"pid", e.PID}
 }
 
 // ActorRestartedEvent is broadcasted when an actor crashes and gets restarted

@@ -28,18 +28,19 @@ func NewInventory() actor.Receiver {
 
 func (i Inventory) Receive(c *actor.Context) {}
 
+func TestFooBarBaz(t *testing.T) {
+	config := NewConfig()
+	cluster, err := New(config)
+	assert.Nil(t, err)
+	_ = cluster
+}
+
 func TestClusterShouldWorkWithDefaultValues(t *testing.T) {
-	remote := remote.New(getRandomLocalhostAddr(), nil)
-	e, err := actor.NewEngine(&actor.EngineConfig{Remote: remote})
+	config := NewConfig()
+	c, err := New(config)
 	assert.Nil(t, err)
-	cfg := Config{
-		ClusterProvider: NewSelfManagedProvider(),
-		Engine:          e,
-	}
-	c, err := New(cfg)
-	assert.Nil(t, err)
-	assert.True(t, len(c.id) > 0)
-	assert.Equal(t, c.region, "default")
+	assert.True(t, len(c.config.id) > 0)
+	assert.Equal(t, c.config.region, "default")
 }
 
 func TestRegisterKind(t *testing.T) {
@@ -51,18 +52,15 @@ func TestRegisterKind(t *testing.T) {
 }
 
 func TestClusterSpawn(t *testing.T) {
-	c1Addr := getRandomLocalhostAddr()
-	c1 := makeCluster(t, c1Addr, "A", "eu-west")
-	c2 := makeCluster(t, getRandomLocalhostAddr(), "B", "eu-west", MemberAddr{
-		ListenAddr: c1Addr,
-		ID:         "A",
-	})
+	var (
+		c1Addr      = getRandomLocalhostAddr()
+		c1          = makeCluster(t, c1Addr, "A", "eu-west")
+		c2          = makeCluster(t, getRandomLocalhostAddr(), "B", "eu-west")
+		wg          = sync.WaitGroup{}
+		expectedPID = actor.NewPID(c1Addr, "player/1")
+	)
 
-	expectedPID := actor.NewPID(c1Addr, "player/1")
-
-	wg := sync.WaitGroup{}
 	wg.Add(2)
-
 	eventPID := c1.engine.SpawnFunc(func(c *actor.Context) {
 		switch msg := c.Message().(type) {
 		case MemberJoinEvent:
@@ -88,15 +86,14 @@ func TestClusterSpawn(t *testing.T) {
 	c1.Start()
 	c2.Start()
 	wg.Wait()
+
+	c1.Stop().Wait()
+	c2.Stop().Wait()
 }
 
 func TestMemberJoin(t *testing.T) {
-	addr := getRandomLocalhostAddr()
-	c1 := makeCluster(t, addr, "A", "eu-west")
-	c2 := makeCluster(t, getRandomLocalhostAddr(), "B", "eu-west", MemberAddr{
-		ListenAddr: addr,
-		ID:         "A",
-	})
+	c1 := makeCluster(t, getRandomLocalhostAddr(), "A", "eu-west")
+	c2 := makeCluster(t, getRandomLocalhostAddr(), "B", "eu-west")
 	c2.RegisterKind("player", NewPlayer, nil)
 
 	wg := sync.WaitGroup{}
@@ -105,6 +102,7 @@ func TestMemberJoin(t *testing.T) {
 		switch msg := c.Message().(type) {
 		// we do this so we are 100% sure nodes are connected with eachother.
 		case MemberJoinEvent:
+			fmt.Println(msg)
 			if msg.Member.ID == "B" {
 				_ = msg
 				wg.Done()
@@ -118,15 +116,17 @@ func TestMemberJoin(t *testing.T) {
 	wg.Wait()
 	assert.Equal(t, len(c1.Members()), 2)
 	assert.True(t, c1.HasKind("player"))
+
+	c1.Stop().Wait()
+	c2.Stop().Wait()
 }
 
 func TestActivate(t *testing.T) {
-	addr := getRandomLocalhostAddr()
-	c1 := makeCluster(t, addr, "A", "eu-west")
-	c2 := makeCluster(t, getRandomLocalhostAddr(), "B", "eu-west", MemberAddr{
-		ListenAddr: addr,
-		ID:         "A",
-	})
+	var (
+		addr = getRandomLocalhostAddr()
+		c1   = makeCluster(t, addr, "A", "eu-west")
+		c2   = makeCluster(t, getRandomLocalhostAddr(), "B", "eu-west")
+	)
 	c2.RegisterKind("player", NewPlayer, nil)
 
 	expectedPID := actor.NewPID(c2.engine.Address(), "player/1")
@@ -139,7 +139,7 @@ func TestActivate(t *testing.T) {
 			if msg.Member.ID == "B" {
 				// Because c1 doesnt have player registered locally we can only spawned
 				// the player on c2
-				pid := c1.Activate("player", &ActivationConfig{ID: "1"})
+				pid := c1.Activate("player", NewActivationConfig().WithID("1"))
 				assert.True(t, pid.Equals(expectedPID))
 			}
 			wg.Done()
@@ -154,15 +154,15 @@ func TestActivate(t *testing.T) {
 	assert.Equal(t, len(c1.Members()), 2)
 	assert.True(t, c1.HasKind("player"))
 	assert.True(t, c1.GetActivated("player/1").Equals(expectedPID))
+
+	c1.Stop().Wait()
+	c2.Stop().Wait()
 }
 
 func TestDeactivate(t *testing.T) {
 	addr := getRandomLocalhostAddr()
 	c1 := makeCluster(t, addr, "A", "eu-west")
-	c2 := makeCluster(t, getRandomLocalhostAddr(), "B", "eu-west", MemberAddr{
-		ListenAddr: addr,
-		ID:         "A",
-	})
+	c2 := makeCluster(t, getRandomLocalhostAddr(), "B", "eu-west")
 	c2.RegisterKind("player", NewPlayer, nil)
 
 	expectedPID := actor.NewPID(c2.engine.Address(), "player/1")
@@ -172,7 +172,7 @@ func TestDeactivate(t *testing.T) {
 		switch msg := c.Message().(type) {
 		case MemberJoinEvent:
 			if msg.Member.ID == "B" {
-				pid := c1.Activate("player", &ActivationConfig{ID: "1"})
+				pid := c1.Activate("player", NewActivationConfig().WithID("1"))
 				assert.True(t, pid.Equals(expectedPID))
 			}
 		case ActivationEvent:
@@ -190,27 +190,25 @@ func TestDeactivate(t *testing.T) {
 	assert.Equal(t, len(c1.Members()), 2)
 	assert.True(t, c1.HasKind("player"))
 	assert.Nil(t, c1.GetActivated("player/1"))
+
+	c1.Stop().Wait()
+	c2.Stop().Wait()
 }
 
 func TestMemberLeave(t *testing.T) {
 	c1Addr := getRandomLocalhostAddr()
 	c2Addr := getRandomLocalhostAddr()
-	remote := remote.New(c2Addr, nil)
 
+	remote := remote.New(c2Addr, nil)
 	e, err := actor.NewEngine(&actor.EngineConfig{Remote: remote})
 	if err != nil {
 		log.Fatal(err)
 	}
-	cfg := Config{
-		ClusterProvider: NewSelfManagedProvider(MemberAddr{
-			ListenAddr: c1Addr,
-			ID:         "A",
-		}),
-		ID:     "B",
-		Region: "eu-east",
-		Engine: e,
-	}
-	c2, err := New(cfg)
+	config := NewConfig().
+		WithID("B").
+		WithRegion("eu-east").
+		WithEngine(e)
+	c2, err := New(config)
 	assert.Nil(t, err)
 
 	c1 := makeCluster(t, c1Addr, "A", "eu-west")
@@ -226,7 +224,7 @@ func TestMemberLeave(t *testing.T) {
 				remote.Stop().Wait()
 			}
 		case MemberLeaveEvent:
-			assert.Equal(t, msg.Member.ID, c2.id)
+			assert.Equal(t, msg.Member.ID, c2.ID())
 			wg.Done()
 		}
 	}, "event")
@@ -236,6 +234,9 @@ func TestMemberLeave(t *testing.T) {
 	wg.Wait()
 	assert.Equal(t, len(c1.Members()), 1)
 	assert.False(t, c1.HasKind("player"))
+
+	c1.Stop().Wait()
+	c2.Stop().Wait()
 }
 
 func TestMembersExcept(t *testing.T) {
@@ -268,23 +269,16 @@ func TestMembersExcept(t *testing.T) {
 	assert.Equal(t, am[0].ID, "C")
 }
 
-func makeCluster(t *testing.T, addr, id, region string, members ...MemberAddr) *Cluster {
-	remote := remote.New(addr, nil)
-	e, err := actor.NewEngine(&actor.EngineConfig{Remote: remote})
-	if err != nil {
-		log.Fatal(err)
-	}
-	cfg := Config{
-		ClusterProvider: NewSelfManagedProvider(members...),
-		ID:              id,
-		Region:          region,
-		Engine:          e,
-	}
-	c, err := New(cfg)
+func makeCluster(t *testing.T, addr, id, region string) *Cluster {
+	config := NewConfig().
+		WithID(id).
+		WithListenAddr(addr).
+		WithRegion(region)
+	c, err := New(config)
 	assert.Nil(t, err)
 	return c
 }
 
 func getRandomLocalhostAddr() string {
-	return fmt.Sprintf("localhost:%d", rand.Intn(50000)+10000)
+	return fmt.Sprintf("127.0.0.1:%d", rand.Intn(50000)+10000)
 }

@@ -234,9 +234,7 @@ func TestStopWaitGroup(t *testing.T) {
 	}, "foo")
 	wg.Wait()
 
-	pwg := &sync.WaitGroup{}
-	e.Stop(pid, pwg)
-	pwg.Wait()
+	e.Stop(pid).Wait()
 	assert.Equal(t, int32(1), atomic.LoadInt32(&x))
 }
 
@@ -258,9 +256,7 @@ func TestStop(t *testing.T) {
 		}, "foo", WithID(tag))
 
 		wg.Wait()
-		stopwg := &sync.WaitGroup{}
-		e.Stop(pid, stopwg)
-		stopwg.Wait()
+		e.Stop(pid).Wait()
 		// When a process is poisoned it should be removed from the registry.
 		// Hence, we should get nil when looking it up in the registry.
 		assert.Nil(t, e.Registry.get(pid))
@@ -286,9 +282,7 @@ func TestPoisonWaitGroup(t *testing.T) {
 	}, "foo")
 	wg.Wait()
 
-	pwg := &sync.WaitGroup{}
-	e.Poison(pid, pwg)
-	pwg.Wait()
+	e.Poison(pid).Wait()
 	assert.Equal(t, int32(1), atomic.LoadInt32(&x))
 }
 
@@ -310,9 +304,7 @@ func TestPoison(t *testing.T) {
 		}, "foo", WithID(tag))
 
 		wg.Wait()
-		stopwg := &sync.WaitGroup{}
-		e.Poison(pid, stopwg)
-		stopwg.Wait()
+		e.Poison(pid).Wait()
 		// When a process is poisoned it should be removed from the registry.
 		// Hence, we should get NIL when we try to get it.
 		assert.Nil(t, e.Registry.get(pid))
@@ -379,7 +371,7 @@ func TestPoisonPillPrivate(t *testing.T) {
 	}
 }
 
-// 56 ns/op
+// 45.84 ns/op 25 B/op => 13th Gen Intel(R) Core(TM) i9-13900KF
 func BenchmarkSendMessageLocal(b *testing.B) {
 	e, err := NewEngine(nil)
 	require.NoError(b, err)

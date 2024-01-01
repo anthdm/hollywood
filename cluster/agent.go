@@ -8,23 +8,17 @@ import (
 	"golang.org/x/exp/maps"
 )
 
-type getActive struct {
-	id string
-}
-
-type getMembers struct{}
-
-type getKinds struct{}
-
-type activate struct {
-	kind   string
-	id     string
-	region string
-}
-
-type deactivate struct {
-	pid *actor.PID
-}
+type (
+	activate struct {
+		kind   string
+		id     string
+		region string
+	}
+	getMembers struct{}
+	getKinds   struct{}
+	deactivate struct{ pid *actor.PID }
+	getActive  struct{ id string }
+)
 
 type Agent struct {
 	members *MemberSet
@@ -59,6 +53,7 @@ func NewAgent(c *Cluster) actor.Producer {
 func (a *Agent) Receive(c *actor.Context) {
 	switch msg := c.Message().(type) {
 	case actor.Started:
+	case actor.Stopped:
 	case *ActorTopology:
 		a.handleActorTopology(msg)
 	case *Members:
@@ -129,7 +124,7 @@ func (a *Agent) activate(kind, id, region string) *actor.PID {
 		slog.Warn("could not find any members with kind", "kind", kind)
 		return nil
 	}
-	owner := a.cluster.activationStrategy.ActivateOnMember(ActivationDetails{
+	owner := a.cluster.config.activationStrategy.ActivateOnMember(ActivationDetails{
 		Members: members,
 		Region:  region,
 		Kind:    kind,
@@ -149,7 +144,7 @@ func (a *Agent) activate(kind, id, region string) *actor.PID {
 		// Remote activation
 
 		// TODO: topology hash
-		resp, err := a.cluster.engine.Request(activatorPID, req, a.cluster.requestTimeout).Result()
+		resp, err := a.cluster.engine.Request(activatorPID, req, a.cluster.config.requestTimeout).Result()
 		if err != nil {
 			slog.Error("failed activation request", "err", err)
 			return nil
@@ -213,7 +208,7 @@ func (a *Agent) memberJoin(member *Member) {
 		Member: member,
 	})
 
-	slog.Debug("member joined", "id", member.ID, "host", member.Host, "kinds", member.Kinds, "region", member.Region)
+	slog.Info("[CLUSTER] member joined", "id", member.ID, "host", member.Host, "kinds", member.Kinds, "region", member.Region)
 }
 
 func (a *Agent) memberLeave(member *Member) {
@@ -229,7 +224,7 @@ func (a *Agent) memberLeave(member *Member) {
 
 	a.cluster.engine.BroadcastEvent(MemberLeaveEvent{Member: member})
 
-	slog.Debug("member left", "id", member.ID, "host", member.Host, "kinds", member.Kinds)
+	slog.Info("[CLUSTER] member left", "id", member.ID, "host", member.Host, "kinds", member.Kinds)
 }
 
 func (a *Agent) bcast(msg any) {

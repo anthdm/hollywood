@@ -29,12 +29,12 @@ large number of concurrent users and complex interactions.
 
 ## Features
 
-- guaranteed message delivery on actor failure (buffer mechanism)
-- fire & forget or request & response messaging, or both.
+- Guaranteed message delivery on actor failure (buffer mechanism)
+- Fire & forget or request & response messaging, or both
 - High performance dRPC as the transport layer
 - Optimized proto buffers without reflection
-- lightweight and highly customizable
-- cluster support [wip]
+- Lightweight and highly customizable
+- Cluster support with DNS auto discovery for nodes that are on the same network
 
 # Benchmarks
 
