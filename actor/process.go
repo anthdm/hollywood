@@ -1,7 +1,9 @@
 package actor
 
 import (
+	"bytes"
 	"fmt"
+	"github.com/DataDog/gostackparse"
 	"log/slog"
 	"runtime/debug"
 	"sync"
@@ -150,8 +152,7 @@ func (p *process) tryRestart(v any) {
 		p.Start()
 		return
 	}
-	stackTrace := debug.Stack()
-	fmt.Println(string(stackTrace))
+	stackTrace := cleanTrace(debug.Stack())
 	// If we reach the max restarts, we shutdown the inbox and clean
 	// everything up.
 	if p.restarts == p.MaxRestarts {
@@ -211,3 +212,24 @@ func (p *process) Send(_ *PID, msg any, sender *PID) {
 	p.inbox.Send(Envelope{Msg: msg, Sender: sender})
 }
 func (p *process) Shutdown(wg *sync.WaitGroup) { p.cleanup(wg) }
+
+func cleanTrace(stack []byte) []byte {
+	goros, err := gostackparse.Parse(bytes.NewReader(stack))
+	if err != nil {
+		slog.Error("failed to parse stacktrace", "err", err)
+		return stack
+	}
+	if len(goros) != 1 {
+		slog.Error("expected only one goroutine", "goroutines", len(goros))
+		return stack
+	}
+	// skip the first frames:
+	goros[0].Stack = goros[0].Stack[4:]
+	buf := bytes.NewBuffer(nil)
+	_, _ = fmt.Fprintf(buf, "goroutine %d [%s]\n", goros[0].ID, goros[0].State)
+	for _, frame := range goros[0].Stack {
+		_, _ = fmt.Fprintf(buf, "%s\n", frame.Func)
+		_, _ = fmt.Fprint(buf, "\t", frame.File, ":", frame.Line, "\n")
+	}
+	return buf.Bytes()
+}
