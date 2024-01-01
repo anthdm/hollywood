@@ -33,7 +33,7 @@ func TestClusterShouldWorkWithDefaultValues(t *testing.T) {
 	e, err := actor.NewEngine(&actor.EngineConfig{Remote: remote})
 	assert.Nil(t, err)
 	cfg := Config{
-		ClusterProvider: NewSelfManagedProvider(),
+		ClusterProvider: NewSelfManagedProvider(NewSelfManagedConfig()),
 		Engine:          e,
 	}
 	c, err := New(cfg)
@@ -204,7 +204,7 @@ func TestMemberLeave(t *testing.T) {
 		log.Fatal(err)
 	}
 	cfg := Config{
-		ClusterProvider: NewSelfManagedProvider(),
+		ClusterProvider: NewSelfManagedProvider(NewSelfManagedConfig()),
 		ID:              "B",
 		Region:          "eu-east",
 		Engine:          e,
@@ -277,7 +277,7 @@ func makeCluster(t *testing.T, addr, id, region string) *Cluster {
 		log.Fatal(err)
 	}
 	cfg := Config{
-		ClusterProvider: NewSelfManagedProvider(),
+		ClusterProvider: NewSelfManagedProvider(NewSelfManagedConfig()),
 		ID:              id,
 		Region:          region,
 		Engine:          e,

@@ -16,11 +16,17 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	bootstrapMember := cluster.MemberAddr{
+		ListenAddr: "127.0.0.1:3000",
+		ID:         "A",
+	}
+	config := cluster.NewSelfManagedConfig().
+		WithBootstrapMember(bootstrapMember)
 	cluster, err := cluster.New(cluster.Config{
 		ID:                 "B",
 		Engine:             e,
 		Region:             "us-west",
-		ClusterProvider:    cluster.NewSelfManagedProvider(),
+		ClusterProvider:    cluster.NewSelfManagedProvider(config),
 		ActivationStrategy: shared.RegionBasedActivationStrategy("eu-west"),
 	})
 	if err != nil {

@@ -20,7 +20,7 @@ func main() {
 		ID:                 "A",
 		Engine:             e,
 		Region:             "eu-west",
-		ClusterProvider:    cluster.NewSelfManagedProvider(),
+		ClusterProvider:    cluster.NewSelfManagedProvider(cluster.NewSelfManagedConfig()),
 		ActivationStrategy: shared.RegionBasedActivationStrategy("eu-west"),
 	})
 	if err != nil {

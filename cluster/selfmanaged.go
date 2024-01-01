@@ -6,6 +6,7 @@ import (
 	"log"
 	"log/slog"
 	"net"
+	"reflect"
 	"strconv"
 	"time"
 
@@ -19,18 +20,36 @@ const (
 	memberPingInterval = time.Second * 2
 )
 
+// MemberAddr represents a reachable node in the cluster.
 type MemberAddr struct {
 	ListenAddr string
 	ID         string
 }
 
-type memberLeave struct {
-	ListenAddr string
+type (
+	memberLeave struct {
+		ListenAddr string
+	}
+	memberPing struct{}
+)
+
+type SelfManagedConfig struct {
+	bootstrapMembers []MemberAddr
 }
 
-type memberPing struct{}
+func NewSelfManagedConfig() SelfManagedConfig {
+	return SelfManagedConfig{
+		bootstrapMembers: make([]MemberAddr, 0),
+	}
+}
+
+func (c SelfManagedConfig) WithBootstrapMember(member MemberAddr) SelfManagedConfig {
+	c.bootstrapMembers = append(c.bootstrapMembers, member)
+	return c
+}
 
 type SelfManaged struct {
+	config       SelfManagedConfig
 	cluster      *Cluster
 	members      *MemberSet
 	memberPinger actor.SendRepeater
@@ -47,10 +66,11 @@ type SelfManaged struct {
 	cancel context.CancelFunc
 }
 
-func NewSelfManagedProvider() Producer {
+func NewSelfManagedProvider(config SelfManagedConfig) Producer {
 	return func(c *Cluster) actor.Producer {
 		return func() actor.Receiver {
 			return &SelfManaged{
+				config:       config,
 				cluster:      c,
 				members:      NewMemberSet(),
 				membersAlive: NewMemberSet(),
@@ -64,11 +84,10 @@ func (s *SelfManaged) Receive(c *actor.Context) {
 	case actor.Started:
 		s.ctx, s.cancel = context.WithCancel(context.Background())
 		s.pid = c.PID()
+
 		s.members.Add(s.cluster.Member())
-		members := &Members{
-			Members: s.members.Slice(),
-		}
-		s.cluster.engine.Send(s.cluster.PID(), members)
+		s.sendMembersToAgent()
+
 		s.memberPinger = c.SendRepeat(c.PID(), memberPing{}, memberPingInterval)
 		s.start(c)
 	case actor.Stopped:
@@ -77,29 +96,22 @@ func (s *SelfManaged) Receive(c *actor.Context) {
 		s.announcer.Shutdown()
 		s.cancel()
 	case *Handshake:
-		s.addMember(msg.Member)
-		s.cluster.engine.Send(c.Sender(), s.cluster.Member())
-	case *Member:
-		s.addMember(msg)
+		s.addMembers(msg.Member)
+		members := s.members.Slice()
+		s.cluster.engine.Send(c.Sender(), &Members{
+			Members: members,
+		})
 	case *Members:
-		s.handleMembers(msg.Members)
+		s.addMembers(msg.Members...)
 	case memberPing:
 		s.handleMemberPing(c)
 	case memberLeave:
 		member := s.members.GetByHost(msg.ListenAddr)
 		s.removeMember(member)
-	}
-}
-
-func (s *SelfManaged) handleMembers(members []*Member) {
-	for _, member := range members {
-		s.addMember(member)
-	}
-	if s.members.Len() > 0 {
-		members := &Members{
-			Members: s.members.Slice(),
-		}
-		s.cluster.engine.Send(s.cluster.PID(), members)
+	case *actor.Ping:
+		_ = msg
+	default:
+		slog.Warn("received unhandled message", "msg", msg, "t", reflect.TypeOf(msg))
 	}
 }
 
@@ -115,22 +127,24 @@ func (s *SelfManaged) handleMemberPing(c *actor.Context) {
 	})
 }
 
-func (s *SelfManaged) addMember(member *Member) {
-	if !s.members.Contains(member) {
-		s.members.Add(member)
+func (s *SelfManaged) addMembers(members ...*Member) {
+	for _, member := range members {
+		if !s.members.Contains(member) {
+			s.members.Add(member)
+		}
 	}
-	s.updateCluster()
+	s.sendMembersToAgent()
 }
 
 func (s *SelfManaged) removeMember(member *Member) {
 	if s.members.Contains(member) {
 		s.members.Remove(member)
 	}
-	s.updateCluster()
+	s.sendMembersToAgent()
 }
 
-// updates the local member of the cluster.
-func (s *SelfManaged) updateCluster() {
+// send all the current members to the local cluster agent.
+func (s *SelfManaged) sendMembersToAgent() {
 	members := &Members{
 		Members: s.members.Slice(),
 	}
@@ -141,6 +155,19 @@ func (s *SelfManaged) start(c *actor.Context) {
 	s.eventSubPID = c.SpawnChildFunc(s.handleEventStream, "event")
 	s.cluster.engine.Subscribe(s.eventSubPID)
 
+	// send handshake to all bootstrap members if any.
+	for _, member := range s.config.bootstrapMembers {
+		memberPID := actor.NewPID(member.ListenAddr, "provider/"+member.ID)
+		s.cluster.engine.SendWithSender(memberPID, &Handshake{
+			Member: s.cluster.Member(),
+		}, c.PID())
+	}
+
+	s.initAutoDiscovery()
+	s.startAutoDiscovery()
+}
+
+func (s *SelfManaged) initAutoDiscovery() {
 	resolver, err := zeroconf.NewResolver()
 	if err != nil {
 		log.Fatal(err)
@@ -168,11 +195,9 @@ func (s *SelfManaged) start(c *actor.Context) {
 		log.Fatal(err)
 	}
 	s.announcer = server
-
-	s.startDiscovery()
 }
 
-func (s *SelfManaged) startDiscovery() {
+func (s *SelfManaged) startAutoDiscovery() {
 	entries := make(chan *zeroconf.ServiceEntry)
 	go func(results <-chan *zeroconf.ServiceEntry) {
 		for entry := range results {
