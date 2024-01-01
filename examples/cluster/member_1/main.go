@@ -11,18 +11,11 @@ import (
 
 // Member 1 of the cluster
 func main() {
-	r := remote.New("127.0.0.1:3000", nil)
-	e, err := actor.NewEngine(&actor.EngineConfig{Remote: r})
-	if err != nil {
-		log.Fatal(err)
-	}
-	c, err := cluster.New(cluster.Config{
-		ID:                 "A",
-		Engine:             e,
-		Region:             "eu-west",
-		ClusterProvider:    cluster.NewSelfManagedProvider(cluster.NewSelfManagedConfig()),
-		ActivationStrategy: shared.RegionBasedActivationStrategy("eu-west"),
-	})
+	config := cluster.NewConfig().
+		WithID("A").
+		WithListenAddr("127.0.0.1:3000").
+		WithRegion("eu-west")
+	c, err := cluster.New(config)
 	if err != nil {
 		log.Fatal(err)
 	}
