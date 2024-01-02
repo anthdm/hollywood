@@ -32,6 +32,7 @@ type Engine struct {
 	eventStream *PID
 }
 
+// EngineConfig holds the configuration of the engine.
 type EngineConfig struct {
 	Remote Remoter
 }
@@ -71,6 +72,7 @@ func (e *Engine) Spawn(p Producer, kind string, opts ...OptFunc) *PID {
 	return e.SpawnProc(proc)
 }
 
+// SpawnFunc spawns the given function as a stateless receiver/actor.
 func (e *Engine) SpawnFunc(f func(*Context), kind string, opts ...OptFunc) *PID {
 	return e.Spawn(newFuncReceiver(f), kind, opts...)
 }
@@ -193,7 +195,6 @@ func (e *Engine) SendRepeat(pid *PID, msg any, interval time.Duration) SendRepea
 
 // Stop will send a non-graceful poisonPill message to the process that is associated with the given PID.
 // The process will shut down immediately, once it has processed the poisonPill messsage.
-// If given a WaitGroup, it blocks till the process is completely shutdown.
 func (e *Engine) Stop(pid *PID, wg ...*sync.WaitGroup) *sync.WaitGroup {
 	return e.sendPoisonPill(pid, false, wg...)
 }

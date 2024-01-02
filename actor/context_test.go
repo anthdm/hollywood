@@ -9,6 +9,21 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestChildEventNoRaceCondition(t *testing.T) {
+	e, err := NewEngine(nil)
+	assert.Nil(t, err)
+
+	parentPID := e.SpawnFunc(func(c *Context) {
+		switch c.Message().(type) {
+		case Started:
+			child := c.SpawnChildFunc(func(childctx *Context) {
+			}, "child")
+			c.engine.Subscribe(child)
+		}
+	}, "parent")
+	e.Poison(parentPID).Wait()
+}
+
 func TestContextSendRepeat(t *testing.T) {
 	var (
 		wg = &sync.WaitGroup{}
@@ -145,9 +160,7 @@ func TestSpawnChild(t *testing.T) {
 	}, "parent", WithMaxRestarts(0))
 
 	wg.Wait()
-	stopwg := &sync.WaitGroup{}
-	e.Poison(pid, stopwg)
-	stopwg.Wait()
+	e.Poison(pid).Wait()
 
 	assert.Nil(t, e.Registry.get(NewPID("local", "child")))
 	assert.Nil(t, e.Registry.get(pid))

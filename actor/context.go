@@ -16,8 +16,8 @@ type Context struct {
 	engine   *Engine
 	receiver Receiver
 	message  any
-	// the context of the parent, if this is the context of a child.
-	// we need this so we can remove the child from the parent Context
+	// the context of the parent if we are a child.
+	// we need this parentCtx, so we can remove the child from the parent Context
 	// when the child dies.
 	parentCtx *Context
 	children  *safemap.SafeMap[string, *PID]

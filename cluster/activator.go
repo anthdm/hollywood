@@ -25,8 +25,8 @@ type ActivationDetails struct {
 
 type defaultActivationStrategy struct{}
 
-// DefaultActivationStrategy selects a random member in the cluster.
-func DefaultActivationStrategy() defaultActivationStrategy {
+// NewDefaultActivationStrategy selects a random member in the cluster.
+func NewDefaultActivationStrategy() defaultActivationStrategy {
 	return defaultActivationStrategy{}
 }
 
