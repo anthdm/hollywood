@@ -20,14 +20,13 @@ type (
 	getActive  struct{ id string }
 )
 
+// Agent is an actor/receiver that is responsible for managing the state
+// of the cluster.
 type Agent struct {
-	members *MemberSet
-	cluster *Cluster
-
-	kinds map[string]bool
-
+	members    *MemberSet
+	cluster    *Cluster
+	kinds      map[string]bool
 	localKinds map[string]kind
-
 	// All the actors that are available cluster wide.
 	activated map[string]*actor.PID
 }
@@ -142,7 +141,7 @@ func (a *Agent) activate(kind, id, region string) *actor.PID {
 		activationResp = a.handleActivationRequest(req)
 	} else {
 		// Remote activation
-
+		//
 		// TODO: topology hash
 		resp, err := a.cluster.engine.Request(activatorPID, req, a.cluster.config.requestTimeout).Result()
 		if err != nil {

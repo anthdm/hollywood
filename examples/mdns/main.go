@@ -3,13 +3,14 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log/slog"
+	"math/rand"
+	"os"
+
 	"github.com/anthdm/hollywood/actor"
 	"github.com/anthdm/hollywood/examples/mdns/chat"
 	"github.com/anthdm/hollywood/examples/mdns/discovery"
 	"github.com/anthdm/hollywood/remote"
-	"log/slog"
-	"math/rand"
-	"os"
 )
 
 var (
@@ -25,7 +26,7 @@ func main() {
 		*port = rand.Intn(10000) + 2000
 	}
 	rem := remote.New(fmt.Sprintf("%s:%d", *ip, *port), nil)
-	engine, err := actor.NewEngine(&actor.EngineConfig{Remote: rem})
+	engine, err := actor.NewEngine(actor.NewEngineConfig().WithRemote(rem))
 	if err != nil {
 		panic(err)
 	}

@@ -9,6 +9,7 @@ import (
 	"time"
 )
 
+// Remoter is an interface that abstract a remote that is tied to an engine.
 type Remoter interface {
 	Address() string
 	Send(*PID, any, *PID)
@@ -34,19 +35,30 @@ type Engine struct {
 
 // EngineConfig holds the configuration of the engine.
 type EngineConfig struct {
-	Remote Remoter
+	remote Remoter
 }
 
-// NewEngine returns a new actor Engine.
-// No mandatory arguments, but you can pass in a EngineConfig struct to configure the engine
-func NewEngine(opts *EngineConfig) (*Engine, error) {
+// NewEngineConfig returns a new default EngineConfig.
+func NewEngineConfig() EngineConfig {
+	return EngineConfig{}
+}
+
+// WithRemote sets the remote which will configure the engine so its capable
+// to send and receive messages over the network.
+func (config EngineConfig) WithRemote(remote Remoter) EngineConfig {
+	config.remote = remote
+	return config
+}
+
+// NewEngine returns a new actor Engine given an EngineConfig.
+func NewEngine(config EngineConfig) (*Engine, error) {
 	e := &Engine{}
 	e.Registry = newRegistry(e) // need to init the registry in case we want a custom deadletter
 	e.address = LocalLookupAddr
-	if opts != nil && opts.Remote != nil {
-		e.remote = opts.Remote
-		e.address = opts.Remote.Address()
-		err := opts.Remote.Start(e)
+	if config.remote != nil {
+		e.remote = config.remote
+		e.address = config.remote.Address()
+		err := config.remote.Start(e)
 		if err != nil {
 			return nil, fmt.Errorf("failed to start remote: %w", err)
 		}

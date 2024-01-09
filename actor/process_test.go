@@ -3,15 +3,16 @@ package actor
 import (
 	"bytes"
 	"fmt"
-	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 )
 
 // Test_CleanTrace tests that the stack trace is cleaned up correctly and that the function
 // which triggers the panic is at the top of the stack trace.
 func Test_CleanTrace(t *testing.T) {
-	e, err := NewEngine(nil)
+	e, err := NewEngine(NewEngineConfig())
 	require.NoError(t, err)
 	type triggerPanic struct {
 		data int

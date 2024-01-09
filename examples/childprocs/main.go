@@ -62,7 +62,7 @@ type message struct {
 }
 
 func main() {
-	e, err := actor.NewEngine(nil)
+	e, err := actor.NewEngine(actor.NewEngineConfig())
 	if err != nil {
 		panic(err)
 	}

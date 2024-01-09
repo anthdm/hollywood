@@ -143,7 +143,7 @@ func (r *fileStore) Load(key string) ([]byte, error) {
 }
 
 func main() {
-	e, err := actor.NewEngine(nil)
+	e, err := actor.NewEngine(actor.NewEngineConfig())
 	if err != nil {
 		log.Fatal(err)
 	}

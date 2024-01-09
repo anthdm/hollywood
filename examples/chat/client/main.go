@@ -4,12 +4,13 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
-	"github.com/anthdm/hollywood/actor"
-	"github.com/anthdm/hollywood/examples/chat/types"
-	"github.com/anthdm/hollywood/remote"
 	"log/slog"
 	"math/rand"
 	"os"
+
+	"github.com/anthdm/hollywood/actor"
+	"github.com/anthdm/hollywood/examples/chat/types"
+	"github.com/anthdm/hollywood/remote"
 )
 
 type client struct {
@@ -52,7 +53,7 @@ func main() {
 		*listenAt = fmt.Sprintf("127.0.0.1:%d", rand.Int31n(50000)+10000)
 	}
 	rem := remote.New(*listenAt, nil)
-	e, err := actor.NewEngine(&actor.EngineConfig{Remote: rem})
+	e, err := actor.NewEngine(actor.NewEngineConfig().WithRemote(rem))
 	if err != nil {
 		slog.Error("failed to create engine", "err", err)
 		os.Exit(1)

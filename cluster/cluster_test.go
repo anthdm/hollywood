@@ -200,7 +200,7 @@ func TestMemberLeave(t *testing.T) {
 	c2Addr := getRandomLocalhostAddr()
 
 	remote := remote.New(c2Addr, nil)
-	e, err := actor.NewEngine(&actor.EngineConfig{Remote: remote})
+	e, err := actor.NewEngine(actor.NewEngineConfig().WithRemote(remote))
 	if err != nil {
 		log.Fatal(err)
 	}

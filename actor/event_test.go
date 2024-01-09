@@ -1,13 +1,14 @@
 package actor
 
 import (
-	"github.com/stretchr/testify/assert"
 	"sync"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestDuplicateIdEvent(t *testing.T) {
-	e, err := NewEngine(nil)
+	e, err := NewEngine(NewEngineConfig())
 	assert.NoError(t, err)
 	wg := sync.WaitGroup{}
 	wg.Add(1)
