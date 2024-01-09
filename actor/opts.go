@@ -1,6 +1,7 @@
 package actor
 
 import (
+	"context"
 	"time"
 )
 
@@ -23,6 +24,7 @@ type Opts struct {
 	RestartDelay time.Duration
 	InboxSize    int
 	Middleware   []MiddlewareFunc
+	Context      context.Context
 }
 
 type OptFunc func(*Opts)
@@ -30,11 +32,18 @@ type OptFunc func(*Opts)
 // DefaultOpts returns default options from the given Producer.
 func DefaultOpts(p Producer) Opts {
 	return Opts{
+		Context:      context.Background(),
 		Producer:     p,
 		MaxRestarts:  defaultMaxRestarts,
 		InboxSize:    defaultInboxSize,
 		RestartDelay: defaultRestartDelay,
 		Middleware:   []MiddlewareFunc{},
+	}
+}
+
+func WithContext(ctx context.Context) OptFunc {
+	return func(opts *Opts) {
+		opts.Context = ctx
 	}
 }
 

@@ -1,6 +1,7 @@
 package actor
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"sync"
@@ -34,6 +35,24 @@ func newTickReceiver(wg *sync.WaitGroup) Producer {
 			wg: wg,
 		}
 	}
+}
+
+func TestSpawnWithContext(t *testing.T) {
+	e, _ := NewEngine(nil)
+	type key struct {
+		key string
+	}
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	ctx := context.WithValue(context.Background(), key{"foo"}, "bar")
+	e.SpawnFunc(func(c *Context) {
+		switch c.Message().(type) {
+		case Started:
+			assert.Equal(t, "bar", ctx.Value(key{"foo"}))
+			wg.Done()
+		}
+	}, "test", WithContext(ctx))
+	wg.Wait()
 }
 
 func TestRegistryGetPID(t *testing.T) {
