@@ -3,11 +3,12 @@ package actor
 import (
 	"bytes"
 	"fmt"
-	"github.com/DataDog/gostackparse"
 	"log/slog"
 	"runtime/debug"
 	"sync"
 	"time"
+
+	"github.com/DataDog/gostackparse"
 )
 
 type Envelope struct {
@@ -24,11 +25,6 @@ type Processer interface {
 	Shutdown(*sync.WaitGroup)
 }
 
-const (
-	procStateRunning int32 = iota
-	procStateStopped
-)
-
 type process struct {
 	Opts
 
@@ -36,13 +32,12 @@ type process struct {
 	context  *Context
 	pid      *PID
 	restarts int32
-
-	mbuffer []Envelope
+	mbuffer  []Envelope
 }
 
 func newProcess(e *Engine, opts Opts) *process {
 	pid := NewPID(e.address, opts.Kind+pidSeparator+opts.ID)
-	ctx := newContext(e, pid)
+	ctx := newContext(opts.Context, e, pid)
 	p := &process{
 		pid:     pid,
 		inbox:   NewInbox(opts.InboxSize),

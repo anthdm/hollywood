@@ -1,6 +1,7 @@
 package actor
 
 import (
+	"context"
 	"log/slog"
 	"math"
 	"math/rand"
@@ -21,14 +22,22 @@ type Context struct {
 	// when the child dies.
 	parentCtx *Context
 	children  *safemap.SafeMap[string, *PID]
+	context   context.Context
 }
 
-func newContext(e *Engine, pid *PID) *Context {
+func newContext(ctx context.Context, e *Engine, pid *PID) *Context {
 	return &Context{
+		context:  ctx,
 		engine:   e,
 		pid:      pid,
 		children: safemap.New[string, *PID](),
 	}
+}
+
+// Context returns a context.Context, user defined on spawn or
+// a context.Background as default
+func (c *Context) Context() context.Context {
+	return c.context
 }
 
 // Receiver returns the underlying receiver of this Context.
