@@ -109,6 +109,7 @@ func (s *SelfManaged) Receive(c *actor.Context) {
 		member := s.members.GetByHost(msg.ListenAddr)
 		s.removeMember(member)
 	case *actor.Ping:
+	case actor.Initialized:
 		_ = msg
 	default:
 		slog.Warn("received unhandled message", "msg", msg, "t", reflect.TypeOf(msg))

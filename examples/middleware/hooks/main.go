@@ -44,7 +44,7 @@ func WithHooks() func(actor.ReceiveFunc) actor.ReceiveFunc {
 
 func main() {
 	// Create a new engine
-	e, err := actor.NewEngine(nil)
+	e, err := actor.NewEngine(actor.NewEngineConfig())
 	if err != nil {
 		panic(err)
 	}

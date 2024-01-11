@@ -119,7 +119,7 @@ type Cluster struct {
 func New(config Config) (*Cluster, error) {
 	if config.engine == nil {
 		remote := remote.New(config.listenAddr, nil)
-		e, err := actor.NewEngine(&actor.EngineConfig{Remote: remote})
+		e, err := actor.NewEngine(actor.NewEngineConfig().WithRemote(remote))
 		if err != nil {
 			return nil, err
 		}

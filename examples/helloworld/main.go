@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+
 	"github.com/anthdm/hollywood/actor"
 )
 
@@ -38,7 +39,7 @@ func main() {
 	fmt.Printf("ds len: %d\n", len(ds))
 
 	fmt.Printf("%+v\n", ds)
-	engine, err := actor.NewEngine(nil)
+	engine, err := actor.NewEngine(actor.NewEngineConfig())
 	if err != nil {
 		panic(err)
 	}

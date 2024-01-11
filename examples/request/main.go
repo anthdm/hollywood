@@ -43,7 +43,7 @@ func (r *nameResponder) Receive(ctx *actor.Context) {
 // actor is spawned with a custom name, showing you how to pass custom
 // arguments to your actors.
 func main() {
-	e, err := actor.NewEngine(nil)
+	e, err := actor.NewEngine(actor.NewEngineConfig())
 	if err != nil {
 		log.Fatal(err)
 	}

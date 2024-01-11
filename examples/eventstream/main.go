@@ -15,7 +15,7 @@ type MyCustomEvent struct {
 // Spawn 2 actors and subscribe them to the event stream.
 // When we call engine.PublishEvent both actors will be notified.
 func main() {
-	e, _ := actor.NewEngine(nil)
+	e, _ := actor.NewEngine(actor.NewEngineConfig())
 	actorA := e.SpawnFunc(func(c *actor.Context) {
 		switch msg := c.Message().(type) {
 		case actor.Started:
