@@ -1,8 +1,11 @@
 package main
 
 import (
+	"fmt"
 	"log"
+	"reflect"
 
+	"github.com/anthdm/hollywood/actor"
 	"github.com/anthdm/hollywood/cluster"
 	"github.com/anthdm/hollywood/examples/cluster/shared"
 )
@@ -13,11 +16,21 @@ func main() {
 		WithID("B").
 		WithListenAddr("127.0.0.1:3001").
 		WithRegion("us-west")
-	cluster, err := cluster.New(config)
+	c, err := cluster.New(config)
 	if err != nil {
 		log.Fatal(err)
 	}
-	cluster.RegisterKind("playerSession", shared.NewPlayer, nil)
-	cluster.Start()
+	eventPID := c.Engine().SpawnFunc(func(ctx *actor.Context) {
+		switch msg := ctx.Message().(type) {
+		case *cluster.Activation:
+			fmt.Println("got activation event", msg)
+		default:
+			fmt.Println("got", reflect.TypeOf(msg))
+		}
+	}, "event")
+
+	c.Engine().Subscribe(eventPID)
+	c.RegisterKind("playerSession", shared.NewPlayer, nil)
+	c.Start()
 	select {}
 }

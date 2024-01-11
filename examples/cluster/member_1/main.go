@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/anthdm/hollywood/actor"
@@ -23,6 +24,8 @@ func main() {
 
 	eventPID := c.Engine().SpawnFunc(func(ctx *actor.Context) {
 		switch msg := ctx.Message().(type) {
+		case cluster.ActivationEvent:
+			fmt.Println("got activation event")
 		case cluster.MemberJoinEvent:
 			if msg.Member.ID == "B" {
 				config := cluster.NewActivationConfig().

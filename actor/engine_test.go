@@ -38,7 +38,7 @@ func newTickReceiver(wg *sync.WaitGroup) Producer {
 }
 
 func TestSpawnWithContext(t *testing.T) {
-	e, _ := NewEngine(nil)
+	e, _ := NewEngine(NewEngineConfig())
 	type key struct {
 		key string
 	}
