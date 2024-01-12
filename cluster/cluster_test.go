@@ -10,6 +10,7 @@ import (
 	"github.com/anthdm/hollywood/actor"
 	"github.com/anthdm/hollywood/remote"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type Player struct{}
@@ -28,11 +29,11 @@ func NewInventory() actor.Receiver {
 
 func (i Inventory) Receive(c *actor.Context) {}
 
-func TestFooBarBaz(t *testing.T) {
-	config := NewConfig()
-	cluster, err := New(config)
-	assert.Nil(t, err)
-	_ = cluster
+func TestClusterActivationOnMemberFunc(t *testing.T) {
+	c, err := New(NewConfig())
+	require.Nil(t, err)
+
+	c.RegisterKind("player", NewPlayer, NewKindConfig())
 }
 
 func TestClusterShouldWorkWithDefaultValues(t *testing.T) {
@@ -45,8 +46,8 @@ func TestClusterShouldWorkWithDefaultValues(t *testing.T) {
 
 func TestRegisterKind(t *testing.T) {
 	c := makeCluster(t, getRandomLocalhostAddr(), "A", "eu-west")
-	c.RegisterKind("player", NewPlayer, nil)
-	c.RegisterKind("inventory", NewInventory, nil)
+	c.RegisterKind("player", NewPlayer, NewKindConfig())
+	c.RegisterKind("inventory", NewInventory, NewKindConfig())
 	assert.True(t, c.HasKindLocal("player"))
 	assert.True(t, c.HasKindLocal("inventory"))
 }
@@ -94,7 +95,7 @@ func TestClusterSpawn(t *testing.T) {
 func TestMemberJoin(t *testing.T) {
 	c1 := makeCluster(t, getRandomLocalhostAddr(), "A", "eu-west")
 	c2 := makeCluster(t, getRandomLocalhostAddr(), "B", "eu-west")
-	c2.RegisterKind("player", NewPlayer, nil)
+	c2.RegisterKind("player", NewPlayer, NewKindConfig())
 
 	wg := sync.WaitGroup{}
 	wg.Add(1)
@@ -127,7 +128,7 @@ func TestActivate(t *testing.T) {
 		c1   = makeCluster(t, addr, "A", "eu-west")
 		c2   = makeCluster(t, getRandomLocalhostAddr(), "B", "eu-west")
 	)
-	c2.RegisterKind("player", NewPlayer, nil)
+	c2.RegisterKind("player", NewPlayer, NewKindConfig())
 
 	expectedPID := actor.NewPID(c2.engine.Address(), "player/1")
 	wg := sync.WaitGroup{}
@@ -163,7 +164,7 @@ func TestDeactivate(t *testing.T) {
 	addr := getRandomLocalhostAddr()
 	c1 := makeCluster(t, addr, "A", "eu-west")
 	c2 := makeCluster(t, getRandomLocalhostAddr(), "B", "eu-west")
-	c2.RegisterKind("player", NewPlayer, nil)
+	c2.RegisterKind("player", NewPlayer, NewKindConfig())
 
 	expectedPID := actor.NewPID(c2.engine.Address(), "player/1")
 	wg := sync.WaitGroup{}
@@ -212,7 +213,7 @@ func TestMemberLeave(t *testing.T) {
 	assert.Nil(t, err)
 
 	c1 := makeCluster(t, c1Addr, "A", "eu-west")
-	c2.RegisterKind("player", NewPlayer, nil)
+	c2.RegisterKind("player", NewPlayer, NewKindConfig())
 	c1.Start()
 
 	wg := sync.WaitGroup{}

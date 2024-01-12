@@ -10,9 +10,7 @@ import (
 
 type (
 	activate struct {
-		kind   string
-		id     string
-		region string
+		details ActivationDetails
 	}
 	getMembers struct{}
 	getKinds   struct{}
@@ -60,7 +58,7 @@ func (a *Agent) Receive(c *actor.Context) {
 	case *Activation:
 		a.handleActivation(msg)
 	case activate:
-		pid := a.activate(msg.kind, msg.id, msg.region)
+		pid := a.activate(msg.details)
 		c.Respond(pid)
 	case deactivate:
 		a.bcast(&Deactivation{PID: msg.pid})
@@ -117,10 +115,10 @@ func (a *Agent) handleActivationRequest(msg *ActivationRequest) *ActivationRespo
 	return resp
 }
 
-func (a *Agent) activate(kind, id, region string) *actor.PID {
-	members := a.members.FilterByKind(kind)
+func (a *Agent) activate(details ActivationDetails) *actor.PID {
+	members := a.members.FilterByKind(details.Kind)
 	if len(members) == 0 {
-		slog.Warn("could not find any members with kind", "kind", kind)
+		slog.Warn("could not find any members with kind", "kind", details.Kind)
 		return nil
 	}
 	owner := a.cluster.config.activationStrategy.ActivateOnMember(ActivationDetails{
