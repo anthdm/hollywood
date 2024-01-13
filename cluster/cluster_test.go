@@ -1,11 +1,13 @@
 package cluster
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"math/rand"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/anthdm/hollywood/actor"
 	"github.com/anthdm/hollywood/remote"
@@ -29,11 +31,56 @@ func NewInventory() actor.Receiver {
 
 func (i Inventory) Receive(c *actor.Context) {}
 
-func TestClusterActivationOnMemberFunc(t *testing.T) {
-	c, err := New(NewConfig())
+func TestClusterSelectMemberFunc(t *testing.T) {
+	c1, err := New(NewConfig().WithID("A"))
+	require.Nil(t, err)
+	c2, err := New(NewConfig().WithID("B"))
+	require.Nil(t, err)
+	c3, err := New(NewConfig().WithID("C"))
 	require.Nil(t, err)
 
-	c.RegisterKind("player", NewPlayer, NewKindConfig())
+	c1.RegisterKind("player", NewPlayer, NewKindConfig())
+	c2.RegisterKind("player", NewPlayer, NewKindConfig())
+	c3.RegisterKind("player", NewPlayer, NewKindConfig())
+
+	c1.Start()
+	c2.Start()
+	c3.Start()
+
+	selectMember := func(details ActivationDetails) *Member {
+		for _, member := range details.Members {
+			if member.ID == "C" {
+				return member
+			}
+		}
+		return nil
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	eventPID := c1.Engine().SpawnFunc(func(c *actor.Context) {
+		switch msg := c.Message().(type) {
+		case ActivationEvent:
+			// test that we spawned on member C
+			require.Equal(t, c3.Address(), msg.PID.Address)
+			cancel()
+		case MemberJoinEvent:
+			if msg.Member.ID == "C" {
+				// Wait till member C is online before activating
+				// Activate the actor from member A
+				// Which should spawn the actor on member C
+				config := NewActivationConfig().WithSelectMemberFunc(selectMember)
+				c1.Activate("cancel_receiver", config)
+			}
+		}
+	}, "event")
+	c1.Engine().Subscribe(eventPID)
+	defer c1.Engine().Unsubscribe(eventPID)
+
+	<-ctx.Done()
+	require.Equal(t, context.DeadlineExceeded, ctx.Err())
+	c1.Stop().Wait()
+	c2.Stop().Wait()
+	c3.Stop().Wait()
 }
 
 func TestClusterShouldWorkWithDefaultValues(t *testing.T) {

@@ -10,7 +10,8 @@ import (
 
 type (
 	activate struct {
-		details ActivationDetails
+		kind   string
+		config ActivationConfig
 	}
 	getMembers struct{}
 	getKinds   struct{}
@@ -58,7 +59,7 @@ func (a *Agent) Receive(c *actor.Context) {
 	case *Activation:
 		a.handleActivation(msg)
 	case activate:
-		pid := a.activate(msg.details)
+		pid := a.activate(msg.kind, msg.config)
 		c.Respond(pid)
 	case deactivate:
 		a.bcast(&Deactivation{PID: msg.pid})
@@ -115,27 +116,30 @@ func (a *Agent) handleActivationRequest(msg *ActivationRequest) *ActivationRespo
 	return resp
 }
 
-func (a *Agent) activate(details ActivationDetails) *actor.PID {
-	members := a.members.FilterByKind(details.Kind)
+func (a *Agent) activate(kind string, config ActivationConfig) *actor.PID {
+	members := a.members.FilterByKind(kind)
 	if len(members) == 0 {
-		slog.Warn("could not find any members with kind", "kind", details.Kind)
+		slog.Warn("could not find any members with kind", "kind", kind)
 		return nil
 	}
-	owner := a.cluster.config.activationStrategy.ActivateOnMember(ActivationDetails{
+	if config.selectMember == nil {
+		config.selectMember = SelectRandomMember
+	}
+	memberPID := config.selectMember(ActivationDetails{
 		Members: members,
-		Region:  region,
+		Region:  config.region,
 		Kind:    kind,
 	})
-	if owner == nil {
+	if memberPID == nil {
 		slog.Warn("activator did not found a member to activate on")
 		return nil
 	}
-	req := &ActivationRequest{Kind: kind, ID: id}
-	activatorPID := actor.NewPID(owner.Host, "cluster/"+owner.ID)
+	req := &ActivationRequest{Kind: kind, ID: config.id}
+	activatorPID := actor.NewPID(memberPID.Host, "cluster/"+memberPID.ID)
 
 	var activationResp *ActivationResponse
 	// Local activation
-	if owner.Host == a.cluster.engine.Address() {
+	if memberPID.Host == a.cluster.engine.Address() {
 		activationResp = a.handleActivationRequest(req)
 	} else {
 		// Remote activation

@@ -3,22 +3,11 @@ package cluster
 import "github.com/anthdm/hollywood/actor"
 
 // KindConfig holds configuration for a registered kind.
-type KindConfig struct {
-	activateOnMember ActivateOnMemberFunc
-}
+type KindConfig struct{}
 
 // NewKindConfig returns a default kind configuration.
 func NewKindConfig() KindConfig {
-	return KindConfig{
-		activateOnMember: ActivateOnRandomMember,
-	}
-}
-
-// WithActivateOnMemberFunc set the function that will be used to select the member
-// where this kind will be spawned/activated on.
-func (config KindConfig) WithActivateOnMemberFunc(fun ActivateOnMemberFunc) KindConfig {
-	config.activateOnMember = fun
-	return config
+	return KindConfig{}
 }
 
 // A kind is a type of actor that can be activated from any member of the cluster.

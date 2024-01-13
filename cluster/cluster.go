@@ -150,36 +150,6 @@ func (c *Cluster) Spawn(p actor.Producer, id string, opts ...actor.OptFunc) *act
 	return pid
 }
 
-// ActivationConfig...
-type ActivationConfig struct {
-	id     string
-	region string
-}
-
-// NewActivationConfig returns a new default config.
-func NewActivationConfig() ActivationConfig {
-	return ActivationConfig{
-		id:     fmt.Sprintf("%d", rand.Intn(math.MaxInt)),
-		region: "default",
-	}
-}
-
-// WithID set's the id of the actor that will be activated on the cluster.
-//
-// Defaults to a random identifier.
-func (config ActivationConfig) WithID(id string) ActivationConfig {
-	config.id = id
-	return config
-}
-
-// WithRegion set's the region on where this actor should be spawned.
-//
-// Defaults to a "default".
-func (config ActivationConfig) WithRegion(region string) ActivationConfig {
-	config.region = region
-	return config
-}
-
 // Activate actives the registered kind in the cluster based on the given config.
 // The actor does not need to be registered locally on the member if at least one
 // member has that kind registered.
@@ -188,8 +158,7 @@ func (config ActivationConfig) WithRegion(region string) ActivationConfig {
 func (c *Cluster) Activate(kind string, config ActivationConfig) *actor.PID {
 	msg := activate{
 		kind:   kind,
-		id:     config.id,
-		region: config.region,
+		config: config,
 	}
 	resp, err := c.engine.Request(c.agentPID, msg, c.config.requestTimeout).Result()
 	if err != nil {
