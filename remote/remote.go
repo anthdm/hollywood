@@ -25,7 +25,8 @@ func NewConfig() Config {
 	return Config{}
 }
 
-// WithTLS sets the TLS config of the remote.
+// WithTLS sets the TLS config of the remote which will set
+// the transport of the Remote to TLS.
 func (c Config) WithTLS(tlsconf *tls.Config) Config {
 	c.TLSConfig = tlsconf
 	return c

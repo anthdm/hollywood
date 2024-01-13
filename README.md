@@ -73,7 +73,7 @@ compiler.
 Let's go through a Hello world message. The complete example is available in the 
 [hello world](examples/helloworld) folder. Let's start in main:
 ```go
-engine, err := actor.NewEngine(nil)
+engine, err := actor.NewEngine(actor.NewEngineConfig())
 ```
 This creates a new engine. The engine is the core of Hollywood. It's responsible for spawning actors, sending messages
 and handling the lifecycle of actors. If Hollywood fails to create the engine it'll return an error. For development 
@@ -212,21 +212,18 @@ This works the same as local actors but "over the wire". Hollywood supports seri
 
 ### Configuration
 
-remote.New() takes a remote.Config struct. This struct contains the following fields:
-- ListenAddr string
-- TlsConfig *tls.Config
+remote.New() takes a listen address and a remote.Config struct.
 
 You'll instantiate a new remote with the following code:
 ```go
-var engine *actor.Engine
-remote := remote.New("0.0.0.0:2222",
-		&remote.Config{TlsConfig: &tls.Config{
-			Certificates: []tls.Certificate{cert},
-		},
-	}		
-})
-var err error
-engine, err = actor.NewEngine(actor.EngineOptRemote(remote))
+tlsConfig := TlsConfig: &tls.Config{
+	Certificates: []tls.Certificate{cert},
+}
+
+config := remote.NewConfig().WithTLS(tlsConfig)
+remote := remote.New("0.0.0.0:2222", config)
+
+engine, err := actor.NewEngine(actor.NewEngineConfig().WithRemote(remote))
 ```
 
 Look at the [Remote actor examples](examples/remote) and the [Chat client & Server](examples/chat) for more information.
