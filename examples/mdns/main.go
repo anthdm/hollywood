@@ -25,7 +25,7 @@ func main() {
 		// pick a random port, 2000 and up.
 		*port = rand.Intn(10000) + 2000
 	}
-	rem := remote.New(fmt.Sprintf("%s:%d", *ip, *port), nil)
+	rem := remote.New(fmt.Sprintf("%s:%d", *ip, *port), remote.NewConfig())
 	engine, err := actor.NewEngine(actor.NewEngineConfig().WithRemote(rem))
 	if err != nil {
 		panic(err)

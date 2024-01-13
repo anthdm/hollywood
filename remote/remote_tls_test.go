@@ -172,7 +172,7 @@ func generateCert(ca *x509.Certificate, caKey *ecdsa.PrivateKey) (*tls.Certifica
 func makeRemoteEngineTls(listenAddr string, config *tls.Config) (*actor.Engine, *Remote, error) {
 	var eng *actor.Engine
 	var err error
-	rem := New(listenAddr, &Config{TlsConfig: config})
+	rem := New(listenAddr, NewConfig().WithTLS(config))
 	eng, err = actor.NewEngine(actor.NewEngineConfig().WithRemote(rem))
 	if err != nil {
 		return nil, nil, fmt.Errorf("actor.NewEngine: %w", err)

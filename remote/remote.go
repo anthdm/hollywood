@@ -16,14 +16,23 @@ import (
 
 // Config holds the remote configuration.
 type Config struct {
-	TlsConfig *tls.Config
-	Wg        *sync.WaitGroup
+	TLSConfig *tls.Config
+	// Wg        *sync.WaitGroup
+}
+
+// NewConfig returns a new default remote configuration.
+func NewConfig() Config {
+	return Config{}
+}
+
+// WithTLS sets the TLS config of the remote.
+func (c Config) WithTLS(tlsconf *tls.Config) Config {
+	c.TLSConfig = tlsconf
+	return c
 }
 
 type Remote struct {
 	addr            string
-	tlsConfig       *tls.Config
-	wg              *sync.WaitGroup
 	engine          *actor.Engine
 	config          Config
 	streamReader    *streamReader
@@ -41,13 +50,10 @@ const (
 )
 
 // New creates a new "Remote" object given a Config.
-func New(addr string, cfg *Config) *Remote {
+func New(addr string, config Config) *Remote {
 	r := &Remote{
-		addr: addr,
-	}
-	if cfg != nil {
-		r.tlsConfig = cfg.TlsConfig
-		r.wg = cfg.Wg
+		addr:   addr,
+		config: config,
 	}
 	r.state.Store(stateInitialized)
 	r.streamReader = newStreamReader(r)
@@ -62,12 +68,12 @@ func (r *Remote) Start(e *actor.Engine) error {
 	r.engine = e
 	var ln net.Listener
 	var err error
-	switch r.config.TlsConfig {
+	switch r.config.TLSConfig {
 	case nil:
 		ln, err = net.Listen("tcp", r.addr)
 	default:
 		slog.Debug("remote using TLS for listening")
-		ln, err = tls.Listen("tcp", r.addr, r.config.TlsConfig)
+		ln, err = tls.Listen("tcp", r.addr, r.config.TLSConfig)
 	}
 	if err != nil {
 		return fmt.Errorf("remote failed to listen: %w", err)
@@ -80,7 +86,9 @@ func (r *Remote) Start(e *actor.Engine) error {
 	}
 	s := drpcserver.New(mux)
 
-	r.streamRouterPID = r.engine.Spawn(newStreamRouter(r.engine, r.config.TlsConfig), "router", actor.WithInboxSize(1024*1024))
+	r.streamRouterPID = r.engine.Spawn(
+		newStreamRouter(r.engine, r.config.TLSConfig),
+		"router", actor.WithInboxSize(1024*1024))
 	slog.Debug("server started", "listenAddr", r.addr)
 	r.stopWg = &sync.WaitGroup{}
 	r.stopWg.Add(1)
