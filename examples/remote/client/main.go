@@ -12,7 +12,7 @@ import (
 
 func main() {
 	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug})))
-	r := remote.New("127.0.0.1:3000", nil)
+	r := remote.New("127.0.0.1:3000", remote.NewConfig())
 	e, err := actor.NewEngine(actor.NewEngineConfig().WithRemote(r))
 	if err != nil {
 		panic(err)
