@@ -30,7 +30,7 @@ func main() {
 	}, "event")
 
 	c.Engine().Subscribe(eventPID)
-	c.RegisterKind("playerSession", shared.NewPlayer, nil)
+	c.RegisterKind("playerSession", shared.NewPlayer, cluster.NewKindConfig())
 	c.Start()
 	select {}
 }

@@ -1,15 +1,18 @@
 package cluster
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"math/rand"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/anthdm/hollywood/actor"
 	"github.com/anthdm/hollywood/remote"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type Player struct{}
@@ -28,11 +31,56 @@ func NewInventory() actor.Receiver {
 
 func (i Inventory) Receive(c *actor.Context) {}
 
-func TestFooBarBaz(t *testing.T) {
-	config := NewConfig()
-	cluster, err := New(config)
-	assert.Nil(t, err)
-	_ = cluster
+func TestClusterSelectMemberFunc(t *testing.T) {
+	c1, err := New(NewConfig().WithID("A"))
+	require.Nil(t, err)
+	c2, err := New(NewConfig().WithID("B"))
+	require.Nil(t, err)
+	c3, err := New(NewConfig().WithID("C"))
+	require.Nil(t, err)
+
+	c1.RegisterKind("player", NewPlayer, NewKindConfig())
+	c2.RegisterKind("player", NewPlayer, NewKindConfig())
+	c3.RegisterKind("player", NewPlayer, NewKindConfig())
+
+	c1.Start()
+	c2.Start()
+	c3.Start()
+
+	selectMember := func(details ActivationDetails) *Member {
+		for _, member := range details.Members {
+			if member.ID == "C" {
+				return member
+			}
+		}
+		return nil
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	eventPID := c1.Engine().SpawnFunc(func(c *actor.Context) {
+		switch msg := c.Message().(type) {
+		case ActivationEvent:
+			// test that we spawned on member C
+			require.Equal(t, c3.Address(), msg.PID.Address)
+			cancel()
+		case MemberJoinEvent:
+			if msg.Member.ID == "C" {
+				// Wait till member C is online before activating
+				// Activate the actor from member A
+				// Which should spawn the actor on member C
+				config := NewActivationConfig().WithSelectMemberFunc(selectMember)
+				c1.Activate("cancel_receiver", config)
+			}
+		}
+	}, "event")
+	c1.Engine().Subscribe(eventPID)
+	defer c1.Engine().Unsubscribe(eventPID)
+
+	<-ctx.Done()
+	require.Equal(t, context.DeadlineExceeded, ctx.Err())
+	c1.Stop().Wait()
+	c2.Stop().Wait()
+	c3.Stop().Wait()
 }
 
 func TestClusterShouldWorkWithDefaultValues(t *testing.T) {
@@ -45,8 +93,8 @@ func TestClusterShouldWorkWithDefaultValues(t *testing.T) {
 
 func TestRegisterKind(t *testing.T) {
 	c := makeCluster(t, getRandomLocalhostAddr(), "A", "eu-west")
-	c.RegisterKind("player", NewPlayer, nil)
-	c.RegisterKind("inventory", NewInventory, nil)
+	c.RegisterKind("player", NewPlayer, NewKindConfig())
+	c.RegisterKind("inventory", NewInventory, NewKindConfig())
 	assert.True(t, c.HasKindLocal("player"))
 	assert.True(t, c.HasKindLocal("inventory"))
 }
@@ -94,7 +142,7 @@ func TestClusterSpawn(t *testing.T) {
 func TestMemberJoin(t *testing.T) {
 	c1 := makeCluster(t, getRandomLocalhostAddr(), "A", "eu-west")
 	c2 := makeCluster(t, getRandomLocalhostAddr(), "B", "eu-west")
-	c2.RegisterKind("player", NewPlayer, nil)
+	c2.RegisterKind("player", NewPlayer, NewKindConfig())
 
 	wg := sync.WaitGroup{}
 	wg.Add(1)
@@ -127,7 +175,7 @@ func TestActivate(t *testing.T) {
 		c1   = makeCluster(t, addr, "A", "eu-west")
 		c2   = makeCluster(t, getRandomLocalhostAddr(), "B", "eu-west")
 	)
-	c2.RegisterKind("player", NewPlayer, nil)
+	c2.RegisterKind("player", NewPlayer, NewKindConfig())
 
 	expectedPID := actor.NewPID(c2.engine.Address(), "player/1")
 	wg := sync.WaitGroup{}
@@ -163,7 +211,7 @@ func TestDeactivate(t *testing.T) {
 	addr := getRandomLocalhostAddr()
 	c1 := makeCluster(t, addr, "A", "eu-west")
 	c2 := makeCluster(t, getRandomLocalhostAddr(), "B", "eu-west")
-	c2.RegisterKind("player", NewPlayer, nil)
+	c2.RegisterKind("player", NewPlayer, NewKindConfig())
 
 	expectedPID := actor.NewPID(c2.engine.Address(), "player/1")
 	wg := sync.WaitGroup{}
@@ -212,7 +260,7 @@ func TestMemberLeave(t *testing.T) {
 	assert.Nil(t, err)
 
 	c1 := makeCluster(t, c1Addr, "A", "eu-west")
-	c2.RegisterKind("player", NewPlayer, nil)
+	c2.RegisterKind("player", NewPlayer, NewKindConfig())
 	c1.Start()
 
 	wg := sync.WaitGroup{}

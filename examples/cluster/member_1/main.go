@@ -20,7 +20,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	c.RegisterKind("playerSession", shared.NewPlayer, nil)
+	c.RegisterKind("playerSession", shared.NewPlayer, cluster.NewKindConfig())
 
 	eventPID := c.Engine().SpawnFunc(func(ctx *actor.Context) {
 		switch msg := ctx.Message().(type) {

@@ -22,24 +22,22 @@ type Producer func(c *Cluster) actor.Producer
 
 // Config holds the cluster configuration
 type Config struct {
-	listenAddr         string
-	id                 string
-	region             string
-	activationStrategy ActivationStrategy
-	engine             *actor.Engine
-	provider           Producer
-	requestTimeout     time.Duration
+	listenAddr     string
+	id             string
+	region         string
+	engine         *actor.Engine
+	provider       Producer
+	requestTimeout time.Duration
 }
 
 // NewConfig returns a Config that is initialized with default values.
 func NewConfig() Config {
 	return Config{
-		listenAddr:         getRandomListenAddr(),
-		id:                 fmt.Sprintf("%d", rand.Intn(math.MaxInt)),
-		region:             "default",
-		activationStrategy: NewDefaultActivationStrategy(),
-		provider:           NewSelfManagedProvider(NewSelfManagedConfig()),
-		requestTimeout:     defaultRequestTimeout,
+		listenAddr:     getRandomListenAddr(),
+		id:             fmt.Sprintf("%d", rand.Intn(math.MaxInt)),
+		region:         "default",
+		provider:       NewSelfManagedProvider(NewSelfManagedConfig()),
+		requestTimeout: defaultRequestTimeout,
 	}
 }
 
@@ -68,14 +66,6 @@ func (config Config) WithProvider(p Producer) Config {
 // engine and remote.
 func (config Config) WithEngine(e *actor.Engine) Config {
 	config.engine = e
-	return config
-}
-
-// TODO: Still not convinced about the name "ActivationStrategy".
-// TODO: Document this more.
-// WithActivationStrategy
-func (config Config) WithActivationStrategy(s ActivationStrategy) Config {
-	config.activationStrategy = s
 	return config
 }
 
@@ -160,42 +150,15 @@ func (c *Cluster) Spawn(p actor.Producer, id string, opts ...actor.OptFunc) *act
 	return pid
 }
 
-type ActivationConfig struct {
-	id     string
-	region string
-}
-
-// NewActivationConfig returns a new default config.
-func NewActivationConfig() ActivationConfig {
-	return ActivationConfig{
-		id:     fmt.Sprintf("%d", rand.Intn(math.MaxInt)),
-		region: "default",
-	}
-}
-
-// WithID set's the id of the actor that will be activated on the cluster.
+// Activate actives the registered kind in the cluster based on the given config.
+// The actor does not need to be registered locally on the member if at least one
+// member has that kind registered.
 //
-// Defaults to a random identifier.
-func (config ActivationConfig) WithID(id string) ActivationConfig {
-	config.id = id
-	return config
-}
-
-// WithRegion set's the region on where this actor (potentially) will be spawned
-//
-// Defaults to a "default".
-func (config ActivationConfig) WithRegion(region string) ActivationConfig {
-	config.region = region
-	return config
-}
-
-// Activate actives the given actor kind with an optional id. If there is no id
-// given, the engine will create an unique id automatically.
+//	playerPID := cluster.Activate("player", cluster.NewActivationConfig())
 func (c *Cluster) Activate(kind string, config ActivationConfig) *actor.PID {
 	msg := activate{
 		kind:   kind,
-		id:     config.id,
-		region: config.region,
+		config: config,
 	}
 	resp, err := c.engine.Request(c.agentPID, msg, c.config.requestTimeout).Result()
 	if err != nil {
@@ -215,23 +178,21 @@ func (c *Cluster) Deactivate(pid *actor.PID) {
 	c.engine.Send(c.agentPID, deactivate{pid: pid})
 }
 
-// RegisterKind registers a new actor/receiver kind that can be spawned from any node
-// on the cluster.
-// NOTE: Kinds can only be registered if the cluster is not running.
-func (c *Cluster) RegisterKind(name string, producer actor.Producer, config *KindConfig) {
+// RegisterKind registers a new actor that can be activated from any member
+// in the cluster.
+//
+//	cluster.Register("player", NewPlayer, NewKindConfig())
+//
+// NOTE: Kinds can only be registered before the cluster is started.
+func (c *Cluster) RegisterKind(kind string, producer actor.Producer, config KindConfig) {
 	if c.isStarted {
-		slog.Warn("trying to register new kind on a running cluster")
+		slog.Warn("failed to register kind", "reason", "cluster already started", "kind", kind)
 		return
 	}
-	if config == nil {
-		config = &KindConfig{}
-	}
-	kind := newKind(name, producer, *config)
-	c.kinds = append(c.kinds, kind)
+	c.kinds = append(c.kinds, newKind(kind, producer, config))
 }
 
-// HasLocalKind returns true if this members of the cluster has the kind
-// locally registered.
+// HasKindLocal returns true whether the node of the cluster has the kind locally registered.
 func (c *Cluster) HasKindLocal(name string) bool {
 	for _, kind := range c.kinds {
 		if kind.name == name {
