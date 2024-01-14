@@ -213,7 +213,7 @@ func (s *SelfManaged) startAutoDiscovery() {
 				s.cluster.engine.SendWithSender(memberPID, hs, self)
 			}
 		}
-		slog.Info("[CLUSTER] stopping discovery", "id", s.cluster.ID())
+		slog.Debug("[CLUSTER] stopping discovery", "id", s.cluster.ID())
 	}(entries)
 
 	err := s.resolver.Browse(s.ctx, serviceName, domain, entries)
