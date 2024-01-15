@@ -3,8 +3,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"github.com/anthdm/hollywood/actor"
-	"github.com/anthdm/hollywood/remote"
 	"log/slog"
 	"math/rand"
 	"os"
@@ -12,6 +10,9 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/anthdm/hollywood/actor"
+	"github.com/anthdm/hollywood/remote"
 )
 
 //go:generate protoc --proto_path=. --go_out=. --go_opt=paths=source_relative message.proto
@@ -98,8 +99,8 @@ func newBenchmark(engineCount, actorsPerEngine, senders int) *Benchmark {
 }
 func (b *Benchmark) spawnEngines() error {
 	for i := 0; i < b.engineCount; i++ {
-		r := remote.New(fmt.Sprintf("localhost:%d", 4000+i), nil)
-		e, err := actor.NewEngine(&actor.EngineConfig{Remote: r})
+		r := remote.New(fmt.Sprintf("localhost:%d", 4000+i), remote.NewConfig())
+		e, err := actor.NewEngine(actor.NewEngineConfig().WithRemote(r))
 		if err != nil {
 			return fmt.Errorf("failed to create engine: %w", err)
 		}
