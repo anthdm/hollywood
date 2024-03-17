@@ -12,13 +12,7 @@ type message struct {
 	data string
 }
 
-var wg sync.WaitGroup
-
-type foo struct{}
-
-func newFoo() actor.Receiver {
-	return &foo{}
-}
+type foo struct{ done func() }
 
 func (f *foo) Receive(ctx *actor.Context) {
 	switch msg := ctx.Message().(type) {
@@ -28,8 +22,8 @@ func (f *foo) Receive(ctx *actor.Context) {
 		if msg.data == "failed" {
 			panic("I failed processing this message")
 		}
-		wg.Done()
 		fmt.Println("I restarted and processed the next one perfectly:", msg.data)
+		f.done()
 	}
 }
 
@@ -38,8 +32,11 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	pid := engine.Spawn(newFoo, "foo", actor.WithMaxRestarts(3))
+	var wg sync.WaitGroup
 	wg.Add(1)
+	pid := engine.Spawn(
+		func() actor.Receiver { return &foo{done: wg.Done} },
+		"foo", actor.WithMaxRestarts(3))
 	engine.Send(pid, &message{data: "failed"})
 	time.Sleep(time.Millisecond)
 	engine.Send(pid, &message{data: "hello world!"})
