@@ -75,7 +75,8 @@ func TestSpawnChildPID(t *testing.T) {
 
 func TestChild(t *testing.T) {
 	var (
-		wg = sync.WaitGroup{}
+		wg     = sync.WaitGroup{}
+		stopWg = sync.WaitGroup{}
 	)
 	e, err := NewEngine(NewEngineConfig())
 	require.NoError(t, err)
@@ -88,6 +89,9 @@ func TestChild(t *testing.T) {
 			c.SpawnChildFunc(func(_ *Context) {}, "child", WithID("3"))
 		case Started:
 			assert.Equal(t, 3, len(c.Children()))
+			c.Engine().Stop(c.Children()[0], &stopWg)
+			stopWg.Wait()
+			assert.Equal(t, 2, len(c.Children()))
 			wg.Done()
 		}
 	}, "foo", WithID("bar/baz"))
