@@ -52,8 +52,9 @@ type Inbox struct {
 
 func NewInbox(size int) *Inbox {
 	return &Inbox{
-		rb:        ringbuffer.New[Envelope](int64(size)),
-		scheduler: NewScheduler(defaultThroughput),
+		rb:         ringbuffer.New[Envelope](int64(size)),
+		scheduler:  NewScheduler(defaultThroughput),
+		procStatus: stopped,
 	}
 }
 
@@ -92,6 +93,8 @@ func (in *Inbox) run() {
 
 func (in *Inbox) Start(proc Processer) {
 	in.proc = proc
+	atomic.StoreInt32(&in.procStatus, idle)
+	in.schedule()
 }
 
 func (in *Inbox) Stop() error {
