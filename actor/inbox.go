@@ -13,9 +13,10 @@ const (
 )
 
 const (
-	idle int32 = iota
+	stopped int32 = iota
+	starting
+	idle
 	running
-	stopped
 )
 
 type Scheduler interface {
@@ -92,9 +93,12 @@ func (in *Inbox) run() {
 }
 
 func (in *Inbox) Start(proc Processer) {
-	in.proc = proc
-	atomic.CompareAndSwapInt32(&in.procStatus, stopped, idle)
-	in.schedule()
+	// transition to "starting" and then "idle" to ensure no race condition on in.proc
+	if atomic.CompareAndSwapInt32(&in.procStatus, stopped, starting) {
+		in.proc = proc
+		atomic.SwapInt32(&in.procStatus, idle)
+		in.schedule()
+	}
 }
 
 func (in *Inbox) Stop() error {
