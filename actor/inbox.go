@@ -93,7 +93,7 @@ func (in *Inbox) run() {
 
 func (in *Inbox) Start(proc Processer) {
 	in.proc = proc
-	atomic.StoreInt32(&in.procStatus, idle)
+	atomic.CompareAndSwapInt32(&in.procStatus, stopped, idle)
 	in.schedule()
 }
 
