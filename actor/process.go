@@ -179,7 +179,7 @@ func (p *process) tryRestart(v any) {
 
 func (p *process) cleanup(wg *sync.WaitGroup) {
 	if p.context.parentCtx != nil {
-		p.context.parentCtx.children.Delete(p.Kind)
+		p.context.parentCtx.children.Delete(p.pid.ID)
 	}
 
 	if p.context.children.Len() > 0 {
