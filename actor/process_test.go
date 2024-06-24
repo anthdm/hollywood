@@ -55,26 +55,39 @@ func Test_StartupMessages(t *testing.T) {
 
 	type testMsg struct{}
 
+	timeout := time.After(1 * time.Second)
 	msgCh := make(chan any, 10) // used to check the msg order
+	syncCh1 := make(chan struct{})
+	syncCh2 := make(chan struct{})
 
 	go func() {
 		e.SpawnFunc(func(c *Context) {
 			fmt.Printf("Got message type %T\n", c.Message())
 			switch c.Message().(type) {
 			case Initialized:
-				time.Sleep(10 * time.Millisecond) // sleep to simulate db load
-			case Started:
-				time.Sleep(10 * time.Millisecond) // sleep to sumulate db load
+				syncCh1 <- struct{}{}
+				// wait for testMsg to send
+				select {
+				case <-syncCh2:
+				case <-timeout:
+					t.Error("test timed out")
+				}
 			}
 			msgCh <- c.Message()
 		}, "foo", WithID("bar"))
 	}()
 
-	time.Sleep(5 * time.Millisecond)
+	// wait for actor to initialize
+	select {
+	case <-syncCh1:
+	case <-timeout:
+		t.Error("test timed out")
+		return
+	}
+
 	pid := e.Registry.GetPID("foo", "bar")
 	e.Send(pid, testMsg{})
-
-	timeout := time.After(1 * time.Second)
+	syncCh2 <- struct{}{}
 
 	// check that message order is as expected
 	select {
@@ -83,6 +96,7 @@ func Test_StartupMessages(t *testing.T) {
 		require.True(t, ok)
 	case <-timeout:
 		t.Error("test timed out")
+		return
 	}
 
 	select {
@@ -91,6 +105,7 @@ func Test_StartupMessages(t *testing.T) {
 		require.True(t, ok)
 	case <-timeout:
 		t.Error("test timed out")
+		return
 	}
 
 	select {
@@ -99,5 +114,6 @@ func Test_StartupMessages(t *testing.T) {
 		require.True(t, ok)
 	case <-timeout:
 		t.Error("test timed out")
+		return
 	}
 }
