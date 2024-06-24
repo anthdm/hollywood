@@ -48,3 +48,72 @@ func Test_CleanTrace(t *testing.T) {
 func panicWrapper() {
 	panic("foo")
 }
+
+func Test_StartupMessages(t *testing.T) {
+	e, err := NewEngine(NewEngineConfig())
+	require.NoError(t, err)
+
+	type testMsg struct{}
+
+	timeout := time.After(1 * time.Second)
+	msgCh := make(chan any, 10) // used to check the msg order
+	syncCh1 := make(chan struct{})
+	syncCh2 := make(chan struct{})
+
+	go func() {
+		e.SpawnFunc(func(c *Context) {
+			fmt.Printf("Got message type %T\n", c.Message())
+			switch c.Message().(type) {
+			case Initialized:
+				syncCh1 <- struct{}{}
+				// wait for testMsg to send
+				select {
+				case <-syncCh2:
+				case <-timeout:
+					t.Error("test timed out")
+				}
+			}
+			msgCh <- c.Message()
+		}, "foo", WithID("bar"))
+	}()
+
+	// wait for actor to initialize
+	select {
+	case <-syncCh1:
+	case <-timeout:
+		t.Error("test timed out")
+		return
+	}
+
+	pid := e.Registry.GetPID("foo", "bar")
+	e.Send(pid, testMsg{})
+	syncCh2 <- struct{}{}
+
+	// check that message order is as expected
+	select {
+	case msg := <-msgCh:
+		_, ok := msg.(Initialized)
+		require.True(t, ok)
+	case <-timeout:
+		t.Error("test timed out")
+		return
+	}
+
+	select {
+	case msg := <-msgCh:
+		_, ok := msg.(Started)
+		require.True(t, ok)
+	case <-timeout:
+		t.Error("test timed out")
+		return
+	}
+
+	select {
+	case msg := <-msgCh:
+		_, ok := msg.(testMsg)
+		require.True(t, ok)
+	case <-timeout:
+		t.Error("test timed out")
+		return
+	}
+}
