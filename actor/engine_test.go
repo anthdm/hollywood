@@ -284,7 +284,7 @@ func TestStop(t *testing.T) {
 
 func TestPoisonWaitGroup(t *testing.T) {
 	var (
-		wg = sync.WaitGroup{}
+		wg = &sync.WaitGroup{}
 		x  = int32(0)
 	)
 	e, err := NewEngine(NewEngineConfig())
@@ -303,6 +303,19 @@ func TestPoisonWaitGroup(t *testing.T) {
 
 	e.Poison(pid).Wait()
 	assert.Equal(t, int32(1), atomic.LoadInt32(&x))
+
+	// validate poisoning non exiting pid does not deadlock
+	wg = e.Poison(NewPID(LocalLookupAddr, "non-existing"))
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		wg.Wait()
+	}()
+	select {
+	case <-done:
+	case <-time.After(20 * time.Millisecond):
+		t.Error("poison waitGroup deadlocked")
+	}
 }
 
 func TestPoison(t *testing.T) {
@@ -327,7 +340,6 @@ func TestPoison(t *testing.T) {
 		// When a process is poisoned it should be removed from the registry.
 		// Hence, we should get NIL when we try to get it.
 		assert.Nil(t, e.Registry.get(pid))
-
 	}
 }
 
