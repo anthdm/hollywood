@@ -316,6 +316,8 @@ func TestPoisonWaitGroup(t *testing.T) {
 	case <-time.After(20 * time.Millisecond):
 		t.Error("poison waitGroup deadlocked")
 	}
+	// ... or panic
+	e.Poison(nil).Wait()
 }
 
 func TestPoison(t *testing.T) {
