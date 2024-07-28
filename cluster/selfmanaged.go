@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/anthdm/hollywood/actor"
-	"github.com/grandcat/zeroconf"
 )
 
 const (
@@ -48,6 +47,9 @@ func (c SelfManagedConfig) WithBootstrapMember(member MemberAddr) SelfManagedCon
 	return c
 }
 
+type Shutdownable interface {
+	Shutdown()
+}
 type SelfManaged struct {
 	config       SelfManagedConfig
 	cluster      *Cluster
@@ -59,8 +61,8 @@ type SelfManaged struct {
 
 	membersAlive *MemberSet
 
-	resolver  *zeroconf.Resolver
-	announcer *zeroconf.Server
+	resolver  Resolver
+	announcer Shutdownable
 
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -169,7 +171,7 @@ func (s *SelfManaged) start(c *actor.Context) {
 }
 
 func (s *SelfManaged) initAutoDiscovery() {
-	resolver, err := zeroconf.NewResolver()
+	resolver, err := NewResolver()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -184,31 +186,39 @@ func (s *SelfManaged) initAutoDiscovery() {
 		log.Fatal(err)
 	}
 
-	server, err := zeroconf.RegisterProxy(
+	server, err := NewDiscovery().RegisterProxy(
 		s.cluster.ID(),
 		serviceName,
 		domain,
 		port,
 		fmt.Sprintf("member_%s", s.cluster.ID()),
 		[]string{host},
-		[]string{"txtv=0", "lo=1", "la=2"}, nil)
+		[]string{"txtv=0", "lo=1", "la=2"},
+		nil,
+	)
 	if err != nil {
 		log.Fatal(err)
 	}
 	s.announcer = server
 }
 
+const localhost = "127.0.0.1"
+
 func (s *SelfManaged) startAutoDiscovery() {
-	entries := make(chan *zeroconf.ServiceEntry)
-	go func(results <-chan *zeroconf.ServiceEntry) {
+	entries := make(chan *ServiceEntry)
+	go func(results <-chan *ServiceEntry) {
 		for entry := range results {
 			if entry.Instance != s.cluster.ID() {
-				host := fmt.Sprintf("%s:%d", entry.AddrIPv4[0], entry.Port)
+				host := localhost
+				if len(entry.AddrIPv4) > 0 && len(entry.AddrIPv4[0]) > 0 {
+					host = entry.AddrIPv4[0].String()
+				}
+				addr := fmt.Sprintf("%s:%d", host, entry.Port)
 				hs := &Handshake{
 					Member: s.cluster.Member(),
 				}
 				// create the reachable PID for this member.
-				memberPID := actor.NewPID(host, "provider/"+entry.Instance)
+				memberPID := actor.NewPID(addr, "provider/"+entry.Instance)
 				self := actor.NewPID(s.cluster.agentPID.Address, "provider/"+s.cluster.ID())
 				s.cluster.engine.SendWithSender(memberPID, hs, self)
 			}
