@@ -20,7 +20,7 @@ func TestGetRemoveAdd(t *testing.T) {
 	e, _ := NewEngine(NewEngineConfig())
 	reg := newRegistry(e)
 	eproc := fooProc{}
-	reg.add(eproc)
+	assert.NoError(t, reg.add(eproc))
 	proc := reg.getByID(eproc.PID().ID)
 	assert.Equal(t, proc, eproc)
 	proc = reg.get(eproc.PID())

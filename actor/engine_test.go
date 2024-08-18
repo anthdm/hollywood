@@ -223,7 +223,7 @@ func TestSpawn(t *testing.T) {
 	wg.Wait()
 }
 
-func TestSpawnDuplicateId(t *testing.T) {
+func TestSpawnDuplicateKind(t *testing.T) {
 	e, err := NewEngine(NewEngineConfig())
 	require.NoError(t, err)
 	wg := sync.WaitGroup{}
@@ -231,6 +231,22 @@ func TestSpawnDuplicateId(t *testing.T) {
 	e.Send(pid1, 1)
 	pid2 := e.Spawn(NewTestProducer(t, func(t *testing.T, ctx *Context) {}), "dummy")
 	e.Send(pid2, 2)
+	wg.Wait()
+}
+
+func TestSpawnDuplicateId(t *testing.T) {
+	e, err := NewEngine(NewEngineConfig())
+	require.NoError(t, err)
+	wg := sync.WaitGroup{}
+	receiveFunc := func(t *testing.T, ctx *Context) {
+		switch ctx.Message().(type) {
+		case Initialized:
+			wg.Add(1)
+		}
+	}
+	e.Spawn(NewTestProducer(t, receiveFunc), "dummy", WithID("1"))
+	e.Spawn(NewTestProducer(t, receiveFunc), "dummy", WithID("1"))
+	wg.Done() // should only spawn one actor
 	wg.Wait()
 }
 

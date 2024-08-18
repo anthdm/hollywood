@@ -92,7 +92,9 @@ func (e *Engine) SpawnFunc(f func(*Context), kind string, opts ...OptFunc) *PID 
 // SpawnProc spawns the give Processer. This function is useful when working
 // with custom created Processes. Take a look at the streamWriter as an example.
 func (e *Engine) SpawnProc(p Processer) *PID {
-	e.Registry.add(p)
+	if err := e.Registry.add(p); err != nil {
+		return p.PID()
+	}
 	p.Start()
 	return p.PID()
 }
@@ -109,7 +111,10 @@ func (e *Engine) Address() string {
 // block until the deadline is exceeded or the response is being resolved.
 func (e *Engine) Request(pid *PID, msg any, timeout time.Duration) *Response {
 	resp := NewResponse(e, timeout)
-	e.Registry.add(resp)
+	if err := e.Registry.add(resp); err != nil {
+		resp.Send(nil, ErrProcessDuplicateId, nil)
+		return resp
+	}
 
 	e.SendWithSender(pid, msg, resp.PID())
 
