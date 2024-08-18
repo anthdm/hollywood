@@ -40,6 +40,9 @@ func (r *Registry) Remove(pid *PID) {
 // If it doesn't exist, nil is returned so the caller must check for that
 // and direct the message to the deadletter processer instead.
 func (r *Registry) get(pid *PID) Processer {
+	if pid == nil {
+		return nil
+	}
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	if proc, ok := r.lookup[pid.ID]; ok {

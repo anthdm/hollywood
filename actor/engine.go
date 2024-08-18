@@ -225,24 +225,21 @@ func (e *Engine) sendPoisonPill(pid *PID, graceful bool, wg ...*sync.WaitGroup) 
 	} else {
 		_wg = &sync.WaitGroup{}
 	}
-	_wg.Add(1)
-	proc := e.Registry.get(pid)
-	// deadletter - if we didn't find a process, we will broadcast a DeadletterEvent
-	if proc == nil {
-		e.BroadcastEvent(DeadLetterEvent{
-			Target:  pid,
-			Message: poisonPill{_wg, graceful},
-			Sender:  nil,
-		})
-		return _wg
-	}
 	pill := poisonPill{
 		wg:       _wg,
 		graceful: graceful,
 	}
-	if proc != nil {
-		e.SendLocal(pid, pill, nil)
+	// deadletter - if we didn't find a process, we will broadcast a DeadletterEvent
+	if e.Registry.get(pid) == nil {
+		e.BroadcastEvent(DeadLetterEvent{
+			Target:  pid,
+			Message: pill,
+			Sender:  nil,
+		})
+		return _wg
 	}
+	_wg.Add(1)
+	e.SendLocal(pid, pill, nil)
 	return _wg
 }
 
