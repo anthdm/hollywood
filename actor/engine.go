@@ -112,7 +112,7 @@ func (e *Engine) Address() string {
 func (e *Engine) Request(pid *PID, msg any, timeout time.Duration) *Response {
 	resp := NewResponse(e, timeout)
 	if err := e.Registry.add(resp); err != nil {
-		resp.Send(nil, ErrProcessDuplicateId, nil)
+		resp.err = err
 		return resp
 	}
 
