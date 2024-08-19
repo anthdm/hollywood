@@ -14,7 +14,6 @@ type Response struct {
 	pid     *PID
 	result  chan any
 	timeout time.Duration
-	err     error
 }
 
 func NewResponse(e *Engine, timeout time.Duration) *Response {
@@ -32,10 +31,6 @@ func (r *Response) Result() (any, error) {
 		cancel()
 		r.engine.Registry.Remove(r.pid)
 	}()
-
-	if r.err != nil {
-		return nil, r.err
-	}
 
 	select {
 	case resp := <-r.result:

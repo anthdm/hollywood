@@ -111,10 +111,7 @@ func (e *Engine) Address() string {
 // block until the deadline is exceeded or the response is being resolved.
 func (e *Engine) Request(pid *PID, msg any, timeout time.Duration) *Response {
 	resp := NewResponse(e, timeout)
-	if err := e.Registry.add(resp); err != nil {
-		resp.err = err
-		return resp
-	}
+	e.Registry.add(resp)
 
 	e.SendWithSender(pid, msg, resp.PID())
 
