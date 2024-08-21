@@ -237,17 +237,16 @@ func TestSpawnDuplicateKind(t *testing.T) {
 func TestSpawnDuplicateId(t *testing.T) {
 	e, err := NewEngine(NewEngineConfig())
 	require.NoError(t, err)
-	wg := sync.WaitGroup{}
+	var startsCount int32 = 0
 	receiveFunc := func(t *testing.T, ctx *Context) {
 		switch ctx.Message().(type) {
 		case Initialized:
-			wg.Add(1)
+			atomic.AddInt32(&startsCount, 1)
 		}
 	}
 	e.Spawn(NewTestProducer(t, receiveFunc), "dummy", WithID("1"))
 	e.Spawn(NewTestProducer(t, receiveFunc), "dummy", WithID("1"))
-	wg.Done() // should only spawn one actor
-	wg.Wait()
+	assert.Equal(t, int32(1), startsCount) // should only spawn one actor
 }
 
 func TestStopWaitGroup(t *testing.T) {
