@@ -92,10 +92,7 @@ func (e *Engine) SpawnFunc(f func(*Context), kind string, opts ...OptFunc) *PID 
 // SpawnProc spawns the give Processer. This function is useful when working
 // with custom created Processes. Take a look at the streamWriter as an example.
 func (e *Engine) SpawnProc(p Processer) *PID {
-	if err := e.Registry.add(p); err != nil {
-		return p.PID()
-	}
-	p.Start()
+	e.Registry.add(p)
 	return p.PID()
 }
 

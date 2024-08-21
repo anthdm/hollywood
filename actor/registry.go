@@ -1,15 +1,10 @@
 package actor
 
 import (
-	"errors"
 	"sync"
 )
 
 const LocalLookupAddr = "local"
-
-var (
-	ErrProcessDuplicateId = errors.New("actor: process has a duplicate id")
-)
 
 type Registry struct {
 	mu     sync.RWMutex
@@ -62,15 +57,15 @@ func (r *Registry) getByID(id string) Processer {
 	return r.lookup[id]
 }
 
-func (r *Registry) add(proc Processer) error {
+func (r *Registry) add(proc Processer) {
 	r.mu.Lock()
 	id := proc.PID().ID
 	if _, ok := r.lookup[id]; ok {
 		r.mu.Unlock()
 		r.engine.BroadcastEvent(ActorDuplicateIdEvent{PID: proc.PID()})
-		return ErrProcessDuplicateId
+		return
 	}
 	r.lookup[id] = proc
 	r.mu.Unlock()
-	return nil
+	proc.Start()
 }
