@@ -36,6 +36,8 @@ github.com/matttproud/golang_protobuf_extensions/v2 v2.0.0 h1:jWpvCLoY8Z/e3VKvls
 github.com/matttproud/golang_protobuf_extensions/v2 v2.0.0/go.mod h1:QUyp042oQthUoa9bqDv0ER0wrtXnBruoNd7aNjkbP+k=
 github.com/miekg/dns v1.1.27 h1:aEH/kqUzUxGJ/UHcEKdJY+ugH6WEzsEBBSPa8zuy1aM=
 github.com/miekg/dns v1.1.27/go.mod h1:KNUDUusw/aVsxyTYZM1oqvCicbwhgbNgztCETuNZ7xM=
+github.com/oleksandr/bonjour v0.0.0-20210301155756-30f43c61b915 h1:d291KOLbN1GthTPA1fLKyWdclX3k1ZP+CzYtun+a5Es=
+github.com/oleksandr/bonjour v0.0.0-20210301155756-30f43c61b915/go.mod h1:MGuVJ1+5TX1SCoO2Sx0eAnjpdRytYla2uC1YIZfkC9c=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
 github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/planetscale/vtprotobuf v0.5.0 h1:l8PXm6Colok5z6qQLNhAj2Jq5BfoMTIHxLER5a6nDqM=
