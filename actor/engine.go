@@ -93,7 +93,6 @@ func (e *Engine) SpawnFunc(f func(*Context), kind string, opts ...OptFunc) *PID 
 // with custom created Processes. Take a look at the streamWriter as an example.
 func (e *Engine) SpawnProc(p Processer) *PID {
 	e.Registry.add(p)
-	p.Start()
 	return p.PID()
 }
 

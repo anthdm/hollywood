@@ -67,4 +67,5 @@ func (r *Registry) add(proc Processer) {
 	}
 	r.lookup[id] = proc
 	r.mu.Unlock()
+	proc.Start()
 }
