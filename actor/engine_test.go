@@ -463,3 +463,21 @@ func NewTestProducer(t *testing.T, f TestReceiveFunc) Producer {
 func (r *TestReceiver) Receive(ctx *Context) {
 	r.OnReceive(r.t, ctx)
 }
+
+func TestMultipleStops(t *testing.T) {
+	e, err := NewEngine(NewEngineConfig())
+	require.NoError(t, err)
+	for i := 0; i < 1000; i++ {
+		done := make(chan struct{})
+		pid := e.SpawnFunc(func(ctx *Context) {
+			switch ctx.Message().(type) {
+			case Stopped:
+				close(done)
+			}
+		}, "test")
+		for j := 0; j < 10; j++ {
+			e.Stop(pid)
+		}
+		<-done
+	}
+}

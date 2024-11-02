@@ -72,7 +72,9 @@ func (in *Inbox) schedule() {
 
 func (in *Inbox) process() {
 	in.run()
-	atomic.StoreInt32(&in.procStatus, idle)
+	if in.procStatus != stopped {
+		atomic.StoreInt32(&in.procStatus, idle)
+	}
 }
 
 func (in *Inbox) run() {
