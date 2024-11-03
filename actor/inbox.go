@@ -13,11 +13,10 @@ const (
 )
 
 const (
-	new int32 = iota
+	stopped int32 = iota
 	starting
 	idle
 	running
-	stopped
 )
 
 type Scheduler interface {
@@ -56,7 +55,7 @@ func NewInbox(size int) *Inbox {
 	return &Inbox{
 		rb:         ringbuffer.New[Envelope](int64(size)),
 		scheduler:  NewScheduler(defaultThroughput),
-		procStatus: new,
+		procStatus: stopped,
 	}
 }
 
@@ -73,7 +72,7 @@ func (in *Inbox) schedule() {
 
 func (in *Inbox) process() {
 	in.run()
-	if in.procStatus != stopped {
+	if atomic.LoadInt32(&in.procStatus) != stopped {
 		atomic.StoreInt32(&in.procStatus, idle)
 	}
 }
@@ -97,7 +96,7 @@ func (in *Inbox) run() {
 
 func (in *Inbox) Start(proc Processer) {
 	// transition to "starting" and then "idle" to ensure no race condition on in.proc
-	if atomic.CompareAndSwapInt32(&in.procStatus, new, starting) {
+	if atomic.CompareAndSwapInt32(&in.procStatus, stopped, starting) {
 		in.proc = proc
 		atomic.SwapInt32(&in.procStatus, idle)
 		in.schedule()
