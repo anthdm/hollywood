@@ -45,7 +45,7 @@ func (m MockProcesser) Invoke(envelopes []Envelope) {
 }
 func (m MockProcesser) Shutdown(_ *sync.WaitGroup) {}
 
-func TestStopInbox(t *testing.T) {
+func TestInboxStop(t *testing.T) {
 	inbox := NewInbox(10)
 	done := make(chan struct{})
 	mockProc := MockProcesser{
