@@ -2,8 +2,11 @@ package actor
 
 import (
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestInboxSendAndProcess(t *testing.T) {
@@ -41,3 +44,18 @@ func (m MockProcesser) Invoke(envelopes []Envelope) {
 	m.processFunc(envelopes)
 }
 func (m MockProcesser) Shutdown(_ *sync.WaitGroup) {}
+
+func TestStopInbox(t *testing.T) {
+	inbox := NewInbox(10)
+	done := make(chan struct{})
+	mockProc := MockProcesser{
+		processFunc: func(envelopes []Envelope) {
+			inbox.Stop()
+			done <- struct{}{}
+		},
+	}
+	inbox.Start(mockProc)
+	inbox.Send(Envelope{})
+	<-done
+	require.True(t, atomic.LoadInt32(&inbox.procStatus) == stopped)
+}
