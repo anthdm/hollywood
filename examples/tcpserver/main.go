@@ -11,7 +11,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/anthdm/hollywood/actor"
+	"github.com/fancom/hollywood/actor"
 )
 
 type handler struct{}

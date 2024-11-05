@@ -1,9 +1,9 @@
 package chat
 
 import (
-	"github.com/anthdm/hollywood/actor"
-	"github.com/anthdm/hollywood/examples/mdns/chat/types"
-	"github.com/anthdm/hollywood/examples/mdns/discovery"
+	"github.com/fancom/hollywood/actor"
+	"github.com/fancom/hollywood/examples/mdns/chat/types"
+	"github.com/fancom/hollywood/examples/mdns/discovery"
 	"log/slog"
 	"reflect"
 )

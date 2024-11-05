@@ -1,5 +1,5 @@
-[![Go Report Card](https://goreportcard.com/badge/github.com/anthdm/hollywood)](https://goreportcard.com/report/github.com/anthdm/hollywood)
-![example workflow](https://github.com/anthdm/hollywood/actions/workflows/build.yml/badge.svg?branch=master)
+[![Go Report Card](https://goreportcard.com/badge/github.com/fancom/hollywood)](https://goreportcard.com/report/github.com/fancom/hollywood)
+![example workflow](https://github.com/fancom/hollywood/actions/workflows/build.yml/badge.svg?branch=master)
 <a href="https://discord.gg/gdwXmXYNTh">
 	<img src="https://discordapp.com/api/guilds/1025692014903316490/widget.png?style=shield" alt="Discord Shield"/>
 </a>
@@ -57,7 +57,7 @@ deadletters: 0
 # Installation
 
 ```
-go get github.com/anthdm/hollywood/...
+go get github.com/fancom/hollywood/...
 ```
 
 > Hollywood requires Golang version `1.21`

@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/anthdm/hollywood/actor"
-	"github.com/anthdm/hollywood/cluster"
-	"github.com/anthdm/hollywood/examples/cluster/shared"
-	"github.com/anthdm/hollywood/remote"
+	"github.com/fancom/hollywood/actor"
+	"github.com/fancom/hollywood/cluster"
+	"github.com/fancom/hollywood/examples/cluster/shared"
+	"github.com/fancom/hollywood/remote"
 )
 
 // Member 1 of the cluster

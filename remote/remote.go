@@ -9,7 +9,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/anthdm/hollywood/actor"
+	"github.com/fancom/hollywood/actor"
 	"storj.io/drpc/drpcmux"
 	"storj.io/drpc/drpcserver"
 )

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/anthdm/hollywood/actor"
+	"github.com/fancom/hollywood/actor"
 )
 
 var restarts = 0

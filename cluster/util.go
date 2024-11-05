@@ -1,7 +1,7 @@
 package cluster
 
 import (
-	"github.com/anthdm/hollywood/actor"
+	"github.com/fancom/hollywood/actor"
 )
 
 // memberToProviderPID create a new PID from the member that

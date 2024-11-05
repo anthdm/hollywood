@@ -5,7 +5,7 @@ import (
 	"errors"
 	"log/slog"
 
-	"github.com/anthdm/hollywood/actor"
+	"github.com/fancom/hollywood/actor"
 )
 
 type streamReader struct {

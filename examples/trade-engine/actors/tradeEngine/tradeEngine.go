@@ -5,10 +5,10 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/anthdm/hollywood/actor"
-	"github.com/anthdm/hollywood/examples/trade-engine/actors/executor"
-	"github.com/anthdm/hollywood/examples/trade-engine/actors/price"
-	"github.com/anthdm/hollywood/examples/trade-engine/types"
+	"github.com/fancom/hollywood/actor"
+	"github.com/fancom/hollywood/examples/trade-engine/actors/executor"
+	"github.com/fancom/hollywood/examples/trade-engine/actors/price"
+	"github.com/fancom/hollywood/examples/trade-engine/types"
 )
 
 // tradeEngineActor is the main actor for the trade engine

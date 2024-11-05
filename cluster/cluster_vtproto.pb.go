@@ -6,7 +6,7 @@ package cluster
 
 import (
 	fmt "fmt"
-	actor "github.com/anthdm/hollywood/actor"
+	actor "github.com/fancom/hollywood/actor"
 	proto "google.golang.org/protobuf/proto"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	io "io"

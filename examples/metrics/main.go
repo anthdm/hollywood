@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/anthdm/hollywood/actor"
+	"github.com/fancom/hollywood/actor"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"

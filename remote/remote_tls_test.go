@@ -15,7 +15,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/anthdm/hollywood/actor"
+	"github.com/fancom/hollywood/actor"
 	"github.com/stretchr/testify/assert"
 )
 

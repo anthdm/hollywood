@@ -7,9 +7,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/anthdm/hollywood/actor"
-	"github.com/anthdm/hollywood/examples/trade-engine/actors/tradeEngine"
-	"github.com/anthdm/hollywood/examples/trade-engine/types"
+	"github.com/fancom/hollywood/actor"
+	"github.com/fancom/hollywood/examples/trade-engine/actors/tradeEngine"
+	"github.com/fancom/hollywood/examples/trade-engine/types"
 )
 
 func main() {

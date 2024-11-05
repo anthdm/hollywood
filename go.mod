@@ -1,4 +1,4 @@
-module github.com/anthdm/hollywood
+module github.com/fancom/hollywood
 
 go 1.21
 

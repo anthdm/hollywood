@@ -5,9 +5,9 @@ import (
 	"log"
 	"reflect"
 
-	"github.com/anthdm/hollywood/actor"
-	"github.com/anthdm/hollywood/cluster"
-	"github.com/anthdm/hollywood/examples/cluster/shared"
+	"github.com/fancom/hollywood/actor"
+	"github.com/fancom/hollywood/cluster"
+	"github.com/fancom/hollywood/examples/cluster/shared"
 )
 
 // Member 2 of the cluster

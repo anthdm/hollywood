@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/anthdm/hollywood/actor"
+	"github.com/fancom/hollywood/actor"
 )
 
 type message struct {

@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/anthdm/hollywood/safemap"
+	"github.com/fancom/hollywood/safemap"
 )
 
 type Context struct {

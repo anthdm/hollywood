@@ -1,6 +1,6 @@
 syntax = "proto3";
 package types;
-option go_package = "github.com/anthdm/hollywood/examples/mdns/chat/types";
+option go_package = "github.com/fancom/hollywood/examples/mdns/chat/types";
 
 message Disconnect {}
 

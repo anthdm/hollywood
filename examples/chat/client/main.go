@@ -8,9 +8,9 @@ import (
 	"math/rand"
 	"os"
 
-	"github.com/anthdm/hollywood/actor"
-	"github.com/anthdm/hollywood/examples/chat/types"
-	"github.com/anthdm/hollywood/remote"
+	"github.com/fancom/hollywood/actor"
+	"github.com/fancom/hollywood/examples/chat/types"
+	"github.com/fancom/hollywood/remote"
 )
 
 type client struct {

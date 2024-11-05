@@ -1,7 +1,7 @@
 package types
 
 import (
-	"github.com/anthdm/hollywood/actor"
+	"github.com/fancom/hollywood/actor"
 	"time"
 )
 

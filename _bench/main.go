@@ -11,8 +11,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/anthdm/hollywood/actor"
-	"github.com/anthdm/hollywood/remote"
+	"github.com/fancom/hollywood/actor"
+	"github.com/fancom/hollywood/remote"
 )
 
 //go:generate protoc --proto_path=. --go_out=. --go_opt=paths=source_relative message.proto

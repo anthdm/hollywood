@@ -9,8 +9,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/anthdm/hollywood/actor"
-	"github.com/anthdm/hollywood/remote"
+	"github.com/fancom/hollywood/actor"
+	"github.com/fancom/hollywood/remote"
 )
 
 // pick a reasonable timeout so nodes of long distance networks (should) work.

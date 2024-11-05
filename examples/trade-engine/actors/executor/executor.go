@@ -4,8 +4,8 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/anthdm/hollywood/actor"
-	"github.com/anthdm/hollywood/examples/trade-engine/types"
+	"github.com/fancom/hollywood/actor"
+	"github.com/fancom/hollywood/examples/trade-engine/types"
 )
 
 // Options for creating a new executor

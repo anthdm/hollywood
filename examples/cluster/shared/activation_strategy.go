@@ -3,7 +3,7 @@ package shared
 import (
 	"math/rand"
 
-	"github.com/anthdm/hollywood/cluster"
+	"github.com/fancom/hollywood/cluster"
 )
 
 type regionBasedActivationStrategy struct {

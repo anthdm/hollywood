@@ -1,6 +1,6 @@
 package cluster
 
-import "github.com/anthdm/hollywood/actor"
+import "github.com/fancom/hollywood/actor"
 
 // KindConfig holds configuration for a registered kind.
 type KindConfig struct{}

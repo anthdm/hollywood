@@ -5,9 +5,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/anthdm/hollywood/actor"
-	"github.com/anthdm/hollywood/examples/remote/msg"
-	"github.com/anthdm/hollywood/remote"
+	"github.com/fancom/hollywood/actor"
+	"github.com/fancom/hollywood/examples/remote/msg"
+	"github.com/fancom/hollywood/remote"
 )
 
 func main() {

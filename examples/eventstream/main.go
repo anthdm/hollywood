@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/anthdm/hollywood/actor"
+	"github.com/fancom/hollywood/actor"
 )
 
 // Custom event type that will be send over the event stream.
