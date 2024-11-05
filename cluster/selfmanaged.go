@@ -169,7 +169,7 @@ func (s *SelfManaged) start(c *actor.Context) {
 }
 
 func (s *SelfManaged) initAutoDiscovery() {
-	resolver, err := zeroconf.NewResolver()
+	resolver, err := zeroconf.NewResolver(zeroconf.SelectIPTraffic(zeroconf.IPv4))
 	if err != nil {
 		log.Fatal(err)
 	}
