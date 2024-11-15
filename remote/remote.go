@@ -36,7 +36,6 @@ type Remote struct {
 	addr            string
 	engine          *actor.Engine
 	config          Config
-	streamReader    *streamReader
 	streamRouterPID *actor.PID
 	stopCh          chan struct{} // Stop closes this channel to signal the remote to stop listening.
 	stopWg          *sync.WaitGroup
@@ -57,7 +56,6 @@ func New(addr string, config Config) *Remote {
 		config: config,
 	}
 	r.state.Store(stateInitialized)
-	r.streamReader = newStreamReader(r)
 	return r
 }
 
@@ -81,7 +79,7 @@ func (r *Remote) Start(e *actor.Engine) error {
 	}
 	slog.Debug("listening", "addr", r.addr)
 	mux := drpcmux.New()
-	err = DRPCRegisterRemote(mux, r.streamReader)
+	err = DRPCRegisterRemote(mux, newStreamReader(r))
 	if err != nil {
 		return fmt.Errorf("failed to register remote: %w", err)
 	}

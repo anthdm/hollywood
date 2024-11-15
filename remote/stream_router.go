@@ -13,10 +13,6 @@ type streamDeliver struct {
 	msg    any
 }
 
-type terminateStream struct {
-	address string
-}
-
 type streamRouter struct {
 	engine *actor.Engine
 	// streams is a map of remote address to stream writer pid.
@@ -41,16 +37,16 @@ func (s *streamRouter) Receive(ctx *actor.Context) {
 		s.pid = ctx.PID()
 	case *streamDeliver:
 		s.deliverStream(msg)
-	case terminateStream:
+	case actor.RemoteUnreachableEvent:
 		s.handleTerminateStream(msg)
 	}
 }
 
-func (s *streamRouter) handleTerminateStream(msg terminateStream) {
-	streamWriterPID := s.streams[msg.address]
-	delete(s.streams, msg.address)
-	slog.Debug("terminating stream",
-		"remote", msg.address,
+func (s *streamRouter) handleTerminateStream(msg actor.RemoteUnreachableEvent) {
+	streamWriterPID := s.streams[msg.ListenAddr]
+	delete(s.streams, msg.ListenAddr)
+	slog.Debug("stream terminated",
+		"remote", msg.ListenAddr,
 		"pid", streamWriterPID,
 	)
 }

@@ -117,7 +117,6 @@ func (s *streamWriter) init() {
 	)
 	for i := 0; i < maxRetries; i++ {
 		// Here we try to connect to the remote address.
-		// Todo: can we make an Event here in case of failure?
 		switch s.tlsConfig {
 		case nil:
 			rawconn, err = net.Dial("tcp", s.writeToAddr)
@@ -183,8 +182,12 @@ func (s *streamWriter) init() {
 	}()
 }
 
+// TODO: is there a way that stream router can listen to event stream
+// instead of sending the event itself?
 func (s *streamWriter) Shutdown(wg *sync.WaitGroup) {
-	s.engine.Send(s.routerPID, terminateStream{address: s.writeToAddr})
+	evt := actor.RemoteUnreachableEvent{ListenAddr: s.writeToAddr}
+	s.engine.Send(s.routerPID, evt)
+	s.engine.BroadcastEvent(evt)
 	if s.stream != nil {
 		s.stream.Close()
 	}
