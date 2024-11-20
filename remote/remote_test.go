@@ -215,6 +215,37 @@ func TestWeird(t *testing.T) {
 	wg.Wait()     // wait for the actor to stop.
 }
 
+func TestStreamWriterRemoteUnreachableEvent(t *testing.T) {
+	a, _, err := makeRemoteEngine(getRandomLocalhostAddr())
+	assert.NoError(t, err)
+	b, rb, err := makeRemoteEngine(getRandomLocalhostAddr())
+	assert.NoError(t, err)
+
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+
+	a.SpawnFunc(func(c *actor.Context) {
+		switch c.Message().(type) {
+		case actor.Started:
+			c.Engine().Subscribe(c.PID())
+		case actor.RemoteUnreachableEvent:
+			wg.Done()
+		}
+	}, "listener")
+
+	bPID := b.SpawnFunc(func(c *actor.Context) {
+		switch c.Message().(type) {
+		case actor.Started:
+			c.Engine().Subscribe(c.PID())
+		case *TestMessage:
+			rb.Stop()
+		}
+	}, "listener")
+
+	a.Send(bPID, &TestMessage{Data: []byte("test")})
+	wg.Wait()
+}
+
 func makeRemoteEngine(listenAddr string) (*actor.Engine, *Remote, error) {
 	var e *actor.Engine
 	r := New(listenAddr, NewConfig())
