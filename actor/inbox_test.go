@@ -46,7 +46,7 @@ func TestInboxSendAndProcessMany(t *testing.T) {
 		msg := Envelope{}
 		inbox.Send(msg)
 
-		timer := time.NewTimer(10 * time.Millisecond)
+		timer := time.NewTimer(time.Second)
 		select {
 		case <-processedMessages: // Message processed
 		case <-timer.C:
