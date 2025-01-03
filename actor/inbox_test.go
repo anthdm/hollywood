@@ -31,6 +31,33 @@ func TestInboxSendAndProcess(t *testing.T) {
 	inbox.Stop()
 }
 
+func TestInboxSendAndProcessMany(t *testing.T) {
+	for i := 0; i < 100000; i++ {
+		inbox := NewInbox(10)
+		processedMessages := make(chan Envelope, 10)
+		mockProc := MockProcesser{
+			processFunc: func(envelopes []Envelope) {
+				for _, e := range envelopes {
+					processedMessages <- e
+				}
+			},
+		}
+		inbox.Start(mockProc)
+		msg := Envelope{}
+		inbox.Send(msg)
+
+		timer := time.NewTimer(time.Second)
+		select {
+		case <-processedMessages: // Message processed
+		case <-timer.C:
+			t.Errorf("Message was not processed in time")
+		}
+		timer.Stop()
+
+		inbox.Stop()
+	}
+}
+
 type MockProcesser struct {
 	processFunc func([]Envelope)
 }
