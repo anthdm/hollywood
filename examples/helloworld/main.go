@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/anthdm/hollywood/actor"
@@ -27,26 +28,17 @@ func (f *foo) Receive(ctx *actor.Context) {
 	}
 }
 
-type info struct {
-	data string
-}
-
 func main() {
-
-	var ds []*info
-	ds = append(ds, &info{data: "hello"})
-
-	fmt.Printf("ds len: %d\n", len(ds))
-
-	fmt.Printf("%+v\n", ds)
 	engine, err := actor.NewEngine(actor.NewEngineConfig())
 	if err != nil {
 		panic(err)
 	}
 
 	pid := engine.Spawn(newFoo, "my_actor")
-	for i := 0; i < 3; i++ {
+	for i := 0; i < 5; i++ {
 		engine.Send(pid, &message{data: "hello world!"})
 	}
-	engine.Poison(pid).Wait()
+
+	ctx := engine.PoisonCtx(context.Background(), pid)
+	<-ctx.Done()
 }

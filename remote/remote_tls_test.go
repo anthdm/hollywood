@@ -63,8 +63,8 @@ func TestSend_TLS(t *testing.T) {
 	wg.Wait()        // wait for messages to be received by the actor.
 	ra.Stop().Wait() // shutdown the remotes
 	rb.Stop().Wait()
-	a.Poison(pida).Wait()
-	b.Poison(pidb).Wait()
+	<-a.Poison(pida).Done()
+	<-b.Poison(pidb).Done()
 }
 
 func generateTLSConfig() (*sharedConfig, error) {

@@ -75,7 +75,7 @@ func TestEventStreamActorStoppedEvent(t *testing.T) {
 	}, "b")
 
 	e.Subscribe(pidb)
-	e.Poison(a).Wait()
+	<-e.Poison(a).Done()
 
 	wg.Wait()
 }

@@ -2,10 +2,10 @@ package actor
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"log/slog"
 	"runtime/debug"
-	"sync"
 	"time"
 
 	"github.com/DataDog/gostackparse"
@@ -22,7 +22,7 @@ type Processer interface {
 	PID() *PID
 	Send(*PID, any, *PID)
 	Invoke([]Envelope)
-	Shutdown(*sync.WaitGroup)
+	Shutdown()
 }
 
 type process struct {
@@ -80,6 +80,7 @@ func (p *process) Invoke(msgs []Envelope) {
 			p.tryRestart(v)
 		}
 	}()
+
 	for i := 0; i < len(msgs); i++ {
 		nproc++
 		msg := msgs[i]
@@ -92,7 +93,7 @@ func (p *process) Invoke(msgs []Envelope) {
 					p.invokeMsg(m)
 				}
 			}
-			p.cleanup(pill.wg)
+			p.cleanup(pill.cancel)
 			return
 		}
 		p.invokeMsg(msg)
@@ -178,7 +179,9 @@ func (p *process) tryRestart(v any) {
 	p.Start()
 }
 
-func (p *process) cleanup(wg *sync.WaitGroup) {
+func (p *process) cleanup(cancel context.CancelFunc) {
+	defer cancel()
+
 	if p.context.parentCtx != nil {
 		p.context.parentCtx.children.Delete(p.pid.ID)
 	}
@@ -186,7 +189,7 @@ func (p *process) cleanup(wg *sync.WaitGroup) {
 	if p.context.children.Len() > 0 {
 		children := p.context.Children()
 		for _, pid := range children {
-			p.context.engine.Poison(pid).Wait()
+			<-p.context.engine.Poison(pid).Done()
 		}
 	}
 
@@ -196,16 +199,15 @@ func (p *process) cleanup(wg *sync.WaitGroup) {
 	applyMiddleware(p.context.receiver.Receive, p.Opts.Middleware...)(p.context)
 
 	p.context.engine.BroadcastEvent(ActorStoppedEvent{PID: p.pid, Timestamp: time.Now()})
-	if wg != nil {
-		wg.Done()
-	}
 }
 
 func (p *process) PID() *PID { return p.pid }
 func (p *process) Send(_ *PID, msg any, sender *PID) {
 	p.inbox.Send(Envelope{Msg: msg, Sender: sender})
 }
-func (p *process) Shutdown(wg *sync.WaitGroup) { p.cleanup(wg) }
+func (p *process) Shutdown() {
+	// p.cleanup()
+}
 
 func cleanTrace(stack []byte) []byte {
 	goros, err := gostackparse.Parse(bytes.NewReader(stack))

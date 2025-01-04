@@ -7,7 +7,6 @@ import (
 	"io"
 	"log/slog"
 	"net"
-	"sync"
 	"time"
 
 	"github.com/anthdm/hollywood/actor"
@@ -141,7 +140,7 @@ func (s *streamWriter) init() {
 	// We could not reach the remote after retrying N times. Hence, shutdown the stream writer.
 	// and notify RemoteUnreachableEvent.
 	if rawconn == nil {
-		s.Shutdown(nil)
+		s.Shutdown()
 		return
 	}
 
@@ -158,7 +157,7 @@ func (s *streamWriter) init() {
 	stream, err := client.Receive(context.Background())
 	if err != nil {
 		slog.Error("receive", "err", err, "remote", s.writeToAddr)
-		s.Shutdown(nil)
+		s.Shutdown()
 		return
 	}
 
@@ -174,13 +173,13 @@ func (s *streamWriter) init() {
 		slog.Debug("lost connection",
 			"remote", s.writeToAddr,
 		)
-		s.Shutdown(nil)
+		s.Shutdown()
 	}()
 }
 
 // TODO: is there a way that stream router can listen to event stream
 // instead of sending the event itself?
-func (s *streamWriter) Shutdown(wg *sync.WaitGroup) {
+func (s *streamWriter) Shutdown() {
 	evt := actor.RemoteUnreachableEvent{ListenAddr: s.writeToAddr}
 	s.engine.Send(s.routerPID, evt)
 	s.engine.BroadcastEvent(evt)
@@ -189,9 +188,6 @@ func (s *streamWriter) Shutdown(wg *sync.WaitGroup) {
 	}
 	s.inbox.Stop()
 	s.engine.Registry.Remove(s.PID())
-	if wg != nil {
-		wg.Done()
-	}
 }
 
 func (s *streamWriter) Start() {

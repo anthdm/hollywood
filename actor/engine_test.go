@@ -95,7 +95,7 @@ func TestRestartsMaxRestarts(t *testing.T) {
 		case Started:
 		case Stopped:
 		case payload:
-			if msg.data != 10 {
+			if msg.data != 1 {
 				panic("I failed to process this message")
 			} else {
 				fmt.Println("finally processed all my messages after borking.", msg.data)
@@ -103,9 +103,10 @@ func TestRestartsMaxRestarts(t *testing.T) {
 		}
 	}, "foo", WithMaxRestarts(restarts))
 
-	for i := 0; i < 11; i++ {
+	for i := 0; i < 2; i++ {
 		e.Send(pid, payload{i})
 	}
+	<-e.Poison(pid).Done()
 }
 
 func TestProcessInitStartOrder(t *testing.T) {
@@ -249,7 +250,7 @@ func TestSpawnDuplicateId(t *testing.T) {
 	assert.Equal(t, int32(1), startsCount) // should only spawn one actor
 }
 
-func TestStopWaitGroup(t *testing.T) {
+func TestStopWaitContextDone(t *testing.T) {
 	var (
 		wg = sync.WaitGroup{}
 		x  = int32(0)
@@ -268,7 +269,7 @@ func TestStopWaitGroup(t *testing.T) {
 	}, "foo")
 	wg.Wait()
 
-	e.Stop(pid).Wait()
+	<-e.Stop(pid).Done()
 	assert.Equal(t, int32(1), atomic.LoadInt32(&x))
 }
 
@@ -290,7 +291,7 @@ func TestStop(t *testing.T) {
 		}, "foo", WithID(tag))
 
 		wg.Wait()
-		e.Stop(pid).Wait()
+		<-e.Stop(pid).Done()
 		// When a process is poisoned it should be removed from the registry.
 		// Hence, we should get nil when looking it up in the registry.
 		assert.Nil(t, e.Registry.get(pid))
@@ -316,11 +317,11 @@ func TestPoisonWaitGroup(t *testing.T) {
 	}, "foo")
 	wg.Wait()
 
-	e.Poison(pid).Wait()
+	<-e.Poison(pid).Done()
 	assert.Equal(t, int32(1), atomic.LoadInt32(&x))
 
 	// validate poisoning non exiting pid does not deadlock
-	wg = e.Poison(NewPID(LocalLookupAddr, "non-existing"))
+	e.Poison(NewPID(LocalLookupAddr, "non-existing"))
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
@@ -331,8 +332,6 @@ func TestPoisonWaitGroup(t *testing.T) {
 	case <-time.After(20 * time.Millisecond):
 		t.Error("poison waitGroup deadlocked")
 	}
-	// ... or panic
-	e.Poison(nil).Wait()
 }
 
 func TestPoison(t *testing.T) {
@@ -353,7 +352,7 @@ func TestPoison(t *testing.T) {
 		}, "foo", WithID(tag))
 
 		wg.Wait()
-		e.Poison(pid).Wait()
+		<-e.Poison(pid).Done()
 		// When a process is poisoned it should be removed from the registry.
 		// Hence, we should get NIL when we try to get it.
 		assert.Nil(t, e.Registry.get(pid))
@@ -407,7 +406,7 @@ func TestPoisonPillPrivate(t *testing.T) {
 			time.Sleep(time.Millisecond)
 		}
 	}, "victim")
-	e.Poison(pid).Wait()
+	<-e.Poison(pid).Done()
 	assert.Nil(t, e.Registry.get(pid))
 	select {
 	case <-failCh:

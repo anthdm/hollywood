@@ -23,5 +23,5 @@ func TestDuplicateIdEvent(t *testing.T) {
 	e.SpawnFunc(func(c *Context) {}, "actor_a", WithID("1"))
 	e.SpawnFunc(func(c *Context) {}, "actor_a", WithID("1"))
 	wg.Wait()
-	e.Poison(monitor).Wait()
+	<-e.Poison(monitor).Done()
 }

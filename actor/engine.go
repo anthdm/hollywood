@@ -1,6 +1,7 @@
 package actor
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"math/rand"
@@ -205,27 +206,31 @@ func (e *Engine) SendRepeat(pid *PID, msg any, interval time.Duration) SendRepea
 }
 
 // Stop will send a non-graceful poisonPill message to the process that is associated with the given PID.
-// The process will shut down immediately, once it has processed the poisonPill messsage.
-func (e *Engine) Stop(pid *PID, wg ...*sync.WaitGroup) *sync.WaitGroup {
-	return e.sendPoisonPill(pid, false, wg...)
+// The process will shut down immediately. A context is being returned that can be used to block / wait
+// until the process is stopped.
+func (e *Engine) Stop(pid *PID) context.Context {
+	return e.sendPoisonPill(context.Background(), false, pid)
 }
 
 // Poison will send a graceful poisonPill message to the process that is associated with the given PID.
 // The process will shut down gracefully once it has processed all the messages in the inbox.
-// If given a WaitGroup, it blocks till the process is completely shutdown.
-func (e *Engine) Poison(pid *PID, wg ...*sync.WaitGroup) *sync.WaitGroup {
-	return e.sendPoisonPill(pid, true, wg...)
+// A context is returned that can be used to block / wait until the process is stopped.
+func (e *Engine) Poison(pid *PID) context.Context {
+	return e.sendPoisonPill(context.Background(), true, pid)
 }
 
-func (e *Engine) sendPoisonPill(pid *PID, graceful bool, wg ...*sync.WaitGroup) *sync.WaitGroup {
-	var _wg *sync.WaitGroup
-	if len(wg) > 0 {
-		_wg = wg[0]
-	} else {
-		_wg = &sync.WaitGroup{}
-	}
+// PoisonCtx behaves the exact same as Poison, the only difference is that it accepts
+// a context as the first argument. The context can be used for custom timeouts and manual
+// cancelation.
+func (e *Engine) PoisonCtx(ctx context.Context, pid *PID) context.Context {
+	return e.sendPoisonPill(ctx, true, pid)
+}
+
+func (e *Engine) sendPoisonPill(ctx context.Context, graceful bool, pid *PID) context.Context {
+	var cancel context.CancelFunc
+	ctx, cancel = context.WithCancel(ctx)
 	pill := poisonPill{
-		wg:       _wg,
+		cancel:   cancel,
 		graceful: graceful,
 	}
 	// deadletter - if we didn't find a process, we will broadcast a DeadletterEvent
@@ -235,12 +240,37 @@ func (e *Engine) sendPoisonPill(pid *PID, graceful bool, wg ...*sync.WaitGroup) 
 			Message: pill,
 			Sender:  nil,
 		})
-		return _wg
+		cancel()
+		return ctx
 	}
-	_wg.Add(1)
 	e.SendLocal(pid, pill, nil)
-	return _wg
+	return ctx
 }
+
+// func (e *Engine) sendPoisonPill_old(pid *PID, graceful bool, wg ...*sync.WaitGroup) *sync.WaitGroup {
+// 	var _wg *sync.WaitGroup
+// 	if len(wg) > 0 {
+// 		_wg = wg[0]
+// 	} else {
+// 		_wg = &sync.WaitGroup{}
+// 	}
+// 	pill := poisonPill{
+// 		wg:       _wg,
+// 		graceful: graceful,
+// 	}
+// 	// deadletter - if we didn't find a process, we will broadcast a DeadletterEvent
+// 	if e.Registry.get(pid) == nil {
+// 		e.BroadcastEvent(DeadLetterEvent{
+// 			Target:  pid,
+// 			Message: pill,
+// 			Sender:  nil,
+// 		})
+// 		return _wg
+// 	}
+// 	_wg.Add(1)
+// 	e.SendLocal(pid, pill, nil)
+// 	return _wg
+// }
 
 // SendLocal will send the given message to the given PID. If the recipient is not found in the
 // registry, the message will be sent to the DeadLetter process instead. If there is no deadletter

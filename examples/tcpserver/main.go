@@ -7,7 +7,6 @@ import (
 	"net"
 	"os"
 	"os/signal"
-	"sync"
 	"syscall"
 	"time"
 
@@ -152,8 +151,5 @@ func main() {
 	signal.Notify(sigch, syscall.SIGINT, syscall.SIGTERM)
 	<-sigch
 
-	// wait till the server is gracefully shutdown by using a WaitGroup in the Poison call.
-	wg := &sync.WaitGroup{}
-	e.Poison(serverPID, wg)
-	wg.Wait()
+	<-e.Poison(serverPID).Done()
 }
