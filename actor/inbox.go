@@ -75,7 +75,7 @@ func (in *Inbox) process() {
 	if in.rb.Len() > 0 {
 		in.scheduler.Schedule(in.process)
 	} else {
-		atomic.StoreInt32(&in.procStatus, idle)
+		atomic.CompareAndSwapInt32(&in.procStatus, running, idle)
 	}
 }
 
