@@ -72,10 +72,10 @@ func (in *Inbox) schedule() {
 
 func (in *Inbox) process() {
 	in.run()
-	if atomic.CompareAndSwapInt32(&in.procStatus, running, idle) && in.rb.Len() > 0 {
-		// messages might have been added to the ring-buffer between the last pop and the transition to idle.
-		// if this is the case, then we should schedule again
-		in.schedule()
+	if in.rb.Len() > 0 {
+		in.scheduler.Schedule(in.process)
+	} else {
+		atomic.StoreInt32(&in.procStatus, idle)
 	}
 }
 
