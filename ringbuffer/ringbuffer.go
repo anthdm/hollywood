@@ -56,11 +56,12 @@ func (rb *RingBuffer[T]) Len() int64 {
 }
 
 func (rb *RingBuffer[T]) Pop() (T, bool) {
-	if rb.Len() == 0 {
+	rb.mu.Lock()
+	if rb.len == 0 {
+		rb.mu.Unlock()
 		var t T
 		return t, false
 	}
-	rb.mu.Lock()
 	rb.content.head = (rb.content.head + 1) % rb.content.mod
 	item := rb.content.items[rb.content.head]
 	var t T
@@ -71,10 +72,11 @@ func (rb *RingBuffer[T]) Pop() (T, bool) {
 }
 
 func (rb *RingBuffer[T]) PopN(n int64) ([]T, bool) {
-	if rb.Len() == 0 {
+	rb.mu.Lock()
+	if rb.len == 0 {
+		rb.mu.Unlock()
 		return nil, false
 	}
-	rb.mu.Lock()
 	content := rb.content
 
 	if n >= rb.len {
