@@ -69,7 +69,7 @@ func (s *session) readLoop(c *actor.Context) {
 		copy(msg, buf[:n])
 
 		// Send to the handler to process to message
-		c.Send(c.Parent().Child("handler"), msg)
+		c.Send(c.Parent().Child("handler/default"), msg)
 	}
 	// Loop is done due to error or we need to close due to server shutdown.
 	c.Send(c.Parent(), &connRem{pid: c.PID()})
@@ -108,7 +108,7 @@ func (s *server) Receive(c *actor.Context) {
 		}
 		s.ln = ln
 		// start the handler that will handle the incomming messages from clients/sessions.
-		c.SpawnChild(newHandler, "handler")
+		c.SpawnChild(newHandler, "handler", actor.WithID("default"))
 	case actor.Started:
 		slog.Info("server started", "addr", s.listenAddr)
 		go s.acceptLoop(c)
