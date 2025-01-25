@@ -61,33 +61,32 @@ func (p *process) Invoke(msgs []Envelope) {
 		nmsg = len(msgs)
 		// numbers of msgs that are processed.
 		nproc = 0
-		// FIXME: We could use nrpoc here, but for some reason placing nproc++ on the
-		// bottom of the function it freezes some tests. Hence, I created a new counter
-		// for bookkeeping.
-		processed = 0
 	)
 	defer func() {
 		// If we recovered, we buffer up all the messages that we could not process
 		// so we can retry them on the next restart.
 		if v := recover(); v != nil {
+			// Processed 'nproc' messages successfully, then encountered a crash on the next message.
+			// After restart, processing begins with the message following the one that caused the crash.
+			// 'nrecv' represents the total number of successfully received messages, including the one that caused the crash.
+			nrecv := nproc + 1
 			p.context.message = Stopped{}
 			p.context.receiver.Receive(p.context)
 
-			p.mbuffer = make([]Envelope, nmsg-nproc)
-			for i := 0; i < nmsg-nproc; i++ {
-				p.mbuffer[i] = msgs[i+nproc]
+			p.mbuffer = make([]Envelope, nmsg-nrecv)
+			for i := 0; i < nmsg-nrecv; i++ {
+				p.mbuffer[i] = msgs[i+nrecv]
 			}
 			p.tryRestart(v)
 		}
 	}()
 	for i := 0; i < len(msgs); i++ {
-		nproc++
 		msg := msgs[i]
 		if pill, ok := msg.Msg.(poisonPill); ok {
 			// If we need to gracefuly stop, we process all the messages
 			// from the inbox, otherwise we ignore and cleanup.
 			if pill.graceful {
-				msgsToProcess := msgs[processed:]
+				msgsToProcess := msgs[nproc:]
 				for _, m := range msgsToProcess {
 					p.invokeMsg(m)
 				}
@@ -96,7 +95,7 @@ func (p *process) Invoke(msgs []Envelope) {
 			return
 		}
 		p.invokeMsg(msg)
-		processed++
+		nproc++
 	}
 }
 

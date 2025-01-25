@@ -9,14 +9,35 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type triggerPanic struct {
+	data int
+}
+
+func Test_ProcessingStartsFromNextMessageAfterRestart(t *testing.T) {
+	e, err := NewEngine(NewEngineConfig())
+	require.NoError(t, err)
+	done := make(chan struct{})
+	pid := e.SpawnFunc(func(c *Context) {
+		fmt.Printf("Got message type %T\n", c.Message())
+		if _, ok := c.Message().(triggerPanic); ok {
+			//  message causing the failure is not processed again.
+			panicWrapper()
+		}
+		if s, ok := c.Message().(string); ok && s == "foo" {
+			close(done)
+		}
+	}, "kind", WithMaxRestarts(1))
+
+	e.Send(pid, triggerPanic{})
+	e.Send(pid, "foo")
+	<-done
+}
+
 // Test_CleanTrace tests that the stack trace is cleaned up correctly and that the function
 // which triggers the panic is at the top of the stack trace.
 func Test_CleanTrace(t *testing.T) {
 	e, err := NewEngine(NewEngineConfig())
 	require.NoError(t, err)
-	type triggerPanic struct {
-		data int
-	}
 	stopCh := make(chan struct{})
 	pid := e.SpawnFunc(func(c *Context) {
 		fmt.Printf("Got message type %T\n", c.Message())
