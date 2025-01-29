@@ -79,7 +79,7 @@ func main() {
 	repeater := e.SendRepeat(ua, customMessage{}, time.Millisecond*20)
 	time.Sleep(time.Second * 5)
 	repeater.Stop()
-	e.Poison(ua).Wait()
+	<-e.Poison(ua).Done()
 	res, err := e.Request(monitor, query{}, time.Second).Result()
 	if err != nil {
 		fmt.Println("Query", err)
@@ -89,6 +89,6 @@ func main() {
 	fmt.Printf("Observed %d starts\n", q.starts)
 	fmt.Printf("Observed %d stops\n", q.stops)
 	fmt.Printf("Observed %d deadletters\n", q.deadletters)
-	e.Poison(monitor).Wait() // the monitor will output stats on stop.
+	<-e.Poison(monitor).Done() // the monitor will output stats on stop.
 	fmt.Println("done")
 }

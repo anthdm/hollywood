@@ -6,7 +6,6 @@ import (
 	"math"
 	"math/rand"
 	"reflect"
-	"sync"
 	"time"
 
 	"github.com/anthdm/hollywood/actor"
@@ -131,11 +130,9 @@ func (c *Cluster) Start() {
 }
 
 // Stop will shutdown the cluster poisoning all its actors.
-func (c *Cluster) Stop() *sync.WaitGroup {
-	wg := sync.WaitGroup{}
-	c.engine.Poison(c.agentPID, &wg)
-	c.engine.Poison(c.providerPID, &wg)
-	return &wg
+func (c *Cluster) Stop() {
+	<-c.engine.Poison(c.agentPID).Done()
+	<-c.engine.Poison(c.providerPID).Done()
 }
 
 // Spawn an actor locally on the node with cluster awareness.

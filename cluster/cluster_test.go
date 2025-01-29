@@ -78,9 +78,9 @@ func TestClusterSelectMemberFunc(t *testing.T) {
 
 	<-ctx.Done()
 	require.Equal(t, context.DeadlineExceeded, ctx.Err())
-	c1.Stop().Wait()
-	c2.Stop().Wait()
-	c3.Stop().Wait()
+	c1.Stop()
+	c2.Stop()
+	c3.Stop()
 }
 
 func TestClusterShouldWorkWithDefaultValues(t *testing.T) {
@@ -135,8 +135,8 @@ func TestClusterSpawn(t *testing.T) {
 	c2.Start()
 	wg.Wait()
 
-	c1.Stop().Wait()
-	c2.Stop().Wait()
+	c1.Stop()
+	c2.Stop()
 }
 
 func TestMemberJoin(t *testing.T) {
@@ -165,8 +165,8 @@ func TestMemberJoin(t *testing.T) {
 	assert.Equal(t, len(c1.Members()), 2)
 	assert.True(t, c1.HasKind("player"))
 
-	c1.Stop().Wait()
-	c2.Stop().Wait()
+	c1.Stop()
+	c2.Stop()
 }
 
 func TestActivate(t *testing.T) {
@@ -203,8 +203,8 @@ func TestActivate(t *testing.T) {
 	assert.True(t, c1.HasKind("player"))
 	assert.True(t, c1.GetActivated("player/1").Equals(expectedPID))
 
-	c1.Stop().Wait()
-	c2.Stop().Wait()
+	c1.Stop()
+	c2.Stop()
 }
 
 func TestDeactivate(t *testing.T) {
@@ -239,8 +239,8 @@ func TestDeactivate(t *testing.T) {
 	assert.True(t, c1.HasKind("player"))
 	assert.Nil(t, c1.GetActivated("player/1"))
 
-	c1.Stop().Wait()
-	c2.Stop().Wait()
+	c1.Stop()
+	c2.Stop()
 }
 
 func TestMemberLeave(t *testing.T) {
@@ -283,8 +283,8 @@ func TestMemberLeave(t *testing.T) {
 	assert.Equal(t, len(c1.Members()), 1)
 	assert.False(t, c1.HasKind("player"))
 
-	c1.Stop().Wait()
-	c2.Stop().Wait()
+	c1.Stop()
+	c2.Stop()
 }
 
 func TestMembersExcept(t *testing.T) {

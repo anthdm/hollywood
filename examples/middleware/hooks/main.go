@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/anthdm/hollywood/actor"
@@ -54,8 +53,5 @@ func main() {
 	e.Send(pid, "Hello sailor!")
 	// We sleep here so we are sure foo received our message
 	time.Sleep(time.Second)
-	// Create a waitgroup so we can wait until foo has been stopped gracefully
-	wg := &sync.WaitGroup{}
-	e.Poison(pid, wg)
-	wg.Wait()
+	<-e.Poison(pid).Done()
 }

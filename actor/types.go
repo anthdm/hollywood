@@ -1,6 +1,6 @@
 package actor
 
-import "sync"
+import "context"
 
 type InternalError struct {
 	From string
@@ -8,7 +8,7 @@ type InternalError struct {
 }
 
 type poisonPill struct {
-	wg       *sync.WaitGroup
+	cancel   context.CancelFunc
 	graceful bool
 }
 type Initialized struct{}

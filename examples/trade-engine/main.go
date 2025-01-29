@@ -68,7 +68,7 @@ func main() {
 	e.Send(tradeEnginePID, types.CancelOrderRequest{TradeID: tradeOrder.TradeID})
 
 	time.Sleep(2 * time.Second)
-	e.Poison(tradeEnginePID).Wait()
+	<-e.Poison(tradeEnginePID).Done()
 }
 
 // The GenID function generates a random ID string of length 16 using a cryptographic random number
