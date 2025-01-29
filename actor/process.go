@@ -206,7 +206,7 @@ func (p *process) Send(_ *PID, msg any, sender *PID) {
 	p.inbox.Send(Envelope{Msg: msg, Sender: sender})
 }
 func (p *process) Shutdown() {
-	// p.cleanup()
+	p.cleanup(nil)
 }
 
 func cleanTrace(stack []byte) []byte {
