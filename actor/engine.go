@@ -247,31 +247,6 @@ func (e *Engine) sendPoisonPill(ctx context.Context, graceful bool, pid *PID) co
 	return ctx
 }
 
-// func (e *Engine) sendPoisonPill_old(pid *PID, graceful bool, wg ...*sync.WaitGroup) *sync.WaitGroup {
-// 	var _wg *sync.WaitGroup
-// 	if len(wg) > 0 {
-// 		_wg = wg[0]
-// 	} else {
-// 		_wg = &sync.WaitGroup{}
-// 	}
-// 	pill := poisonPill{
-// 		wg:       _wg,
-// 		graceful: graceful,
-// 	}
-// 	// deadletter - if we didn't find a process, we will broadcast a DeadletterEvent
-// 	if e.Registry.get(pid) == nil {
-// 		e.BroadcastEvent(DeadLetterEvent{
-// 			Target:  pid,
-// 			Message: pill,
-// 			Sender:  nil,
-// 		})
-// 		return _wg
-// 	}
-// 	_wg.Add(1)
-// 	e.SendLocal(pid, pill, nil)
-// 	return _wg
-// }
-
 // SendLocal will send the given message to the given PID. If the recipient is not found in the
 // registry, the message will be sent to the DeadLetter process instead. If there is no deadletter
 // process registered, the function will panic.
