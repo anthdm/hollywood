@@ -201,7 +201,7 @@ func TestActivate(t *testing.T) {
 	wg.Wait()
 	assert.Equal(t, len(c1.Members()), 2)
 	assert.True(t, c1.HasKind("player"))
-	assert.True(t, c1.GetActivated("player/1").Equals(expectedPID))
+	assert.True(t, c1.GetActivedByID("player/1").Equals(expectedPID))
 
 	c1.Stop()
 	c2.Stop()
@@ -237,7 +237,7 @@ func TestDeactivate(t *testing.T) {
 
 	assert.Equal(t, len(c1.Members()), 2)
 	assert.True(t, c1.HasKind("player"))
-	assert.Nil(t, c1.GetActivated("player/1"))
+	assert.Nil(t, c1.GetActivedByID("player/1"))
 
 	c1.Stop()
 	c2.Stop()
@@ -315,6 +315,62 @@ func TestMembersExcept(t *testing.T) {
 	am := NewMemberSet(b...).Except(a)
 	assert.Len(t, am, 1)
 	assert.Equal(t, am[0].ID, "C")
+}
+
+func TestGetActiveByKind(t *testing.T) {
+	c1Addr := getRandomLocalhostAddr()
+	c2Addr := getRandomLocalhostAddr()
+
+	c1 := makeCluster(t, c1Addr, "A", "eu")
+	c1.RegisterKind("player", NewPlayer, NewKindConfig())
+	c1.Start()
+
+	c2 := makeCluster(t, c2Addr, "B", "eu")
+	c2.RegisterKind("player", NewPlayer, NewKindConfig())
+	c2.Start()
+
+	pid1 := c1.Activate("player", NewActivationConfig().WithID("1"))
+	pid2 := c2.Activate("player", NewActivationConfig().WithID("2"))
+	time.Sleep(time.Millisecond * 10)
+
+	// I know. But we need to have strings, so we dont compare
+	// protobuffer messages.
+	pids := c1.GetActiveByKind("player")
+	assert.Len(t, pids, 2)
+	pidsStr := make([]string, 2)
+	pidsStr[0] = pids[0].String()
+	pidsStr[1] = pids[1].String()
+	assert.Contains(t, pidsStr, pid1.String())
+	assert.Contains(t, pidsStr, pid2.String())
+}
+
+func TestCannotDuplicateActor(t *testing.T) {
+	c1Addr := getRandomLocalhostAddr()
+	c2Addr := getRandomLocalhostAddr()
+
+	c1 := makeCluster(t, c1Addr, "A", "eu")
+	c1.RegisterKind("player", NewPlayer, NewKindConfig())
+	c1.Start()
+
+	c2 := makeCluster(t, c2Addr, "B", "eu")
+	c2.RegisterKind("player", NewPlayer, NewKindConfig())
+	c2.Start()
+
+	pid := c1.Activate("player", NewActivationConfig().WithID("1"))
+	time.Sleep(10 * time.Millisecond)
+	// Lets make sure we spawn the actor on "our" node. Why?
+	// Because when we randomly selected the other node to spawn the actor
+	// with the same id on the test will pass.
+	// Local registry will prevent duplicated actor IDs from the get go.
+	pid2 := c2.Activate("player", NewActivationConfig().WithID("1").WithSelectMemberFunc(func(_ ActivationDetails) *Member {
+		return c2.Member()
+	}))
+	fmt.Println(pid2)
+	time.Sleep(time.Millisecond * 10)
+
+	pids := c1.GetActiveByKind("player")
+	assert.Len(t, pids, 1)
+	assert.Equal(t, pids[0].String(), pid.String())
 }
 
 func makeCluster(t *testing.T, addr, id, region string) *Cluster {
