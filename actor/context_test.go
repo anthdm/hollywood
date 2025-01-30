@@ -1,6 +1,7 @@
 package actor
 
 import (
+	fmt "fmt"
 	"sync"
 	"testing"
 	"time"
@@ -21,7 +22,7 @@ func TestChildEventNoRaceCondition(t *testing.T) {
 			c.engine.Subscribe(child)
 		}
 	}, "parent")
-	e.Poison(parentPID).Wait()
+	<-e.Poison(parentPID).Done()
 }
 
 func TestContextSendRepeat(t *testing.T) {
@@ -75,8 +76,7 @@ func TestSpawnChildPID(t *testing.T) {
 
 func TestChild(t *testing.T) {
 	var (
-		wg     = sync.WaitGroup{}
-		stopWg = sync.WaitGroup{}
+		wg = sync.WaitGroup{}
 	)
 	e, err := NewEngine(NewEngineConfig())
 	require.NoError(t, err)
@@ -89,8 +89,9 @@ func TestChild(t *testing.T) {
 			c.SpawnChildFunc(func(_ *Context) {}, "child", WithID("3"))
 		case Started:
 			assert.Equal(t, 3, len(c.Children()))
-			c.Engine().Stop(c.Children()[0], &stopWg)
-			stopWg.Wait()
+			childPid := c.Children()[0]
+			fmt.Println("sending poison pill to ", childPid)
+			<-c.Engine().Stop(childPid).Done()
 			assert.Equal(t, 2, len(c.Children()))
 			wg.Done()
 		}
@@ -164,7 +165,7 @@ func TestSpawnChild(t *testing.T) {
 	}, "parent", WithMaxRestarts(0))
 
 	wg.Wait()
-	e.Poison(pid).Wait()
+	<-e.Poison(pid).Done()
 
 	assert.Nil(t, e.Registry.get(NewPID("local", "child")))
 	assert.Nil(t, e.Registry.get(pid))

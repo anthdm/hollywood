@@ -1,7 +1,6 @@
 package actor
 
 import (
-	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -70,7 +69,7 @@ func (m MockProcesser) Send(*PID, any, *PID) {}
 func (m MockProcesser) Invoke(envelopes []Envelope) {
 	m.processFunc(envelopes)
 }
-func (m MockProcesser) Shutdown(_ *sync.WaitGroup) {}
+func (m MockProcesser) Shutdown() {}
 
 func TestInboxStop(t *testing.T) {
 	inbox := NewInbox(10)

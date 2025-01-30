@@ -7,7 +7,6 @@ import (
 	"os"
 	"path"
 	"regexp"
-	"sync"
 	"time"
 
 	"github.com/anthdm/hollywood/actor"
@@ -158,9 +157,7 @@ func main() {
 	time.Sleep(time.Second * 1)
 	e.Send(pid, TakeDamage{Amount: 9})
 	time.Sleep(time.Second * 1)
-	wg := &sync.WaitGroup{}
-	e.Poison(pid, wg)
-	wg.Wait()
+	<-e.Poison(pid).Done()
 }
 
 var safeRx = regexp.MustCompile(`[^a-zA-Z0-9]`)
