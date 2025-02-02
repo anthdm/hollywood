@@ -502,3 +502,46 @@ func TestShouldNotBlockActorOnAccidentalDuplicateRespond(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 6, r)
 }
+
+func TestShouldNotReceiveAccidentallySentSecondResult(t *testing.T) {
+	e, err := NewEngine(NewEngineConfig())
+	require.NoError(t, err)
+	done := make(chan struct{})
+	pid := e.SpawnFunc(func(ctx *Context) {
+		msg := ctx.Message()
+		if s, ok := msg.(string); ok && s == "foo" {
+			defer close(done)
+			if s == "foo" {
+				ctx.Respond(1)
+				// missing `return` statement, causing an unintended second response
+			}
+			select { // sends a duplicate response
+			case <-time.After(100 * time.Millisecond):
+			case <-runAsync(func() {
+				ctx.Respond(2)
+			}):
+			}
+		}
+	}, "kind")
+
+	resp := e.Request(pid, "foo", 200*time.Millisecond)
+	<-done
+
+	r, err := resp.Result()
+	require.NoError(t, err)
+	require.Equal(t, 1, r)
+	require.Nil(t, e.Registry.get(resp.pid))
+
+	r, err = resp.Result()
+	require.Error(t, err)
+	require.Nil(t, r)
+}
+
+func runAsync(f func()) <-chan struct{} {
+	ch := make(chan struct{})
+	go func() {
+		defer close(ch)
+		f()
+	}()
+	return ch
+}
