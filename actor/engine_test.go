@@ -480,3 +480,25 @@ func TestMultipleStops(t *testing.T) {
 		<-done
 	}
 }
+
+func TestShouldNotBlockActorOnAccidentalDuplicateRespond(t *testing.T) {
+	e, err := NewEngine(NewEngineConfig())
+	require.NoError(t, err)
+	pid := e.SpawnFunc(func(ctx *Context) {
+		msg := ctx.Message()
+		if s, ok := msg.(string); ok {
+			if s == "foo" {
+				ctx.Respond(len(s))
+				// missing `return` statement, causing an unintended second response
+			}
+			ctx.Respond(len(s)) // sends a duplicate response
+		}
+	}, "str", WithID("len"))
+
+	_ = e.Request(pid, "foo", 2*time.Second) // response will be consumed later
+	resp := e.Request(pid, "barbaz", 2*time.Second)
+
+	r, err := resp.Result()
+	require.NoError(t, err)
+	require.Equal(t, 6, r)
+}
