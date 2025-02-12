@@ -11,6 +11,8 @@ import (
 
 	"github.com/anthdm/hollywood/actor"
 	"storj.io/drpc/drpcconn"
+	"storj.io/drpc/drpcmanager"
+	"storj.io/drpc/drpcwire"
 )
 
 const (
@@ -151,7 +153,13 @@ func (s *streamWriter) init() {
 		return
 	}
 
-	conn := drpcconn.New(rawconn)
+	conn := drpcconn.NewWithOptions(rawconn, drpcconn.Options{
+		Manager: drpcmanager.Options{
+			Reader: drpcwire.ReaderOptions{
+				MaximumBufferSize: 8 << 20,
+			},
+		},
+	})
 	client := NewDRPCRemoteClient(conn)
 
 	stream, err := client.Receive(context.Background())
