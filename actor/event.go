@@ -45,7 +45,7 @@ type ActorStoppingEvent struct {
 }
 
 func (e ActorStoppingEvent) Log() (slog.Level, string, []any) {
-	return slog.LevelDebug, "Actor stopped", []any{"pid", e.PID}
+	return slog.LevelDebug, "Actor stopping", []any{"pid", e.PID}
 }
 
 // ActorStoppedEvent is broadcasted over the eventStream each time
