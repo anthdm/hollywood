@@ -85,6 +85,9 @@ func (p *process) Invoke(msgs []Envelope) {
 		nproc++
 		msg := msgs[i]
 		if pill, ok := msg.Msg.(poisonPill); ok {
+			p.context.message = Stopping{}
+			applyMiddleware(p.context.receiver.Receive, p.Opts.Middleware...)(p.context)
+			p.context.engine.BroadcastEvent(ActorStoppingEvent{PID: p.pid, Timestamp: time.Now()})
 			// If we need to gracefuly stop, we process all the messages
 			// from the inbox, otherwise we ignore and cleanup.
 			if pill.graceful {

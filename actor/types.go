@@ -13,4 +13,5 @@ type poisonPill struct {
 }
 type Initialized struct{}
 type Started struct{}
+type Stopping struct{}
 type Stopped struct{}
