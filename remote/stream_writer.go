@@ -31,9 +31,10 @@ type streamWriter struct {
 	inbox       actor.Inboxer
 	serializer  Serializer
 	tlsConfig   *tls.Config
+	buffSize    int
 }
 
-func newStreamWriter(e *actor.Engine, rpid *actor.PID, address string, tlsConfig *tls.Config) actor.Processer {
+func newStreamWriter(e *actor.Engine, rpid *actor.PID, address string, tlsConfig *tls.Config, buffSize int) actor.Processer {
 	return &streamWriter{
 		writeToAddr: address,
 		engine:      e,
@@ -42,6 +43,7 @@ func newStreamWriter(e *actor.Engine, rpid *actor.PID, address string, tlsConfig
 		pid:         actor.NewPID(e.Address(), "stream"+"/"+address),
 		serializer:  ProtoSerializer{},
 		tlsConfig:   tlsConfig,
+		buffSize:    buffSize,
 	}
 }
 
@@ -156,7 +158,7 @@ func (s *streamWriter) init() {
 	conn := drpcconn.NewWithOptions(rawconn, drpcconn.Options{
 		Manager: drpcmanager.Options{
 			Reader: drpcwire.ReaderOptions{
-				MaximumBufferSize: 8 << 20,
+				MaximumBufferSize: s.buffSize,
 			},
 		},
 	})

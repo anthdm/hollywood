@@ -19,14 +19,16 @@ type streamRouter struct {
 	streams   map[string]*actor.PID
 	pid       *actor.PID
 	tlsConfig *tls.Config
+	buffSize  int
 }
 
-func newStreamRouter(e *actor.Engine, tlsConfig *tls.Config) actor.Producer {
+func newStreamRouter(e *actor.Engine, tlsConfig *tls.Config, buffSize int) actor.Producer {
 	return func() actor.Receiver {
 		return &streamRouter{
 			streams:   make(map[string]*actor.PID),
 			engine:    e,
 			tlsConfig: tlsConfig,
+			buffSize:  buffSize,
 		}
 	}
 }
@@ -60,7 +62,7 @@ func (s *streamRouter) deliverStream(msg *streamDeliver) {
 
 	swpid, ok = s.streams[address]
 	if !ok {
-		swpid = s.engine.SpawnProc(newStreamWriter(s.engine, s.pid, address, s.tlsConfig))
+		swpid = s.engine.SpawnProc(newStreamWriter(s.engine, s.pid, address, s.tlsConfig, s.buffSize))
 		s.streams[address] = swpid
 	}
 
