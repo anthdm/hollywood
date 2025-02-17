@@ -29,6 +29,45 @@ func (r *Registry) GetPID(kind, id string) *PID {
 	return nil
 }
 
+// GetAllPIDs returns a slice of all currently registered PIDs.
+func (r *Registry) GetAllPIDs() []*actor.PID {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	pids := make([]*actor.PID, 0, len(r.lookup))
+	for _, proc := range r.lookup {
+		pids = append(pids, proc.PID())
+	}
+	return pids
+}
+
+// GetPIDsByKind returns all PIDs that match the given kind.
+func (r *Registry) GetPIDsByKind(kind string) []*actor.PID {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	var pids []*actor.PID
+	prefix := kind + pidSeparator
+	for id, proc := range r.lookup {
+		if strings.HasPrefix(id, prefix) {
+			pids = append(pids, proc.PID())
+		}
+	}
+	return pids
+}
+
+// GetPIDMap returns a map of actor IDs to their PIDs.
+func (r *Registry) GetPIDMap() map[string]*actor.PID {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	pidMap := make(map[string]*actor.PID, len(r.lookup))
+	for id, proc := range r.lookup {
+		pidMap[id] = proc.PID()
+	}
+	return pidMap
+}
+
 // Remove removes the given PID from the registry.
 func (r *Registry) Remove(pid *PID) {
 	r.mu.Lock()
