@@ -10,13 +10,16 @@ import (
 	"sync/atomic"
 
 	"github.com/anthdm/hollywood/actor"
+	"storj.io/drpc/drpcmanager"
 	"storj.io/drpc/drpcmux"
 	"storj.io/drpc/drpcserver"
+	"storj.io/drpc/drpcwire"
 )
 
 // Config holds the remote configuration.
 type Config struct {
 	TLSConfig *tls.Config
+	BuffSize  int
 	// Wg        *sync.WaitGroup
 }
 
@@ -29,6 +32,14 @@ func NewConfig() Config {
 // the transport of the Remote to TLS.
 func (c Config) WithTLS(tlsconf *tls.Config) Config {
 	c.TLSConfig = tlsconf
+	return c
+}
+
+// Set the buffer size of the stream reader.
+// If not provided, the default buffer size is 4MB
+// defined by drpc package
+func (c Config) WithBufferSize(size int) Config {
+	c.BuffSize = size
 	return c
 }
 
@@ -83,10 +94,16 @@ func (r *Remote) Start(e *actor.Engine) error {
 	if err != nil {
 		return fmt.Errorf("failed to register remote: %w", err)
 	}
-	s := drpcserver.New(mux)
+	s := drpcserver.NewWithOptions(mux, drpcserver.Options{
+		Manager: drpcmanager.Options{
+			Reader: drpcwire.ReaderOptions{
+				MaximumBufferSize: r.config.BuffSize,
+			},
+		},
+	})
 
 	r.streamRouterPID = r.engine.Spawn(
-		newStreamRouter(r.engine, r.config.TLSConfig),
+		newStreamRouter(r.engine, r.config.TLSConfig, r.config.BuffSize),
 		"router", actor.WithInboxSize(1024*1024))
 	slog.Debug("server started", "listenAddr", r.addr)
 	r.stopWg = &sync.WaitGroup{}
