@@ -34,7 +34,7 @@ type streamWriter struct {
 	buffSize    int
 }
 
-func newStreamWriter(e *actor.Engine, rpid *actor.PID, address string, tlsConfig *tls.Config, buffSize int) actor.Processer {
+func newStreamWriter(e *actor.Engine, rpid *actor.PID, address string, tlsConfig *tls.Config, buffSize int) actor.Processor {
 	return &streamWriter{
 		writeToAddr: address,
 		engine:      e,

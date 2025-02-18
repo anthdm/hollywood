@@ -87,7 +87,7 @@ receiver. The envelope is used to route the message to the correct actor.
 
 A process is an abstraction over the actor. Todo: Describe the process.
 
-## Processer
+## Processor
 
 Todo: Not really sure.
 

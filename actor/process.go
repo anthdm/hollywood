@@ -16,8 +16,8 @@ type Envelope struct {
 	Sender *PID
 }
 
-// Processer is an interface the abstracts the way a process behaves.
-type Processer interface {
+// Processor is an interface the abstracts the way a process behaves.
+type Processor interface {
 	Start()
 	PID() *PID
 	Send(*PID, any, *PID)
