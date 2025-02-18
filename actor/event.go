@@ -73,6 +73,17 @@ func (e ActorMaxRestartsExceededEvent) Log() (slog.Level, string, []any) {
 	return slog.LevelError, "Actor crashed too many times", []any{"pid", e.PID.GetID()}
 }
 
+// ActorUnprocessableMessageEvent gets published if an actor is unable to process the message after retries
+type ActorUnprocessableMessageEvent struct {
+	PID       *PID
+	Timestamp time.Time
+	Message   any
+}
+
+func (e ActorUnprocessableMessageEvent) Log() (slog.Level, string, []any) {
+	return slog.LevelError, "Actor unable to process message", []any{"pid", e.PID.GetID()}
+}
+
 // ActorDuplicateIdEvent gets published if we try to register the same name twice.
 type ActorDuplicateIdEvent struct {
 	PID *PID
