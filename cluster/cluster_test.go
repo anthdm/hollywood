@@ -317,7 +317,7 @@ func TestMembersExcept(t *testing.T) {
 	assert.Equal(t, am[0].ID, "C")
 }
 
-func TestGetActiveByKind(t *testing.T) {
+func TestGetActiveByID(t *testing.T) {
 	c1Addr := getRandomLocalhostAddr()
 	c2Addr := getRandomLocalhostAddr()
 
@@ -333,27 +333,27 @@ func TestGetActiveByKind(t *testing.T) {
 	pid2 := c2.Activate("player", NewActivationConfig().WithID("2"))
 	time.Sleep(time.Millisecond * 10)
 
-	// I know. But we need to have strings, so we dont compare
-	// protobuffer messages.
-	pids := c1.GetActiveByKind("player")
-	assert.Len(t, pids, 2)
-	pidsStr := make([]string, 2)
-	pidsStr[0] = pids[0].String()
-	pidsStr[1] = pids[1].String()
-	assert.Contains(t, pidsStr, pid1.String())
-	assert.Contains(t, pidsStr, pid2.String())
+	pid := c1.GetActiveByID("player/1")
+	assert.NotNil(t, pid)
+	assert.Equal(t, pid.ID, pid1.ID)
+
+	pid = c1.GetActiveByID("player/2")
+	assert.NotNil(t, pid)
+	assert.Equal(t, pid.ID, pid2.ID)
+
+	pid = c1.GetActiveByID("player/3")
+	assert.Nil(t, pid)
 
 	c1.Stop()
 	c2.Stop()
 }
 
-func TestGetActiveByKind_ReturnsCorrectKind(t *testing.T) {
+func TestGetActiveByKind(t *testing.T) {
 	c1Addr := getRandomLocalhostAddr()
 	c2Addr := getRandomLocalhostAddr()
 
 	c1 := makeCluster(t, c1Addr, "A", "eu")
 	c1.RegisterKind("player", NewPlayer, NewKindConfig())
-	c1.RegisterKind("foobar", NewPlayer, NewKindConfig())
 	c1.Start()
 
 	c2 := makeCluster(t, c2Addr, "B", "eu")
@@ -362,8 +362,8 @@ func TestGetActiveByKind_ReturnsCorrectKind(t *testing.T) {
 
 	pid1 := c1.Activate("player", NewActivationConfig().WithID("1"))
 	pid2 := c2.Activate("player", NewActivationConfig().WithID("2"))
-	c1.Activate("player1", NewActivationConfig().WithID("1"))
-	c1.Activate("layer", NewActivationConfig().WithID("1"))
+	c1.Activate("foo", NewActivationConfig().WithID("2"))
+	c1.Activate("bar", NewActivationConfig().WithID("2"))
 	time.Sleep(time.Millisecond * 10)
 
 	pids := c1.GetActiveByKind("player")
