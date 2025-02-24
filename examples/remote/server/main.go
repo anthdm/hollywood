@@ -25,7 +25,7 @@ func (f *server) Receive(ctx *actor.Context) {
 	case *actor.PID:
 		slog.Info("server got pid", "pid", m)
 	case *msg.Message:
-		slog.Info("server got message", "msg", m)
+		slog.Info("server got message", "msg", m, "sender", ctx.Sender().String())
 	default:
 		slog.Warn("server got unknown message", "msg", m, "type", reflect.TypeOf(m).String())
 	}
