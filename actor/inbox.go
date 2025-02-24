@@ -40,13 +40,13 @@ func NewScheduler(throughput int) Scheduler {
 
 type Inboxer interface {
 	Send(Envelope)
-	Start(Processer)
+	Start(Processor)
 	Stop() error
 }
 
 type Inbox struct {
 	rb         *ringbuffer.RingBuffer[Envelope]
-	proc       Processer
+	proc       Processor
 	scheduler  Scheduler
 	procStatus int32
 }
@@ -96,7 +96,7 @@ func (in *Inbox) run() {
 	}
 }
 
-func (in *Inbox) Start(proc Processer) {
+func (in *Inbox) Start(proc Processor) {
 	// transition to "starting" and then "idle" to ensure no race condition on in.proc
 	if atomic.CompareAndSwapInt32(&in.procStatus, stopped, starting) {
 		in.proc = proc

@@ -8,13 +8,13 @@ const LocalLookupAddr = "local"
 
 type Registry struct {
 	mu     sync.RWMutex
-	lookup map[string]Processer
+	lookup map[string]Processor
 	engine *Engine
 }
 
 func newRegistry(e *Engine) *Registry {
 	return &Registry{
-		lookup: make(map[string]Processer, 1024),
+		lookup: make(map[string]Processor, 1024),
 		engine: e,
 	}
 }
@@ -36,10 +36,10 @@ func (r *Registry) Remove(pid *PID) {
 	delete(r.lookup, pid.ID)
 }
 
-// get returns the processer for the given PID, if it exists.
+// get returns the Processor for the given PID, if it exists.
 // If it doesn't exist, nil is returned so the caller must check for that
-// and direct the message to the deadletter processer instead.
-func (r *Registry) get(pid *PID) Processer {
+// and direct the message to the deadletter Processor instead.
+func (r *Registry) get(pid *PID) Processor {
 	if pid == nil {
 		return nil
 	}
@@ -48,16 +48,16 @@ func (r *Registry) get(pid *PID) Processer {
 	if proc, ok := r.lookup[pid.ID]; ok {
 		return proc
 	}
-	return nil // didn't find the processer
+	return nil // didn't find the Processor
 }
 
-func (r *Registry) getByID(id string) Processer {
+func (r *Registry) getByID(id string) Processor {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	return r.lookup[id]
 }
 
-func (r *Registry) add(proc Processer) {
+func (r *Registry) add(proc Processor) {
 	r.mu.Lock()
 	id := proc.PID().ID
 	if _, ok := r.lookup[id]; ok {

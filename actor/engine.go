@@ -90,9 +90,9 @@ func (e *Engine) SpawnFunc(f func(*Context), kind string, opts ...OptFunc) *PID 
 	return e.Spawn(newFuncReceiver(f), kind, opts...)
 }
 
-// SpawnProc spawns the give Processer. This function is useful when working
+// SpawnProc spawns the give Processor. This function is useful when working
 // with custom created Processes. Take a look at the streamWriter as an example.
-func (e *Engine) SpawnProc(p Processer) *PID {
+func (e *Engine) SpawnProc(p Processor) *PID {
 	e.Registry.add(p)
 	return p.PID()
 }
