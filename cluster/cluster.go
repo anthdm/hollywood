@@ -228,8 +228,27 @@ func (c *Cluster) HasKind(name string) bool {
 	return false
 }
 
-// TODO: Weird
-func (c *Cluster) GetActivated(id string) *actor.PID {
+// GetActiveByKind returns all the actor PIDS that are active across the cluster
+// by the given kind.
+//
+//	playerPids := c.GetActiveByKind("player")
+//	// [127.0.0.1:34364/player/1 127.0.0.1:34365/player/2]
+func (c *Cluster) GetActiveByKind(kind string) []*actor.PID {
+	resp, err := c.engine.Request(c.agentPID, getActive{kind: kind}, c.config.requestTimeout).Result()
+	if err != nil {
+		return []*actor.PID{}
+	}
+	if res, ok := resp.([]*actor.PID); ok {
+		return res
+	}
+	return []*actor.PID{}
+}
+
+// GetActiveByID returns the full PID by the given ID.
+//
+//	playerPid := c.GetActiveByID("player/1")
+//	// 127.0.0.1:34364/player/1
+func (c *Cluster) GetActiveByID(id string) *actor.PID {
 	resp, err := c.engine.Request(c.agentPID, getActive{id: id}, c.config.requestTimeout).Result()
 	if err != nil {
 		return nil

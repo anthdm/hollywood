@@ -3,6 +3,7 @@ package cluster
 import (
 	"log/slog"
 	"reflect"
+	"strings"
 
 	"github.com/anthdm/hollywood/actor"
 	"golang.org/x/exp/maps"
@@ -16,7 +17,10 @@ type (
 	getMembers struct{}
 	getKinds   struct{}
 	deactivate struct{ pid *actor.PID }
-	getActive  struct{ id string }
+	getActive  struct {
+		id   string
+		kind string
+	}
 )
 
 // Agent is an actor/receiver that is responsible for managing the state
@@ -79,8 +83,28 @@ func (a *Agent) Receive(c *actor.Context) {
 		}
 		c.Respond(kinds)
 	case getActive:
+		a.handleGetActive(c, msg)
+	}
+}
+
+func (a *Agent) handleGetActive(c *actor.Context, msg getActive) {
+	if len(msg.id) > 0 {
 		pid := a.activated[msg.id]
 		c.Respond(pid)
+	}
+	if len(msg.kind) > 0 {
+		pids := make([]*actor.PID, 0)
+		for id, pid := range a.activated {
+			parts := strings.Split(id, "/")
+			if len(parts) != 2 {
+				break
+			}
+			kind := parts[0]
+			if msg.kind == kind {
+				pids = append(pids, pid)
+			}
+		}
+		c.Respond(pids)
 	}
 }
 
@@ -107,6 +131,7 @@ func (a *Agent) handleActivationRequest(msg *ActivationRequest) *ActivationRespo
 		slog.Error("received activation request but kind not registered locally on this node", "kind", msg.Kind)
 		return &ActivationResponse{Success: false}
 	}
+
 	kind := a.localKinds[msg.Kind]
 	pid := a.cluster.engine.Spawn(kind.producer, msg.Kind, actor.WithID(msg.ID))
 	resp := &ActivationResponse{
@@ -117,6 +142,12 @@ func (a *Agent) handleActivationRequest(msg *ActivationRequest) *ActivationRespo
 }
 
 func (a *Agent) activate(kind string, config ActivationConfig) *actor.PID {
+	// Make sure actors are unique across the whole cluster.
+	id := kind + "/" + config.id // the id part of the PID
+	if _, ok := a.activated[id]; ok {
+		slog.Warn("activation failed", "err", "duplicated actor id across the cluster", "id", id)
+		return nil
+	}
 	members := a.members.FilterByKind(kind)
 	if len(members) == 0 {
 		slog.Warn("could not find any members with kind", "kind", kind)
