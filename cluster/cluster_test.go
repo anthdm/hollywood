@@ -201,7 +201,7 @@ func TestActivate(t *testing.T) {
 	wg.Wait()
 	assert.Equal(t, len(c1.Members()), 2)
 	assert.True(t, c1.HasKind("player"))
-	assert.True(t, c1.GetActivedByID("player/1").Equals(expectedPID))
+	assert.True(t, c1.GetActiveByID("player/1").Equals(expectedPID))
 
 	c1.Stop()
 	c2.Stop()
@@ -237,7 +237,7 @@ func TestDeactivate(t *testing.T) {
 
 	assert.Equal(t, len(c1.Members()), 2)
 	assert.True(t, c1.HasKind("player"))
-	assert.Nil(t, c1.GetActivedByID("player/1"))
+	assert.Nil(t, c1.GetActiveByID("player/1"))
 
 	c1.Stop()
 	c2.Stop()
@@ -342,6 +342,40 @@ func TestGetActiveByKind(t *testing.T) {
 	pidsStr[1] = pids[1].String()
 	assert.Contains(t, pidsStr, pid1.String())
 	assert.Contains(t, pidsStr, pid2.String())
+
+	c1.Stop()
+	c2.Stop()
+}
+
+func TestGetActiveByKind_ReturnsCorrectKind(t *testing.T) {
+	c1Addr := getRandomLocalhostAddr()
+	c2Addr := getRandomLocalhostAddr()
+
+	c1 := makeCluster(t, c1Addr, "A", "eu")
+	c1.RegisterKind("player", NewPlayer, NewKindConfig())
+	c1.RegisterKind("foobar", NewPlayer, NewKindConfig())
+	c1.Start()
+
+	c2 := makeCluster(t, c2Addr, "B", "eu")
+	c2.RegisterKind("player", NewPlayer, NewKindConfig())
+	c2.Start()
+
+	pid1 := c1.Activate("player", NewActivationConfig().WithID("1"))
+	pid2 := c2.Activate("player", NewActivationConfig().WithID("2"))
+	c1.Activate("player1", NewActivationConfig().WithID("1"))
+	c1.Activate("layer", NewActivationConfig().WithID("1"))
+	time.Sleep(time.Millisecond * 10)
+
+	pids := c1.GetActiveByKind("player")
+	assert.Len(t, pids, 2)
+	pidsStr := make([]string, 2)
+	pidsStr[0] = pids[0].String()
+	pidsStr[1] = pids[1].String()
+	assert.Contains(t, pidsStr, pid1.String())
+	assert.Contains(t, pidsStr, pid2.String())
+
+	c1.Stop()
+	c2.Stop()
 }
 
 func TestCannotDuplicateActor(t *testing.T) {
@@ -371,6 +405,9 @@ func TestCannotDuplicateActor(t *testing.T) {
 	pids := c1.GetActiveByKind("player")
 	assert.Len(t, pids, 1)
 	assert.Equal(t, pids[0].String(), pid.String())
+
+	c1.Stop()
+	c2.Stop()
 }
 
 func makeCluster(t *testing.T, addr, id, region string) *Cluster {

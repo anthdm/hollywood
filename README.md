@@ -29,6 +29,8 @@ large number of concurrent users and complex interactions.
 
 ## Features
 
+Compiles to WASM! Both GOOS=js and GOOS=wasm32
+
 - Guaranteed message delivery on actor failure (buffer mechanism)
 - Fire & forget or request & response messaging, or both
 - High performance dRPC as the transport layer

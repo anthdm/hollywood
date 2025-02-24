@@ -244,11 +244,11 @@ func (c *Cluster) GetActiveByKind(kind string) []*actor.PID {
 	return []*actor.PID{}
 }
 
-// GetActivedByID returns the full PID by the given ID.
+// GetActiveByID returns the full PID by the given ID.
 //
 //	playerPid := c.GetActiveByID("player/1")
 //	// 127.0.0.1:34364/player/1
-func (c *Cluster) GetActivedByID(id string) *actor.PID {
+func (c *Cluster) GetActiveByID(id string) *actor.PID {
 	resp, err := c.engine.Request(c.agentPID, getActive{id: id}, c.config.requestTimeout).Result()
 	if err != nil {
 		return nil

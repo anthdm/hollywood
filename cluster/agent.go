@@ -3,6 +3,7 @@ package cluster
 import (
 	"log/slog"
 	"reflect"
+	"strings"
 
 	"github.com/anthdm/hollywood/actor"
 	"golang.org/x/exp/maps"
@@ -82,19 +83,28 @@ func (a *Agent) Receive(c *actor.Context) {
 		}
 		c.Respond(kinds)
 	case getActive:
-		if len(msg.id) > 0 {
-			pid := a.activated[msg.id]
-			c.Respond(pid)
-		}
-		if len(msg.kind) > 0 {
-			pids := make([]*actor.PID, len(a.activated))
-			i := 0
-			for _, pid := range a.activated {
-				pids[i] = pid
-				i++
+		a.handleGetActive(c, msg)
+	}
+}
+
+func (a *Agent) handleGetActive(c *actor.Context, msg getActive) {
+	if len(msg.id) > 0 {
+		pid := a.activated[msg.id]
+		c.Respond(pid)
+	}
+	if len(msg.kind) > 0 {
+		pids := make([]*actor.PID, 0)
+		for id, pid := range a.activated {
+			parts := strings.Split(id, "/")
+			if len(parts) != 2 {
+				break
 			}
-			c.Respond(pids)
+			kind := parts[0]
+			if msg.kind == kind {
+				pids = append(pids, pid)
+			}
 		}
+		c.Respond(pids)
 	}
 }
 
