@@ -20,7 +20,6 @@ import (
 type Config struct {
 	TLSConfig *tls.Config
 	BuffSize  int
-	// Wg        *sync.WaitGroup
 }
 
 // NewConfig returns a new default remote configuration.
@@ -35,9 +34,11 @@ func (c Config) WithTLS(tlsconf *tls.Config) Config {
 	return c
 }
 
-// Set the buffer size of the stream reader.
-// If not provided, the default buffer size is 4MB
-// defined by drpc package
+// WithBufferSize sets the size of the maximum buffered packet
+// data used by the underlying DRPC connection of the stream writer.
+//
+// If not provided, the default buffer size is 4MB, which is
+// defined by in the DRPC package.
 func (c Config) WithBufferSize(size int) Config {
 	c.BuffSize = size
 	return c
