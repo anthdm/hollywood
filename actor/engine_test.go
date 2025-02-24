@@ -91,9 +91,8 @@ func TestRestartsMaxRestarts(t *testing.T) {
 		data int
 	}
 	pid := e.SpawnFunc(func(c *Context) {
+		fmt.Printf("Got message type %T\n", c.Message())
 		switch msg := c.Message().(type) {
-		case Started:
-		case Stopped:
 		case payload:
 			if msg.data != 1 {
 				panic("I failed to process this message")
@@ -101,7 +100,7 @@ func TestRestartsMaxRestarts(t *testing.T) {
 				fmt.Println("finally processed all my messages after borking.", msg.data)
 			}
 		}
-	}, "foo", WithMaxRestarts(restarts))
+	}, "foo", WithMaxRetries(1), WithMaxRestarts(restarts))
 
 	for i := 0; i < 2; i++ {
 		e.Send(pid, payload{i})
@@ -158,7 +157,7 @@ func TestRestarts(t *testing.T) {
 				wg.Done()
 			}
 		}
-	}, "foo", WithRestartDelay(time.Millisecond*10))
+	}, "foo", WithRetries(0), WithRestartDelay(time.Millisecond*10))
 
 	e.Send(pid, payload{1})
 	e.Send(pid, payload{2})

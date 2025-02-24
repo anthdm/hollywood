@@ -32,6 +32,7 @@ type process struct {
 	context  *Context
 	pid      *PID
 	restarts int32
+	retries  int32
 	mbuffer  []Envelope
 }
 
@@ -39,11 +40,13 @@ func newProcess(e *Engine, opts Opts) *process {
 	pid := NewPID(e.address, opts.Kind+pidSeparator+opts.ID)
 	ctx := newContext(opts.Context, e, pid)
 	p := &process{
-		pid:     pid,
-		inbox:   NewInbox(opts.InboxSize),
-		Opts:    opts,
-		context: ctx,
-		mbuffer: nil,
+		pid:      pid,
+		inbox:    NewInbox(opts.InboxSize),
+		Opts:     opts,
+		context:  ctx,
+		mbuffer:  nil,
+		restarts: 0,
+		retries:  0,
 	}
 	return p
 }
@@ -61,34 +64,51 @@ func (p *process) Invoke(msgs []Envelope) {
 		nmsg = len(msgs)
 		// numbers of msgs that are processed.
 		nproc = 0
-		// FIXME: We could use nrpoc here, but for some reason placing nproc++ on the
-		// bottom of the function it freezes some tests. Hence, I created a new counter
-		// for bookkeeping.
-		processed = 0
 	)
 	defer func() {
 		// If we recovered, we buffer up all the messages that we could not process
 		// so we can retry them on the next restart.
 		if v := recover(); v != nil {
-			p.context.message = Stopped{}
-			p.context.receiver.Receive(p.context)
+			if p.Retries > 0 {
+				p.retries++
+				// If at max retries, drop the message and move onto the next message.
+				if p.retries%p.Retries == 0 {
+					p.context.engine.BroadcastEvent(ActorUnprocessableMessageEvent{
+						PID:       p.pid,
+						Timestamp: time.Now(),
+						Message:   msgs[nproc].Msg,
+					})
+					nproc++
+				}
+			} else {
+				// If retries opt equals 0, message is dropped on each subsequent restart.
+				p.context.engine.BroadcastEvent(ActorUnprocessableMessageEvent{
+					PID:       p.pid,
+					Timestamp: time.Now(),
+					Message:   msgs[nproc].Msg,
+				})
+				nproc++
+			}
 
 			p.mbuffer = make([]Envelope, nmsg-nproc)
 			for i := 0; i < nmsg-nproc; i++ {
 				p.mbuffer[i] = msgs[i+nproc]
 			}
-			p.tryRestart(v)
+			if p.Retries == 0 || p.retries%(p.Retries*p.MaxRetries) == 0 {
+				p.tryRestart(v)
+			} else {
+				p.Invoke(p.mbuffer)
+			}
 		}
 	}()
 
-	for i := 0; i < len(msgs); i++ {
-		nproc++
+	for i := 0; i < nmsg; i++ {
 		msg := msgs[i]
 		if pill, ok := msg.Msg.(poisonPill); ok {
 			// If we need to gracefuly stop, we process all the messages
 			// from the inbox, otherwise we ignore and cleanup.
 			if pill.graceful {
-				msgsToProcess := msgs[processed:]
+				msgsToProcess := msgs[nproc:]
 				for _, m := range msgsToProcess {
 					p.invokeMsg(m)
 				}
@@ -97,7 +117,8 @@ func (p *process) Invoke(msgs []Envelope) {
 			return
 		}
 		p.invokeMsg(msg)
-		processed++
+		p.retries = 0
+		nproc++
 	}
 }
 
@@ -121,9 +142,8 @@ func (p *process) Start() {
 	p.context.receiver = recv
 	defer func() {
 		if v := recover(); v != nil {
-			p.context.message = Stopped{}
-			p.context.receiver.Receive(p.context)
-			p.tryRestart(v)
+			// Actor crashed too many times and exceeded max restarts so let it terminate and upstream handle it.
+			// Todo maybe add some logging here to catch anything abnormal
 		}
 	}()
 	p.context.message = Initialized{}
@@ -135,6 +155,7 @@ func (p *process) Start() {
 	p.context.engine.BroadcastEvent(ActorStartedEvent{PID: p.pid, Timestamp: time.Now()})
 	// If we have messages in our buffer, invoke them.
 	if len(p.mbuffer) > 0 {
+		p.retries = 0
 		p.Invoke(p.mbuffer)
 		p.mbuffer = nil
 	}
@@ -167,6 +188,7 @@ func (p *process) tryRestart(v any) {
 	}
 
 	p.restarts++
+
 	// Restart the process after its restartDelay
 	p.context.engine.BroadcastEvent(ActorRestartedEvent{
 		PID:        p.pid,
@@ -193,7 +215,9 @@ func (p *process) cleanup(cancel context.CancelFunc) {
 		}
 	}
 
-	p.inbox.Stop()
+	p.mbuffer = nil
+
+	_ = p.inbox.Stop()
 	p.context.engine.Registry.Remove(p.pid)
 	p.context.message = Stopped{}
 	applyMiddleware(p.context.receiver.Receive, p.Opts.Middleware...)(p.context)
