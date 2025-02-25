@@ -2,7 +2,6 @@ package ringbuffer
 
 import (
 	"sync"
-	"sync/atomic"
 )
 
 type buffer[T any] struct {
@@ -30,29 +29,25 @@ func New[T any](size int64) *RingBuffer[T] {
 
 func (rb *RingBuffer[T]) Push(item T) {
 	rb.mu.Lock()
-	rb.content.tail = (rb.content.tail + 1) % rb.content.mod
-	if rb.content.tail == rb.content.head {
-		size := rb.content.mod * 2
-		newBuff := make([]T, size)
-		for i := int64(0); i < rb.content.mod; i++ {
-			idx := (rb.content.tail + i) % rb.content.mod
-			newBuff[i] = rb.content.items[idx]
-		}
-		content := &buffer[T]{
-			items: newBuff,
-			head:  0,
-			tail:  rb.content.mod,
-			mod:   size,
-		}
-		rb.content = content
+	nextTail := (rb.content.tail + 1) % rb.content.mod
+	if rb.len == rb.content.mod {
+		// Buffer is full, advance head to overwrite oldest element
+		rb.content.head = (rb.content.head + 1) % rb.content.mod
+	} else {
+		// Buffer not full, increment length
+		rb.len++
 	}
-	atomic.AddInt64(&rb.len, 1)
+
+	rb.content.tail = nextTail
 	rb.content.items[rb.content.tail] = item
 	rb.mu.Unlock()
 }
 
 func (rb *RingBuffer[T]) Len() int64 {
-	return atomic.LoadInt64(&rb.len)
+	rb.mu.Lock()
+	length := rb.len
+	rb.mu.Unlock()
+	return length
 }
 
 func (rb *RingBuffer[T]) Pop() (T, bool) {
@@ -66,7 +61,7 @@ func (rb *RingBuffer[T]) Pop() (T, bool) {
 	item := rb.content.items[rb.content.head]
 	var t T
 	rb.content.items[rb.content.head] = t
-	atomic.AddInt64(&rb.len, -1)
+	rb.len--
 	rb.mu.Unlock()
 	return item, true
 }
@@ -82,7 +77,7 @@ func (rb *RingBuffer[T]) PopN(n int64) ([]T, bool) {
 	if n >= rb.len {
 		n = rb.len
 	}
-	atomic.AddInt64(&rb.len, -n)
+	rb.len -= n
 
 	items := make([]T, n)
 	for i := int64(0); i < n; i++ {
