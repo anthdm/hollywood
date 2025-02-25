@@ -70,6 +70,10 @@ func (p *process) Invoke(msgs []Envelope) {
 		// If we recovered, we buffer up all the messages that we could not process
 		// so we can retry them on the next restart.
 		if v := recover(); v != nil {
+			p.context.message = Stopping{}
+			applyMiddleware(p.context.receiver.Receive, p.Opts.Middleware...)(p.context)
+			p.context.engine.BroadcastEvent(ActorStoppingEvent{PID: p.pid, Timestamp: time.Now()})
+
 			p.context.message = Stopped{}
 			p.context.receiver.Receive(p.context)
 
@@ -85,6 +89,8 @@ func (p *process) Invoke(msgs []Envelope) {
 		nproc++
 		msg := msgs[i]
 		if pill, ok := msg.Msg.(poisonPill); ok {
+			p.context.message = Stopping{}
+			applyMiddleware(p.context.receiver.Receive, p.Opts.Middleware...)(p.context)
 			// If we need to gracefuly stop, we process all the messages
 			// from the inbox, otherwise we ignore and cleanup.
 			if pill.graceful {
@@ -121,6 +127,9 @@ func (p *process) Start() {
 	p.context.receiver = recv
 	defer func() {
 		if v := recover(); v != nil {
+			p.context.message = Stopping{}
+			applyMiddleware(p.context.receiver.Receive, p.Opts.Middleware...)(p.context)
+			p.context.engine.BroadcastEvent(ActorStoppingEvent{PID: p.pid, Timestamp: time.Now()})
 			p.context.message = Stopped{}
 			p.context.receiver.Receive(p.context)
 			p.tryRestart(v)
@@ -181,6 +190,8 @@ func (p *process) tryRestart(v any) {
 
 func (p *process) cleanup(cancel context.CancelFunc) {
 	defer cancel()
+
+	p.context.engine.BroadcastEvent(ActorStoppingEvent{PID: p.pid, Timestamp: time.Now()})
 
 	if p.context.parentCtx != nil {
 		p.context.parentCtx.children.Delete(p.pid.ID)

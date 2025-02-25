@@ -117,3 +117,63 @@ func Test_StartupMessages(t *testing.T) {
 		return
 	}
 }
+
+func Test_LifecyleMessages(t *testing.T) {
+	e, err := NewEngine(NewEngineConfig())
+	require.NoError(t, err)
+
+	type testMsg struct{}
+	type stopMsg struct{}
+
+	timeout := time.After(2 * time.Second)
+	msgCh := make(chan any, 4)
+	syncCh := make(chan any)
+
+	go func() {
+		e.SpawnFunc(func(c *Context) {
+			fmt.Printf("Got message type %T\n", c.Message())
+			switch msg := c.Message().(type) {
+			case Initialized:
+				syncCh <- msg
+			case Started:
+				syncCh <- msg
+				c.Send(c.PID(), testMsg{})
+			case Stopping:
+				syncCh <- msg
+			case Stopped:
+				syncCh <- msg
+			case testMsg:
+				msgCh <- msg
+				c.Send(c.PID(), stopMsg{})
+			case stopMsg:
+				c.engine.Poison(c.PID())
+			}
+		}, "foo", WithID("bar"))
+	}()
+
+	var lifecycle []any
+	var messages []any
+	// wait for actor to initialize
+init:
+	for {
+		select {
+		case msg := <-syncCh:
+			lifecycle = append(lifecycle, msg)
+			if _, ok := msg.(Stopped); ok {
+				break init
+			}
+		case msg := <-msgCh:
+			messages = append(messages, msg.(testMsg))
+		case <-timeout:
+			t.Error("test timed out")
+			return
+		}
+	}
+	require.Len(t, lifecycle, 4)
+	require.Len(t, messages, 1)
+	require.IsType(t, Initialized{}, lifecycle[0])
+	require.IsType(t, Started{}, lifecycle[1])
+	require.IsType(t, Stopping{}, lifecycle[2])
+	require.IsType(t, Stopped{}, lifecycle[3])
+	require.IsType(t, testMsg{}, messages[0])
+}
