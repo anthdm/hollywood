@@ -69,3 +69,13 @@ func (r *Registry) add(proc Processer) {
 	r.mu.Unlock()
 	proc.Start()
 }
+
+func (r *Registry) remove(pid *PID) bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	_, ok := r.lookup[pid.ID]
+	if ok {
+		delete(r.lookup, pid.ID)
+	}
+	return ok
+}
