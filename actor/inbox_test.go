@@ -11,7 +11,7 @@ import (
 func TestInboxSendAndProcess(t *testing.T) {
 	inbox := NewInbox(10)
 	processedMessages := make(chan Envelope, 10)
-	mockProc := MockProcesser{
+	mockProc := MockProcessor{
 		processFunc: func(envelopes []Envelope) {
 			for _, e := range envelopes {
 				processedMessages <- e
@@ -34,7 +34,7 @@ func TestInboxSendAndProcessMany(t *testing.T) {
 	for i := 0; i < 100000; i++ {
 		inbox := NewInbox(10)
 		processedMessages := make(chan Envelope, 10)
-		mockProc := MockProcesser{
+		mockProc := MockProcessor{
 			processFunc: func(envelopes []Envelope) {
 				for _, e := range envelopes {
 					processedMessages <- e
@@ -57,24 +57,24 @@ func TestInboxSendAndProcessMany(t *testing.T) {
 	}
 }
 
-type MockProcesser struct {
+type MockProcessor struct {
 	processFunc func([]Envelope)
 }
 
-func (m MockProcesser) Start() {}
-func (m MockProcesser) PID() *PID {
+func (m MockProcessor) Start() {}
+func (m MockProcessor) PID() *PID {
 	return nil
 }
-func (m MockProcesser) Send(*PID, any, *PID) {}
-func (m MockProcesser) Invoke(envelopes []Envelope) {
+func (m MockProcessor) Send(*PID, any, *PID) {}
+func (m MockProcessor) Invoke(envelopes []Envelope) {
 	m.processFunc(envelopes)
 }
-func (m MockProcesser) Shutdown() {}
+func (m MockProcessor) Shutdown() {}
 
 func TestInboxStop(t *testing.T) {
 	inbox := NewInbox(10)
 	done := make(chan struct{})
-	mockProc := MockProcesser{
+	mockProc := MockProcessor{
 		processFunc: func(envelopes []Envelope) {
 			inbox.Stop()
 			done <- struct{}{}
