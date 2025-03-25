@@ -6,6 +6,7 @@ import (
 	"math"
 	"math/rand"
 	"reflect"
+	"slices"
 	"time"
 
 	"github.com/anthdm/hollywood/actor"
@@ -219,11 +220,7 @@ func (c *Cluster) HasKind(name string) bool {
 		return false
 	}
 	if kinds, ok := resp.([]string); ok {
-		for _, kind := range kinds {
-			if kind == name {
-				return true
-			}
-		}
+		return slices.Contains(kinds, name)
 	}
 	return false
 }
@@ -236,12 +233,15 @@ func (c *Cluster) HasKind(name string) bool {
 func (c *Cluster) GetActiveByKind(kind string) []*actor.PID {
 	resp, err := c.engine.Request(c.agentPID, getActive{kind: kind}, c.config.requestTimeout).Result()
 	if err != nil {
-		return []*actor.PID{}
+		return []*actor.PID{nil}
 	}
 	if res, ok := resp.([]*actor.PID); ok {
+		if len(res) == 0 || res == nil {
+			return []*actor.PID{nil}
+		}
 		return res
 	}
-	return []*actor.PID{}
+	return []*actor.PID{nil}
 }
 
 // GetActiveByID returns the full PID by the given ID.
