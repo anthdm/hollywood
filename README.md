@@ -317,6 +317,7 @@ Join our Discord community with over 2000 members for questions and a nice chat.
 This project is currently used in production by the following organizations/projects:
 
 - [Sensora IoT](https://sensora.io)
+- [Market Monkey Terminal](https://marketmonkeyterminal.com)
 
 # License
 
