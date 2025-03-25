@@ -2,6 +2,7 @@ package cluster
 
 import (
 	fmt "fmt"
+	"log"
 	"log/slog"
 	"net"
 	"strconv"
@@ -18,7 +19,18 @@ const (
 	removeTTL   = 8 * time.Second
 )
 
+type ConsulProviderConfig struct {
+	Address string
+}
+
+func NewConsulProviderConfig() ConsulProviderConfig {
+	return ConsulProviderConfig{
+		Address: "127.0.0.1:8500",
+	}
+}
+
 type ConsulProvider struct {
+	config    ConsulProviderConfig
 	cluster   *Cluster
 	client    *api.Client
 	id        string
@@ -40,11 +52,17 @@ func (p *ConsulProvider) Receive(c *actor.Context) {
 	}
 }
 
-func NewConsulProvider() Producer {
-	client, _ := api.NewClient(&api.Config{})
+func NewConsulProvider(config ConsulProviderConfig) Producer {
+	client, err := api.NewClient(&api.Config{
+		Address: config.Address,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
 	return func(c *Cluster) actor.Producer {
 		return func() actor.Receiver {
 			return &ConsulProvider{
+				config:    config,
 				prevIndex: watch.WaitIndexVal(0),
 				client:    client,
 				cluster:   c,
