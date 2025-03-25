@@ -299,6 +299,14 @@ func (c *Cluster) PID() *actor.PID {
 	return c.agentPID
 }
 
+func (c *Cluster) kindsToString() []string {
+	items := make([]string, len(c.kinds))
+	for i := range len(c.kinds) {
+		items[i] = c.kinds[i].name
+	}
+	return items
+}
+
 func getRandomListenAddr() string {
 	return fmt.Sprintf("127.0.0.1:%d", rand.Intn(50000)+10000)
 }
