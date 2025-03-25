@@ -20,13 +20,18 @@ const (
 )
 
 type ConsulProviderConfig struct {
-	Address string
+	address string
 }
 
 func NewConsulProviderConfig() ConsulProviderConfig {
 	return ConsulProviderConfig{
-		Address: "127.0.0.1:8500",
+		address: "127.0.0.1:8500",
 	}
+}
+
+func (c ConsulProviderConfig) WithAddress(address string) ConsulProviderConfig {
+	c.address = address
+	return c
 }
 
 type ConsulProvider struct {
@@ -54,7 +59,7 @@ func (p *ConsulProvider) Receive(c *actor.Context) {
 
 func NewConsulProvider(config ConsulProviderConfig) Producer {
 	client, err := api.NewClient(&api.Config{
-		Address: config.Address,
+		Address: config.address,
 	})
 	if err != nil {
 		log.Fatal(err)
