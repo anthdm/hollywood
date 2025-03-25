@@ -226,10 +226,25 @@ func (c *Cluster) HasKind(name string) bool {
 }
 
 // GetActiveByKind returns all the actor PIDS that are active across the cluster
-// by the given kind.
+// by the given kind. If not kids can be found on the cluster it will return a slice
+// with a nil pid.
 //
-//	playerPids := c.GetActiveByKind("player")
-//	// [127.0.0.1:34364/player/1 127.0.0.1:34365/player/2]
+// Why?
+// This guarantees that the function will return a slice with at least 1 element.
+// The nil pid can be blindly used to send any message that will end up in the deadLetter.
+// High available and correct code to handle a full fault tolarent system would look something
+// like the following:
+//
+// playerPids := cluster.GetActiveByKind("player")
+//
+//	for _, pid := range playerPids {
+//	 engine.Send(pid, theMessage)
+//	}
+//
+// engine.Send(playerPid)
+//
+// playerPids := c.GetActiveByKind("player")
+// [127.0.0.1:34364/player/1 127.0.0.1:34365/player/2]
 func (c *Cluster) GetActiveByKind(kind string) []*actor.PID {
 	resp, err := c.engine.Request(c.agentPID, getActive{kind: kind}, c.config.requestTimeout).Result()
 	if err != nil {
