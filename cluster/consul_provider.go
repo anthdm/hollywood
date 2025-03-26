@@ -128,7 +128,9 @@ func (p *ConsulProvider) watch() {
 	}
 	plan.HybridHandler = p.onUpdate
 
-	config := &api.Config{}
+	config := &api.Config{
+		Address: p.config.address,
+	}
 	if err := plan.RunWithConfig(config.Address, config); err != nil {
 		panic(err)
 	}
