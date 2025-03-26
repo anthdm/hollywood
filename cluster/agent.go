@@ -240,7 +240,12 @@ func (a *Agent) memberJoin(member *Member) {
 		Member: member,
 	})
 
-	slog.Debug("[CLUSTER] member joined", "id", member.ID, "host", member.Host, "kinds", member.Kinds, "region", member.Region)
+	slog.Debug("[CLUSTER] member joined",
+		"id", member.ID,
+		"host", member.Host,
+		"kinds", member.Kinds,
+		"region", member.Region,
+		"members", len(a.members.members))
 }
 
 func (a *Agent) memberLeave(member *Member) {
