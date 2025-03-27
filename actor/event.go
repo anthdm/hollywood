@@ -37,6 +37,17 @@ func (e ActorInitializedEvent) Log() (slog.Level, string, []any) {
 	return slog.LevelDebug, "Actor initialized", []any{"pid", e.PID}
 }
 
+// ActorStoppingEvent is broadcast via the eventStream each time
+// a process has begun termination.
+type ActorStoppingEvent struct {
+	PID       *PID
+	Timestamp time.Time
+}
+
+func (e ActorStoppingEvent) Log() (slog.Level, string, []any) {
+	return slog.LevelDebug, "Actor stopping", []any{"pid", e.PID}
+}
+
 // ActorStoppedEvent is broadcasted over the eventStream each time
 // a process is terminated.
 type ActorStoppedEvent struct {
