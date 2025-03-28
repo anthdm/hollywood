@@ -274,13 +274,13 @@ func (a *Agent) bcast(msg any) {
 func (a *Agent) addActivated(pid *actor.PID) {
 	if _, ok := a.activated[pid.ID]; !ok {
 		a.activated[pid.ID] = pid
-		slog.Debug("new actor available on cluster", "pid", pid)
+		slog.Debug("[CLUSTER] new actor available", "pid", pid)
 	}
 }
 
 func (a *Agent) removeActivated(pid *actor.PID) {
 	delete(a.activated, pid.ID)
-	slog.Debug("actor removed from cluster", "pid", pid)
+	slog.Debug("[CLUSTER] actor removed", "pid", pid)
 }
 
 func (a *Agent) hasKindLocal(name string) bool {

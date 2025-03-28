@@ -20,7 +20,6 @@ import (
 type Config struct {
 	TLSConfig *tls.Config
 	BuffSize  int
-	// Wg        *sync.WaitGroup
 }
 
 // NewConfig returns a new default remote configuration.
