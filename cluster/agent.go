@@ -280,7 +280,7 @@ func (a *Agent) addActivated(pid *actor.PID) {
 
 func (a *Agent) removeActivated(pid *actor.PID) {
 	delete(a.activated, pid.ID)
-	slog.Debug("actor removed from cluster", "pid", pid)
+	slog.Debug("[CLUSTER] actor removed", "pid", pid)
 }
 
 func (a *Agent) hasKindLocal(name string) bool {

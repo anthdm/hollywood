@@ -14,9 +14,9 @@ import (
 )
 
 const (
-	registerTTL = 4 * time.Second
-	refreshTTL  = 2 * time.Second
-	removeTTL   = 8 * time.Second
+	registerTTL = 1 * time.Second
+	refreshTTL  = 500 * time.Millisecond
+	removeTTL   = 1 * time.Second
 )
 
 type ConsulProviderConfig struct {
@@ -54,6 +54,7 @@ func (p *ConsulProvider) Receive(c *actor.Context) {
 		go p.updateTTL()
 	case actor.Stopped:
 		close(p.quitch)
+		p.client.Agent().ServiceDeregister(p.id)
 	}
 }
 
@@ -164,7 +165,7 @@ func (p *ConsulProvider) onUpdate(index watch.BlockingParamVal, msg any) {
 }
 
 func (p *ConsulProvider) updateTTL() {
-	ticker := time.NewTicker(time.Second)
+	ticker := time.NewTicker(refreshTTL)
 	for {
 		select {
 		case <-ticker.C:
