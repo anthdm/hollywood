@@ -28,23 +28,34 @@ type Receiver interface {
 
 // Engine represents the actor engine.
 type Engine struct {
+	id          string
 	Registry    *Registry
 	address     string
 	remote      Remoter
 	eventStream *PID
+	pid         *PID
 }
 
 // EngineConfig holds the configuration of the engine.
 type EngineConfig struct {
+	id     string
 	remote Remoter
 }
 
 // NewEngineConfig returns a new default EngineConfig.
 func NewEngineConfig() EngineConfig {
-	return EngineConfig{}
+	return EngineConfig{
+		id: strconv.Itoa(rand.Intn(math.MaxInt32)),
+	}
 }
 
-// WithRemote sets the remote which will configure the engine so its capable
+// WithID sets the id of the engine for use in the pid.
+func (config EngineConfig) WithID(id string) EngineConfig {
+	config.id = id
+	return config
+}
+
+// WithRemote sets the remote which will configure the engine so it's capable
 // to send and receive messages over the network.
 func (config EngineConfig) WithRemote(remote Remoter) EngineConfig {
 	config.remote = remote
@@ -56,6 +67,7 @@ func NewEngine(config EngineConfig) (*Engine, error) {
 	e := &Engine{}
 	e.Registry = newRegistry(e) // need to init the registry in case we want a custom deadletter
 	e.address = LocalLookupAddr
+	e.id = config.id
 	if config.remote != nil {
 		e.remote = config.remote
 		e.address = config.remote.Address()
@@ -65,6 +77,7 @@ func NewEngine(config EngineConfig) (*Engine, error) {
 		}
 	}
 	e.eventStream = e.Spawn(newEventStream(), "eventstream")
+	e.pid = NewPID(e.address, e.id)
 	return e, nil
 }
 
@@ -102,6 +115,11 @@ func (e *Engine) SpawnProc(p Processer) *PID {
 // the listen address of the remote.
 func (e *Engine) Address() string {
 	return e.address
+}
+
+// GetPID returns the pid of the actor engine.
+func (e *Engine) GetPID() *PID {
+	return e.pid
 }
 
 // Request sends the given message to the given PID as a "Request", returning

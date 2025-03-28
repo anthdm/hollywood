@@ -37,6 +37,19 @@ func newTickReceiver(wg *sync.WaitGroup) Producer {
 	}
 }
 
+func TestNewEngineConfig(t *testing.T) {
+	e, err := NewEngine(NewEngineConfig())
+	require.Nil(t, err)
+	_, err = strconv.Atoi(e.GetPID().GetID())
+	require.Nil(t, err)
+}
+
+func TestNewEngineConfigWithID(t *testing.T) {
+	e, err := NewEngine(NewEngineConfig().WithID("newID"))
+	require.Nil(t, err)
+	require.Equal(t, "newID", e.GetPID().GetID())
+}
+
 func TestSpawnWithContext(t *testing.T) {
 	e, _ := NewEngine(NewEngineConfig())
 	type key struct {
