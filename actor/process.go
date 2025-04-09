@@ -70,9 +70,6 @@ func (p *process) Invoke(msgs []Envelope) {
 		// If we recovered, we buffer up all the messages that we could not process
 		// so we can retry them on the next restart.
 		if v := recover(); v != nil {
-			p.context.message = Stopped{}
-			p.context.receiver.Receive(p.context)
-
 			p.mbuffer = make([]Envelope, nmsg-nproc)
 			for i := 0; i < nmsg-nproc; i++ {
 				p.mbuffer[i] = msgs[i+nproc]
@@ -121,8 +118,6 @@ func (p *process) Start() {
 	p.context.receiver = recv
 	defer func() {
 		if v := recover(); v != nil {
-			p.context.message = Stopped{}
-			p.context.receiver.Receive(p.context)
 			p.tryRestart(v)
 		}
 	}()
@@ -166,6 +161,9 @@ func (p *process) tryRestart(v any) {
 		return
 	}
 
+	p.context.message = Stopped{}
+	p.context.receiver.Receive(p.context)
+
 	p.restarts++
 	// Restart the process after its restartDelay
 	p.context.engine.BroadcastEvent(ActorRestartedEvent{
@@ -180,7 +178,9 @@ func (p *process) tryRestart(v any) {
 }
 
 func (p *process) cleanup(cancel context.CancelFunc) {
-	defer cancel()
+	if cancel != nil {
+		defer cancel()
+	}
 
 	if p.context.parentCtx != nil {
 		p.context.parentCtx.children.Delete(p.pid.ID)
