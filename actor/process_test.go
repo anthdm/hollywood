@@ -45,6 +45,56 @@ func Test_CleanTrace(t *testing.T) {
 	}
 }
 
+// Test_GracefulCleanup tests that process successfully finishes its lifecycles
+// after all restart attempts are exhausted. It calls cleanup function in the end.
+func Test_GracefulCleanup(t *testing.T) {
+	e, err := NewEngine(NewEngineConfig())
+	require.NoError(t, err)
+	type triggerPanic struct {
+		data int
+	}
+	stopCh := make(chan struct{})
+	pid := e.SpawnFunc(func(c *Context) {
+		fmt.Printf("Actor got message type %T\n", c.Message())
+		switch c.Message().(type) {
+		case Started:
+			c.Engine().Subscribe(c.pid)
+		case triggerPanic:
+			panicWrapper()
+		case Stopped:
+			c.Engine().Unsubscribe(c.pid)
+		}
+	}, "foo", WithMaxRestarts(0))
+
+	e.SpawnFunc(func(c *Context) {
+		fmt.Printf("Monitor got message type %T\n", c.Message())
+
+		switch c.Message().(type) {
+		case Started:
+			c.Engine().Subscribe(c.pid)
+		case ActorMaxRestartsExceededEvent:
+			m := c.Message().(ActorMaxRestartsExceededEvent)
+			// make sure PID is the same as the one we started
+			if m.PID != pid {
+				t.Errorf("expected PID %s, got %s", pid, m.PID)
+			} else {
+				stopCh <- struct{}{}
+			}
+		case Stopped:
+			c.Engine().Unsubscribe(c.pid)
+		}
+	}, "monitor", WithMaxRestarts(0))
+
+	e.Send(pid, triggerPanic{1})
+
+	select {
+	case <-stopCh:
+		fmt.Println("test passed")
+	case <-time.After(time.Second):
+		t.Error("test timed out. stack trace likely did not contain panicWrapper at the right line")
+	}
+}
+
 func panicWrapper() {
 	panic("foo")
 }
