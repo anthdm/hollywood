@@ -42,6 +42,7 @@ type Inboxer interface {
 	Send(Envelope)
 	Start(Processer)
 	Stop() error
+	Count() int
 }
 
 type Inbox struct {
@@ -108,4 +109,8 @@ func (in *Inbox) Start(proc Processer) {
 func (in *Inbox) Stop() error {
 	atomic.StoreInt32(&in.procStatus, stopped)
 	return nil
+}
+
+func (in *Inbox) Count() int {
+	return int(in.rb.Len())
 }

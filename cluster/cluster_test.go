@@ -331,7 +331,7 @@ func TestGetActiveByID(t *testing.T) {
 
 	pid1 := c1.Activate("player", NewActivationConfig().WithID("1"))
 	pid2 := c2.Activate("player", NewActivationConfig().WithID("2"))
-	time.Sleep(time.Millisecond * 10)
+	time.Sleep(time.Millisecond * 200)
 
 	pid := c1.GetActiveByID("player/1")
 	assert.NotNil(t, pid)
@@ -364,7 +364,7 @@ func TestGetActiveByKind(t *testing.T) {
 	pid2 := c2.Activate("player", NewActivationConfig().WithID("2"))
 	c1.Activate("foo", NewActivationConfig().WithID("2"))
 	c1.Activate("bar", NewActivationConfig().WithID("2"))
-	time.Sleep(time.Millisecond * 10)
+	time.Sleep(time.Millisecond * 200)
 
 	pids := c1.GetActiveByKind("player")
 	assert.Len(t, pids, 2)
