@@ -150,13 +150,7 @@ func (c *Context) Child(id string) *PID {
 
 // Children returns all child PIDs for the current process.
 func (c *Context) Children() []*PID {
-	pids := make([]*PID, c.children.Len())
-	i := 0
-	c.children.ForEach(func(_ string, child *PID) {
-		pids[i] = child
-		i++
-	})
-	return pids
+	return c.children.Values()
 }
 
 // PID returns the PID of the process that belongs to the context.

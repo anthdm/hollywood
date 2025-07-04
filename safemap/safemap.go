@@ -45,3 +45,23 @@ func (s *SafeMap[K, V]) ForEach(f func(K, V)) {
 		f(k, v)
 	}
 }
+
+func (s *SafeMap[K, V]) Keys() []K {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	keys := make([]K, 0, len(s.data))
+	for k := range s.data {
+		keys = append(keys, k)
+	}
+	return keys
+}
+
+func (s *SafeMap[K, V]) Values() []V {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	values := make([]V, 0, len(s.data))
+	for _, v := range s.data {
+		values = append(values, v)
+	}
+	return values
+}
