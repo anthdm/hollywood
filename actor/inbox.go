@@ -50,6 +50,7 @@ type Inbox struct {
 	proc       Processer
 	scheduler  Scheduler
 	procStatus int32
+	batch      []Envelope
 }
 
 func NewInbox(size int) *Inbox {
@@ -57,6 +58,7 @@ func NewInbox(size int) *Inbox {
 		rb:         ringbuffer.New[Envelope](int64(size)),
 		scheduler:  NewScheduler(defaultThroughput),
 		procStatus: stopped,
+		batch:      make([]Envelope, 0, messageBatchSize),
 	}
 }
 
@@ -89,11 +91,13 @@ func (in *Inbox) run() {
 		}
 		i++
 
-		if msgs, ok := in.rb.PopN(messageBatchSize); ok && len(msgs) > 0 {
-			in.proc.Invoke(msgs)
-		} else {
+		msgs, ok := in.rb.PopNInto(in.batch, messageBatchSize)
+		if !ok || len(msgs) == 0 {
 			return
 		}
+
+		in.batch = msgs[:0]
+		in.proc.Invoke(msgs)
 	}
 }
 

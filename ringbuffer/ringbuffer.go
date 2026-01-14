@@ -96,3 +96,35 @@ func (rb *RingBuffer[T]) PopN(n int64) ([]T, bool) {
 	rb.mu.Unlock()
 	return items, true
 }
+
+func (rb *RingBuffer[T]) PopNInto(dst []T, n int64) ([]T, bool) {
+	rb.mu.Lock()
+	defer rb.mu.Unlock()
+
+	if rb.len == 0 {
+		return dst[:0], false
+	}
+
+	if n > rb.len {
+		n = rb.len
+	}
+
+	if int64(cap(dst)) < n {
+		dst = make([]T, n)
+	} else {
+		dst = dst[:n]
+	}
+
+	content := rb.content
+	for i := int64(0); i < n; i++ {
+		pos := (content.head + 1 + i) % content.mod
+		dst[i] = content.items[pos]
+		var z T
+		content.items[pos] = z
+	}
+
+	content.head = (content.head + n) % content.mod
+	atomic.AddInt64(&rb.len, -n)
+
+	return dst, true
+}
