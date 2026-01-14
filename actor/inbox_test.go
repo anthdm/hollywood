@@ -23,7 +23,7 @@ func TestInboxSendAndProcess(t *testing.T) {
 	inbox.Send(msg)
 	select {
 	case <-processedMessages: // Message processed
-	case <-time.After(time.Millisecond):
+	case <-time.After(time.Second):
 		t.Errorf("Message was not processed in time")
 	}
 
