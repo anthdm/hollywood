@@ -32,20 +32,24 @@ func NewInventory() actor.Receiver {
 func (i Inventory) Receive(c *actor.Context) {}
 
 func TestClusterSelectMemberFunc(t *testing.T) {
-	c1, err := New(NewConfig().WithID("A"))
+	c1Addr := getRandomLocalhostAddr()
+	c1Config := NewConfig().WithID("A").WithListenAddr(c1Addr)
+	c1, err := New(c1Config)
 	require.Nil(t, err)
-	c2, err := New(NewConfig().WithID("B"))
+
+	selfManagedConfigB := NewSelfManagedConfig().WithBootstrapMember(MemberAddr{ListenAddr: c1Addr, ID: "A"})
+	c2Config := NewConfig().WithID("B").WithProvider(NewSelfManagedProvider(selfManagedConfigB))
+	c2, err := New(c2Config)
 	require.Nil(t, err)
-	c3, err := New(NewConfig().WithID("C"))
+
+	selfManagedConfigC := NewSelfManagedConfig().WithBootstrapMember(MemberAddr{ListenAddr: c1Addr, ID: "A"})
+	c3Config := NewConfig().WithID("C").WithProvider(NewSelfManagedProvider(selfManagedConfigC))
+	c3, err := New(c3Config)
 	require.Nil(t, err)
 
 	c1.RegisterKind("player", NewPlayer, NewKindConfig())
 	c2.RegisterKind("player", NewPlayer, NewKindConfig())
 	c3.RegisterKind("player", NewPlayer, NewKindConfig())
-
-	c1.Start()
-	c2.Start()
-	c3.Start()
 
 	selectMember := func(details ActivationDetails) *Member {
 		for _, member := range details.Members {
@@ -56,7 +60,10 @@ func TestClusterSelectMemberFunc(t *testing.T) {
 		return nil
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	defer cancel()
+
+	// Subscribe BEFORE starting clusters to catch all MemberJoinEvents
 	eventPID := c1.Engine().SpawnFunc(func(c *actor.Context) {
 		switch msg := c.Message().(type) {
 		case ActivationEvent:
@@ -69,15 +76,19 @@ func TestClusterSelectMemberFunc(t *testing.T) {
 				// Activate the actor from member A
 				// Which should spawn the actor on member C
 				config := NewActivationConfig().WithSelectMemberFunc(selectMember)
-				c1.Activate("cancel_receiver", config)
+				c1.Activate("player", config)
 			}
 		}
 	}, "event")
 	c1.Engine().Subscribe(eventPID)
 	defer c1.Engine().Unsubscribe(eventPID)
 
+	c1.Start()
+	c2.Start()
+	c3.Start()
+
 	<-ctx.Done()
-	require.Equal(t, context.DeadlineExceeded, ctx.Err())
+	require.Equal(t, context.Canceled, ctx.Err())
 	c1.Stop()
 	c2.Stop()
 	c3.Stop()
@@ -103,7 +114,7 @@ func TestClusterSpawn(t *testing.T) {
 	var (
 		c1Addr      = getRandomLocalhostAddr()
 		c1          = makeCluster(t, c1Addr, "A", "eu-west")
-		c2          = makeCluster(t, getRandomLocalhostAddr(), "B", "eu-west")
+		c2          = makeClusterWithBootstrap(t, getRandomLocalhostAddr(), "B", "eu-west", MemberAddr{ListenAddr: c1Addr, ID: "A"})
 		wg          = sync.WaitGroup{}
 		expectedPID = actor.NewPID(c1Addr, "player/1")
 	)
@@ -140,8 +151,9 @@ func TestClusterSpawn(t *testing.T) {
 }
 
 func TestMemberJoin(t *testing.T) {
-	c1 := makeCluster(t, getRandomLocalhostAddr(), "A", "eu-west")
-	c2 := makeCluster(t, getRandomLocalhostAddr(), "B", "eu-west")
+	c1Addr := getRandomLocalhostAddr()
+	c1 := makeCluster(t, c1Addr, "A", "eu-west")
+	c2 := makeClusterWithBootstrap(t, getRandomLocalhostAddr(), "B", "eu-west", MemberAddr{ListenAddr: c1Addr, ID: "A"})
 	c2.RegisterKind("player", NewPlayer, NewKindConfig())
 
 	wg := sync.WaitGroup{}
@@ -171,9 +183,9 @@ func TestMemberJoin(t *testing.T) {
 
 func TestActivate(t *testing.T) {
 	var (
-		addr = getRandomLocalhostAddr()
-		c1   = makeCluster(t, addr, "A", "eu-west")
-		c2   = makeCluster(t, getRandomLocalhostAddr(), "B", "eu-west")
+		c1Addr = getRandomLocalhostAddr()
+		c1     = makeCluster(t, c1Addr, "A", "eu-west")
+		c2     = makeClusterWithBootstrap(t, getRandomLocalhostAddr(), "B", "eu-west", MemberAddr{ListenAddr: c1Addr, ID: "A"})
 	)
 	c2.RegisterKind("player", NewPlayer, NewKindConfig())
 
@@ -208,9 +220,9 @@ func TestActivate(t *testing.T) {
 }
 
 func TestDeactivate(t *testing.T) {
-	addr := getRandomLocalhostAddr()
-	c1 := makeCluster(t, addr, "A", "eu-west")
-	c2 := makeCluster(t, getRandomLocalhostAddr(), "B", "eu-west")
+	c1Addr := getRandomLocalhostAddr()
+	c1 := makeCluster(t, c1Addr, "A", "eu-west")
+	c2 := makeClusterWithBootstrap(t, getRandomLocalhostAddr(), "B", "eu-west", MemberAddr{ListenAddr: c1Addr, ID: "A"})
 	c2.RegisterKind("player", NewPlayer, NewKindConfig())
 
 	expectedPID := actor.NewPID(c2.engine.Address(), "player/1")
@@ -252,10 +264,12 @@ func TestMemberLeave(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
+	selfManagedConfig := NewSelfManagedConfig().WithBootstrapMember(MemberAddr{ListenAddr: c1Addr, ID: "A"})
 	config := NewConfig().
 		WithID("B").
 		WithRegion("eu-east").
-		WithEngine(e)
+		WithEngine(e).
+		WithProvider(NewSelfManagedProvider(selfManagedConfig))
 	c2, err := New(config)
 	assert.Nil(t, err)
 
@@ -319,15 +333,17 @@ func TestMembersExcept(t *testing.T) {
 
 func TestGetActiveByID(t *testing.T) {
 	c1Addr := getRandomLocalhostAddr()
-	c2Addr := getRandomLocalhostAddr()
 
 	c1 := makeCluster(t, c1Addr, "A", "eu")
 	c1.RegisterKind("player", NewPlayer, NewKindConfig())
 	c1.Start()
 
-	c2 := makeCluster(t, c2Addr, "B", "eu")
+	c2 := makeClusterWithBootstrap(t, getRandomLocalhostAddr(), "B", "eu", MemberAddr{ListenAddr: c1Addr, ID: "A"})
 	c2.RegisterKind("player", NewPlayer, NewKindConfig())
 	c2.Start()
+
+	// Wait for cluster formation to complete
+	time.Sleep(time.Millisecond * 50)
 
 	pid1 := c1.Activate("player", NewActivationConfig().WithID("1"))
 	pid2 := c2.Activate("player", NewActivationConfig().WithID("2"))
@@ -350,15 +366,17 @@ func TestGetActiveByID(t *testing.T) {
 
 func TestGetActiveByKind(t *testing.T) {
 	c1Addr := getRandomLocalhostAddr()
-	c2Addr := getRandomLocalhostAddr()
 
 	c1 := makeCluster(t, c1Addr, "A", "eu")
 	c1.RegisterKind("player", NewPlayer, NewKindConfig())
 	c1.Start()
 
-	c2 := makeCluster(t, c2Addr, "B", "eu")
+	c2 := makeClusterWithBootstrap(t, getRandomLocalhostAddr(), "B", "eu", MemberAddr{ListenAddr: c1Addr, ID: "A"})
 	c2.RegisterKind("player", NewPlayer, NewKindConfig())
 	c2.Start()
+
+	// Wait for cluster formation to complete
+	time.Sleep(time.Millisecond * 50)
 
 	pid1 := c1.Activate("player", NewActivationConfig().WithID("1"))
 	pid2 := c2.Activate("player", NewActivationConfig().WithID("2"))
@@ -380,15 +398,17 @@ func TestGetActiveByKind(t *testing.T) {
 
 func TestCannotDuplicateActor(t *testing.T) {
 	c1Addr := getRandomLocalhostAddr()
-	c2Addr := getRandomLocalhostAddr()
 
 	c1 := makeCluster(t, c1Addr, "A", "eu")
 	c1.RegisterKind("player", NewPlayer, NewKindConfig())
 	c1.Start()
 
-	c2 := makeCluster(t, c2Addr, "B", "eu")
+	c2 := makeClusterWithBootstrap(t, getRandomLocalhostAddr(), "B", "eu", MemberAddr{ListenAddr: c1Addr, ID: "A"})
 	c2.RegisterKind("player", NewPlayer, NewKindConfig())
 	c2.Start()
+
+	// Wait for cluster formation to complete
+	time.Sleep(time.Millisecond * 50)
 
 	pid := c1.Activate("player", NewActivationConfig().WithID("1"))
 	time.Sleep(10 * time.Millisecond)
@@ -415,6 +435,21 @@ func makeCluster(t *testing.T, addr, id, region string) *Cluster {
 		WithID(id).
 		WithListenAddr(addr).
 		WithRegion(region)
+	c, err := New(config)
+	assert.Nil(t, err)
+	return c
+}
+
+func makeClusterWithBootstrap(t *testing.T, addr, id, region string, bootstrapMembers ...MemberAddr) *Cluster {
+	selfManagedConfig := NewSelfManagedConfig()
+	for _, member := range bootstrapMembers {
+		selfManagedConfig = selfManagedConfig.WithBootstrapMember(member)
+	}
+	config := NewConfig().
+		WithID(id).
+		WithListenAddr(addr).
+		WithRegion(region).
+		WithProvider(NewSelfManagedProvider(selfManagedConfig))
 	c, err := New(config)
 	assert.Nil(t, err)
 	return c
