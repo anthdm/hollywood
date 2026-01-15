@@ -82,7 +82,6 @@ func (in *Inbox) process() {
 
 func (in *Inbox) run() {
 	i, t := 0, in.scheduler.Throughput()
-	empty := 0
 	batch := make([]Envelope, 0, messageBatchSize)
 
 	for atomic.LoadInt32(&in.procStatus) != stopped {
@@ -94,15 +93,9 @@ func (in *Inbox) run() {
 
 		msgs, ok := in.rb.PopNInto(batch, messageBatchSize)
 		if !ok || len(msgs) == 0 {
-			empty++
-			if empty < 256 {
-				runtime.Gosched()
-				continue
-			}
 			return
 		}
 
-		empty = 0
 		in.proc.Invoke(msgs)
 		clear(msgs[:cap(msgs)])
 		batch = msgs[:0]
