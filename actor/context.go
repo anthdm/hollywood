@@ -139,7 +139,14 @@ func (c *Context) Parent() *PID {
 // Child will return the PID of the child (if any) by the given name/id.
 // PID will be nil if it could not find it.
 func (c *Context) Child(id string) *PID {
-	pid, _ := c.children.Get(id)
+	// First try exact match (backward compatibility)
+	if pid, ok := c.children.Get(id); ok {
+		return pid
+	}
+
+	// Then try with parent prefix
+	fullKey := c.pid.ID + pidSeparator + id
+	pid, _ := c.children.Get(fullKey)
 	return pid
 }
 
