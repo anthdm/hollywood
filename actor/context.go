@@ -136,8 +136,9 @@ func (c *Context) Parent() *PID {
 	return nil
 }
 
-// Child will return the PID of the child (if any) by the given name/id.
-// PID will be nil if it could not find it.
+// Child will return the PID of the child (if any) by the given id.
+// The id can be a relative path (e.g., "child/1") or a full path (e.g., "parent/1/child/1").
+// Returns nil if the child could not be found.
 func (c *Context) Child(id string) *PID {
 	// First try exact match (backward compatibility)
 	if pid, ok := c.children.Get(id); ok {
