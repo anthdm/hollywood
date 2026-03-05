@@ -13,6 +13,7 @@ import (
 
 	"github.com/anthdm/hollywood/actor"
 	"github.com/anthdm/hollywood/remote"
+	nserver "github.com/nats-io/nats-server/v2/server"
 )
 
 //go:generate protoc --proto_path=. --go_out=. --go_opt=paths=source_relative message.proto
@@ -67,6 +68,8 @@ type Benchmark struct {
 	actorsPerEngine int
 	senders         int
 	engines         []*Engine
+	remotes         []actor.Remoter
+	newRemoter      func(int) actor.Remoter
 }
 
 func (b *Benchmark) randomEngine() *Engine {
@@ -88,22 +91,25 @@ func (e *Engine) randomTargetEngine() *Engine {
 	return e.targetEngines[rand.Intn(len(e.targetEngines))]
 }
 
-func newBenchmark(engineCount, actorsPerEngine, senders int) *Benchmark {
+func newBenchmark(engineCount, actorsPerEngine, senders int, remoterFactory func(int) actor.Remoter) *Benchmark {
 	b := &Benchmark{
 		engineCount:     engineCount,
 		actorsPerEngine: actorsPerEngine,
 		engines:         make([]*Engine, engineCount),
+		remotes:         make([]actor.Remoter, engineCount),
 		senders:         senders,
+		newRemoter:      remoterFactory,
 	}
 	return b
 }
 func (b *Benchmark) spawnEngines() error {
 	for i := 0; i < b.engineCount; i++ {
-		r := remote.New(fmt.Sprintf("localhost:%d", 4000+i), remote.NewConfig())
+		r := b.newRemoter(i)
 		e, err := actor.NewEngine(actor.NewEngineConfig().WithRemote(r))
 		if err != nil {
 			return fmt.Errorf("failed to create engine: %w", err)
 		}
+		b.remotes[i] = r
 		// spawn the monitor
 		b.engines[i] = &Engine{
 			engineID: i,
@@ -136,6 +142,16 @@ func (b *Benchmark) spawnActors() error {
 	fmt.Printf("spawned %d actors per engine\n", b.actorsPerEngine)
 	return nil
 }
+
+func (b *Benchmark) stopRemotes() {
+	for i := range b.remotes {
+		if b.remotes[i] == nil {
+			continue
+		}
+		b.remotes[i].Stop().Wait()
+	}
+}
+
 func (b *Benchmark) sendMessages(d time.Duration) error {
 	wg := sync.WaitGroup{}
 	wg.Add(b.senders)
@@ -146,10 +162,16 @@ func (b *Benchmark) sendMessages(d time.Duration) error {
 			for time.Now().Before(deadline) {
 				// pick a random engine to send from
 				engine := b.randomEngine()
-				// pick a random target engine:
-				targetEngine := engine.randomTargetEngine()
-				// pick a random target actor from the engine
-				targetActor := targetEngine.randomActor()
+				var targetActor *actor.PID
+				if len(engine.targetEngines) > 0 {
+					// pick a random target engine:
+					targetEngine := engine.randomTargetEngine()
+					// pick a random target actor from the target engine
+					targetActor = targetEngine.randomActor()
+				} else {
+					// no remote target engines (local benchmark mode)
+					targetActor = engine.randomActor()
+				}
 				// send the message
 				engine.engine.Send(targetActor, &Message{})
 				sendCount.Add(1)
@@ -165,13 +187,22 @@ func (b *Benchmark) sendMessages(d time.Duration) error {
 	return nil
 }
 
-func benchmark() error {
+func resetStats() {
+	receiveCount.Store(0)
+	sendCount.Store(0)
+	deadLetters.Store(0)
+}
+
+func runBenchmark(remoterFactory func(int) actor.Remoter) error {
 	const (
-		engines         = 10
 		actorsPerEngine = 2000
 		senders         = 20
 		duration        = time.Second * 10
 	)
+	engines := 10
+	if remoterFactory == nil {
+		engines = 1
+	}
 
 	if runtime.GOMAXPROCS(runtime.NumCPU()) == 1 {
 		return errors.New("GOMAXPROCS must be greater than 1")
@@ -180,12 +211,14 @@ func benchmark() error {
 		Level: slog.LevelError,
 	}))
 	slog.SetDefault(lh)
+	resetStats()
 
-	benchmark := newBenchmark(engines, actorsPerEngine, senders)
+	benchmark := newBenchmark(engines, actorsPerEngine, senders, remoterFactory)
 	err := benchmark.spawnEngines()
 	if err != nil {
 		return fmt.Errorf("failed to spawn engines: %w", err)
 	}
+	defer benchmark.stopRemotes()
 	err = benchmark.spawnActors()
 	if err != nil {
 		return fmt.Errorf("failed to spawn actors: %w", err)
@@ -213,6 +246,61 @@ func benchmark() error {
 	fmt.Printf("messages per second: %d\n", receiveCount.Load()/int64(duration.Seconds()))
 	fmt.Printf("deadletters: %d\n", deadLetters.Load())
 	return nil
+}
+
+func benchmark() error {
+	return runBenchmark(func(i int) actor.Remoter {
+		return remote.New(fmt.Sprintf("localhost:%d", 4000+i), remote.NewConfig())
+	})
+}
+
+func benchmarkNATS() error {
+	embedded, err := startEmbeddedNATSServer()
+	if err != nil {
+		return err
+	}
+	defer embedded.Close()
+
+	return runBenchmark(func(i int) actor.Remoter {
+		return remote.NewNats(
+			fmt.Sprintf("nats-node-%d", i),
+			remote.NatsConfig{}.WithURL(embedded.ClientURL()),
+		)
+	})
+}
+
+func benchmarkLocal() error {
+	return runBenchmark(nil)
+}
+
+type embeddedNATSServer struct {
+	srv *nserver.Server
+}
+
+func startEmbeddedNATSServer() (*embeddedNATSServer, error) {
+	opts := &nserver.Options{
+		Host: "127.0.0.1",
+		Port: -1,
+	}
+	srv, err := nserver.NewServer(opts)
+	if err != nil {
+		return nil, fmt.Errorf("nserver.NewServer: %w", err)
+	}
+	go srv.Start()
+	if !srv.ReadyForConnections(5 * time.Second) {
+		srv.Shutdown()
+		return nil, errors.New("embedded NATS server did not become ready")
+	}
+	return &embeddedNATSServer{srv: srv}, nil
+}
+
+func (s *embeddedNATSServer) ClientURL() string {
+	return s.srv.ClientURL()
+}
+
+func (s *embeddedNATSServer) Close() {
+	s.srv.Shutdown()
+	s.srv.WaitForShutdown()
 }
 
 func main() {

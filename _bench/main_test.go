@@ -11,6 +11,20 @@ func BenchmarkHollywood(b *testing.B) {
 	}
 }
 
+func BenchmarkHollywoodNATS(b *testing.B) {
+	err := benchmarkNATS()
+	if err != nil {
+		b.Fatal(err)
+	}
+}
+
+func BenchmarkHollywoodLocal(b *testing.B) {
+	err := benchmarkLocal()
+	if err != nil {
+		b.Fatal(err)
+	}
+}
+
 /*
 func Benchmark_Latency(b *testing.B) {
 	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError})))

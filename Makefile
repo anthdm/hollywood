@@ -1,5 +1,5 @@
 test: build
-	go test ./... -count=1 --race --timeout=5s
+	go test ./... -count=1 --race --timeout=30s
 
 proto:
 	protoc --go_out=. --go-vtproto_out=.  --go_opt=paths=source_relative --proto_path=. actor/actor.proto
@@ -15,6 +15,8 @@ build:
 	go build -o bin/metrics examples/metrics/main.go
 	go build -o bin/chatserver examples/chat/server/main.go
 	go build -o bin/chatclient examples/chat/client/main.go
+	go build -o bin/natsserver examples/nats/server/main.go
+	go build -o bin/natsclient examples/nats/client/main.go
 	go build -o bin/cluster_member_1 examples/cluster/member_1/main.go
 	go build -o bin/cluster_member_2 examples/cluster/member_2/main.go
 
@@ -23,5 +25,11 @@ bench:
 
 bench-profile:
 	go test -bench='^BenchmarkHollywood$$' -run=NONE -cpuprofile cpu.prof -memprofile mem.prof ./_bench
+
+bench-nats:
+	go test -bench='^BenchmarkHollywoodNATS$$' -run=NONE ./_bench
+
+bench-local:
+	go test -bench='^BenchmarkHollywoodLocal$$' -run=NONE ./_bench
 
 .PHONY: proto
