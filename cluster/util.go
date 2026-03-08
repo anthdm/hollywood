@@ -1,6 +1,8 @@
 package cluster
 
 import (
+	"slices"
+
 	"github.com/anthdm/hollywood/actor"
 )
 
@@ -37,10 +39,5 @@ func (m *Member) Equals(other *Member) bool {
 // TODO: Maybe relocate this function.
 // HasKind returns true whether the Member has the given kind registered.
 func (m *Member) HasKind(kind string) bool {
-	for _, k := range m.Kinds {
-		if k == kind {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(m.Kinds, kind)
 }

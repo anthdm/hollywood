@@ -46,7 +46,7 @@ func TestSend_TLS(t *testing.T) {
 		}
 	}, "actor on a")
 
-	for i := 0; i < msgs; i++ {
+	for range msgs {
 		b.Send(pida, &TestMessage{Data: []byte("foo")})
 	}
 	wg.Add(msgs) // send msgs more messages
@@ -57,7 +57,7 @@ func TestSend_TLS(t *testing.T) {
 			wg.Done()
 		}
 	}, "actor on b")
-	for i := 0; i < msgs; i++ {
+	for range msgs {
 		a.Send(pidb, &TestMessage{Data: []byte("foo")})
 	}
 	wg.Wait()        // wait for messages to be received by the actor.

@@ -97,7 +97,7 @@ func main() {
 		barPID     = e.Spawn(newBar, "bar", actor.WithMiddleware(barmetrics.WithMetrics()))
 	)
 
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		e.Send(fooPID, Message{data: "message to foo"})
 		e.Send(barPID, Message{data: "message to bar"})
 		time.Sleep(time.Second)

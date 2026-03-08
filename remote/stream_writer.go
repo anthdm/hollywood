@@ -63,7 +63,7 @@ func (s *streamWriter) Invoke(msgs []actor.Envelope) {
 		messages     = make([]*Message, len(msgs))
 	)
 
-	for i := 0; i < len(msgs); i++ {
+	for i := range msgs {
 		var (
 			stream   = msgs[i].Msg.(*streamDeliver)
 			typeID   int32
@@ -118,7 +118,7 @@ func (s *streamWriter) init() {
 		delay      time.Duration = time.Millisecond * 500
 		maxRetries               = 3
 	)
-	for i := 0; i < maxRetries; i++ {
+	for i := range maxRetries {
 		// Here we try to connect to the remote address.
 		switch s.tlsConfig {
 		case nil:

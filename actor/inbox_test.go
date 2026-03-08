@@ -31,7 +31,7 @@ func TestInboxSendAndProcess(t *testing.T) {
 }
 
 func TestInboxSendAndProcessMany(t *testing.T) {
-	for i := 0; i < 100000; i++ {
+	for range 100000 {
 		inbox := NewInbox(10)
 		processedMessages := make(chan Envelope, 10)
 		mockProc := MockProcesser{

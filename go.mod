@@ -1,8 +1,6 @@
 module github.com/anthdm/hollywood
 
-go 1.22.12
-
-toolchain go1.24.0
+go 1.26.1
 
 require (
 	github.com/DataDog/gostackparse v0.7.0

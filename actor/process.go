@@ -81,7 +81,7 @@ func (p *process) Invoke(msgs []Envelope) {
 		}
 	}()
 
-	for i := 0; i < len(msgs); i++ {
+	for i := range msgs {
 		nproc++
 		msg := msgs[i]
 		if pill, ok := msg.Msg.(poisonPill); ok {

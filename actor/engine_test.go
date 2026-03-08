@@ -103,7 +103,7 @@ func TestRestartsMaxRestarts(t *testing.T) {
 		}
 	}, "foo", WithMaxRestarts(restarts))
 
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		e.Send(pid, payload{i})
 	}
 	<-e.Poison(pid).Done()
@@ -198,7 +198,7 @@ func TestSendMsgRaceCon(t *testing.T) {
 		}
 	}, "test")
 
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		wg.Add(1)
 		e.Send(pid, []byte("f"))
 		wg.Done()
@@ -211,7 +211,7 @@ func TestSpawn(t *testing.T) {
 	require.NoError(t, err)
 	wg := sync.WaitGroup{}
 
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		wg.Add(1)
 		go func(i int) {
 			tag := strconv.Itoa(i)
@@ -279,7 +279,7 @@ func TestStop(t *testing.T) {
 	)
 	e, err := NewEngine(NewEngineConfig())
 	require.NoError(t, err)
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		wg.Add(1)
 		tag := strconv.Itoa(i)
 		pid := e.SpawnFunc(func(c *Context) {
@@ -340,7 +340,7 @@ func TestPoison(t *testing.T) {
 	)
 	e, err := NewEngine(NewEngineConfig())
 	require.NoError(t, err)
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		wg.Add(1)
 		tag := strconv.Itoa(i)
 		pid := e.SpawnFunc(func(c *Context) {
@@ -382,7 +382,7 @@ func TestRequestResponse(t *testing.T) {
 
 	})
 	t.Run("should not timeout", func(t *testing.T) {
-		for i := 0; i < 200; i++ {
+		for range 200 {
 			resp := e.Request(a, responseEvent{d: time.Microsecond * 1}, time.Millisecond*800)
 			res, err := resp.Result()
 			assert.NoError(t, err)
@@ -466,7 +466,7 @@ func (r *TestReceiver) Receive(ctx *Context) {
 func TestMultipleStops(t *testing.T) {
 	e, err := NewEngine(NewEngineConfig())
 	require.NoError(t, err)
-	for i := 0; i < 1000; i++ {
+	for range 1000 {
 		done := make(chan struct{})
 		pid := e.SpawnFunc(func(ctx *Context) {
 			switch ctx.Message().(type) {
@@ -474,7 +474,7 @@ func TestMultipleStops(t *testing.T) {
 				close(done)
 			}
 		}, "test")
-		for j := 0; j < 10; j++ {
+		for range 10 {
 			e.Stop(pid)
 		}
 		<-done

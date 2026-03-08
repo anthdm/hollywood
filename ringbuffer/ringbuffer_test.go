@@ -12,7 +12,7 @@ type Item struct {
 
 func TestPushPop(t *testing.T) {
 	rb := New[Item](1024)
-	for i := 0; i < 5000; i++ {
+	for i := range 5000 {
 		rb.Push(Item{i})
 		item, ok := rb.Pop()
 		if ok {
@@ -26,14 +26,14 @@ func TestPushPop(t *testing.T) {
 func TestPushPopN(t *testing.T) {
 	rb := New[Item](1024)
 	n := 5000
-	for i := 0; i < n; i++ {
+	for i := range n {
 		rb.Push(Item{i})
 	}
 	items, ok := rb.PopN(int64(n))
 	if !ok {
 		t.Fatal("expected to pop many items")
 	}
-	for i := 0; i < n; i++ {
+	for i := range n {
 		if items[i].i != i {
 			t.Fatal("invalid item popped")
 		}
@@ -46,12 +46,10 @@ func TestPopThreadSafety(t *testing.T) {
 			rb := New[int](4)
 			rb.Push(1)
 			wg := sync.WaitGroup{}
-			for i := 0; i < 2; i++ {
-				wg.Add(1)
-				go func() {
-					defer wg.Done()
+			for range 2 {
+				wg.Go(func() {
 					rb.Pop()
-				}()
+				})
 			}
 			wg.Wait()
 			if rb.Len() == -1 {
@@ -60,7 +58,7 @@ func TestPopThreadSafety(t *testing.T) {
 		}
 
 		// Increase the number of iterations to raise the likelihood of reproducing the race condition
-		for i := 0; i < 100_000; i++ {
+		for range 100_000 {
 			testCase()
 		}
 	})
@@ -71,15 +69,13 @@ func TestPopThreadSafety(t *testing.T) {
 			rb.Push(1)
 			counter := atomic.Int32{}
 			wg := sync.WaitGroup{}
-			for i := 0; i < 2; i++ {
-				wg.Add(1)
-				go func() {
-					defer wg.Done()
+			for range 2 {
+				wg.Go(func() {
 					_, ok := rb.PopN(1)
 					if ok {
 						counter.Add(1)
 					}
-				}()
+				})
 			}
 			wg.Wait()
 			if counter.Load() > 1 {
@@ -88,7 +84,7 @@ func TestPopThreadSafety(t *testing.T) {
 		}
 
 		// Increase the number of iterations to raise the likelihood of reproducing the race condition
-		for i := 0; i < 100_000; i++ {
+		for range 100_000 {
 			testCase()
 		}
 	})
