@@ -2,6 +2,7 @@ package safemap
 
 import (
 	"math/rand"
+	"slices"
 	"testing"
 )
 
@@ -75,19 +76,14 @@ func TestForEach(t *testing.T) {
 
 // Helper function to check if a slice contains a specific element.
 func contains(slice []int, element int) bool {
-	for _, a := range slice {
-		if a == element {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(slice, element)
 }
 
 // Benchmark Get
 func BenchmarkGetConcurrent(b *testing.B) {
 	ds := New[uint64, uint64]()
 	// Pre-fill the data store with test data if needed
-	for i := 0; i < 100000; i++ {
+	for i := range 100000 {
 		ds.Set(uint64(i), uint64(i))
 	}
 	b.SetParallelism(100)

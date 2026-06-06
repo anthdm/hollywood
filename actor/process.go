@@ -83,7 +83,7 @@ func (p *process) Invoke(msgs []Envelope) {
 		}
 	}()
 
-	for i := 0; i < len(msgs); i++ {
+	for i := range msgs {
 		nproc++
 		atomic.AddInt32(&p.mcount, -1)
 		msg := msgs[i]

@@ -60,7 +60,7 @@ func TestRemoteUnreachableMessagesEndUpInDeadletter(t *testing.T) {
 	pid := a.Spawn(NewDlActor(wg, n), "event")
 	a.Subscribe(pid)
 
-	for i := 0; i < n; i++ {
+	for range n {
 		a.Send(actor.NewPID("127.0.0.1:4000", "foo/bar"), &TestMessage{Data: []byte("foo")})
 	}
 	wg.Wait()
@@ -85,7 +85,7 @@ func TestSend(t *testing.T) {
 		}
 	}, "dfoo")
 
-	for i := 0; i < msgs; i++ {
+	for range msgs {
 		b.Send(pid, &TestMessage{Data: []byte("foo")})
 	}
 	wg.Wait()        // wait for messages to be received by the actor.

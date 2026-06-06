@@ -24,7 +24,7 @@ func (handler) Receive(c *actor.Context) {
 	case []byte:
 		fmt.Println("got message to handle:", string(msg))
 	case actor.Stopped:
-		for i := 0; i < 3; i++ {
+		for i := range 3 {
 			fmt.Printf("\r handler stopping in %d", 3-i)
 			time.Sleep(time.Second)
 		}

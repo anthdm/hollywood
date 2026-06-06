@@ -35,7 +35,7 @@ func main() {
 	}
 
 	pid := engine.Spawn(newFoo, "my_actor")
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		engine.Send(pid, &message{data: "hello world!"})
 	}
 
