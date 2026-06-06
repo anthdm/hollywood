@@ -34,7 +34,7 @@ type streamWriter struct {
 	buffSize    int
 }
 
-func newStreamWriter(e *actor.Engine, rpid *actor.PID, address string, tlsConfig *tls.Config, buffSize int) actor.Processer {
+func newStreamWriter(e *actor.Engine, rpid *actor.PID, address string, tlsConfig *tls.Config, buffSize int) *streamWriter {
 	return &streamWriter{
 		writeToAddr: address,
 		engine:      e,
@@ -53,6 +53,14 @@ func (s *streamWriter) Send(_ *actor.PID, msg any, sender *actor.PID) {
 }
 
 func (s *streamWriter) Invoke(msgs []actor.Envelope) {
+	// Lazy intitialize the connection with the the target remote.
+	if s.conn == nil {
+		s.init()
+		if s.conn == nil {
+			return
+		}
+	}
+
 	var (
 		typeLookup   = make(map[string]int32)
 		typeNames    = make([]string, 0)
@@ -63,7 +71,7 @@ func (s *streamWriter) Invoke(msgs []actor.Envelope) {
 		messages     = make([]*Message, len(msgs))
 	)
 
-	for i := 0; i < len(msgs); i++ {
+	for i := range len(msgs) {
 		var (
 			stream   = msgs[i].Msg.(*streamDeliver)
 			typeID   int32
@@ -118,7 +126,7 @@ func (s *streamWriter) init() {
 		delay      time.Duration = time.Millisecond * 500
 		maxRetries               = 3
 	)
-	for i := 0; i < maxRetries; i++ {
+	for i := range maxRetries {
 		// Here we try to connect to the remote address.
 		switch s.tlsConfig {
 		case nil:
@@ -202,7 +210,6 @@ func (s *streamWriter) Shutdown() {
 
 func (s *streamWriter) Start() {
 	s.inbox.Start(s)
-	s.init()
 }
 
 func lookupPIDs(m map[uint64]int32, pid *actor.PID, pids []*actor.PID) (int32, []*actor.PID) {
