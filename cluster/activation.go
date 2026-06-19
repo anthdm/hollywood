@@ -65,3 +65,19 @@ type ActivationDetails struct {
 func SelectRandomMember(details ActivationDetails) *Member {
 	return details.Members[rand.Intn(len(details.Members))]
 }
+
+// SelectRegionMember selects a member in the specified region of the cluster.
+func SelectRegionMember(details ActivationDetails) *Member {
+	members := make([]*Member, 0, len(details.Members))
+	for _, member := range details.Members {
+		if member.Region == details.Region {
+			members = append(members, member)
+		}
+	}
+
+	if len(members) == 0 {
+		return nil
+	}
+
+	return members[rand.Intn(len(members))]
+}

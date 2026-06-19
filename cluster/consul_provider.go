@@ -20,17 +20,24 @@ const (
 )
 
 type ConsulProviderConfig struct {
-	address string
+	address     string
+	serviceName string
 }
 
 func NewConsulProviderConfig() ConsulProviderConfig {
 	return ConsulProviderConfig{
-		address: "127.0.0.1:8500",
+		address:     "127.0.0.1:8500",
+		serviceName: "holywood_actor",
 	}
 }
 
 func (c ConsulProviderConfig) WithAddress(address string) ConsulProviderConfig {
 	c.address = address
+	return c
+}
+
+func (c ConsulProviderConfig) WithServiceName(serviceName string) ConsulProviderConfig {
+	c.serviceName = serviceName
 	return c
 }
 
@@ -98,7 +105,7 @@ func (p *ConsulProvider) registerService() error {
 
 	reg := &api.AgentServiceRegistration{
 		ID:                p.memberID(),
-		Name:              "hollywood_actor",
+		Name:              p.config.serviceName,
 		Tags:              p.cluster.kindsToString(),
 		Address:           host,
 		Port:              port,
@@ -117,7 +124,7 @@ func (p *ConsulProvider) registerService() error {
 func (p *ConsulProvider) watch() {
 	query := map[string]any{
 		"type":        "service",
-		"service":     "hollywood_actor",
+		"service":     p.config.serviceName,
 		"passingonly": true,
 	}
 
@@ -147,9 +154,10 @@ func (p *ConsulProvider) onUpdate(index watch.BlockingParamVal, msg any) {
 		if len(entry.Checks) > 0 && entry.Checks.AggregatedStatus() == api.HealthPassing {
 			port := strconv.Itoa(entry.Service.Port)
 			member := &Member{
-				ID:    entry.Service.Meta["name"],
-				Host:  entry.Service.Address + ":" + port,
-				Kinds: entry.Service.Tags,
+				ID:     entry.Service.Meta["name"],
+				Host:   entry.Service.Address + ":" + port,
+				Region: entry.Node.Datacenter,
+				Kinds:  entry.Service.Tags,
 			}
 			members = append(members, member)
 		}
