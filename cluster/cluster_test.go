@@ -430,6 +430,41 @@ func TestCannotDuplicateActor(t *testing.T) {
 	c2.Stop()
 }
 
+func TestClusterChildLookup(t *testing.T) {
+	var (
+		c1Addr = getRandomLocalhostAddr()
+		c1     = makeCluster(t, c1Addr, "A", "eu-west")
+		wg     = sync.WaitGroup{}
+	)
+
+	wg.Add(1)
+	c1.engine.SpawnFunc(func(c *actor.Context) {
+		switch c.Message().(type) {
+		case actor.Started:
+			childPID := c.SpawnChildFunc(func(_ *actor.Context) {}, "worker", actor.WithID("1"))
+
+			// Test relative path lookup (new behavior)
+			found := c.Child("worker/1")
+			assert.NotNil(t, found)
+			assert.True(t, childPID.Equals(found))
+
+			// Test full path lookup (backward compatible)
+			fullPath := c.PID().ID + "/worker/1"
+			foundFull := c.Child(fullPath)
+			assert.NotNil(t, foundFull)
+			assert.True(t, childPID.Equals(foundFull))
+
+			assert.Equal(t, c1Addr, childPID.Address)
+
+			wg.Done()
+		}
+	}, "parent", actor.WithID("1"))
+
+	c1.Start()
+	wg.Wait()
+	c1.Stop()
+}
+
 func makeCluster(t *testing.T, addr, id, region string) *Cluster {
 	config := NewConfig().
 		WithID(id).

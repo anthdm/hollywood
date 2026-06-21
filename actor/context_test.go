@@ -66,6 +66,11 @@ func TestSpawnChildPID(t *testing.T) {
 		case Started:
 			pid := c.SpawnChildFunc(childfn, "child", WithID("1"))
 			assert.True(t, expectedPID.Equals(pid))
+
+			pid = c.Child("child/1")
+			assert.NotNil(t, pid)
+			assert.True(t, expectedPID.Equals(pid))
+
 			wg.Done()
 		case Stopped:
 		}
