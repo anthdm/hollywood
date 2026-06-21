@@ -40,7 +40,11 @@ func (r *Response) Result() (any, error) {
 }
 
 func (r *Response) Send(_ *PID, msg any, _ *PID) {
-	r.result <- msg
+	// Under normal conditions, the method is expected to be called only once.
+	// To prevent accidental duplicate responses, we promptly remove the process from the registry
+	if r.engine.Registry.remove(r.pid) {
+		r.result <- msg
+	}
 }
 
 func (r *Response) PID() *PID         { return r.pid }
