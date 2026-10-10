@@ -253,7 +253,11 @@ func (e *Engine) sendPoisonPill(ctx context.Context, graceful bool, pid *PID) co
 func (e *Engine) SendLocal(pid *PID, msg any, sender *PID) {
 	proc := e.Registry.get(pid)
 	if proc == nil {
-		// broadcast a deadLetter message
+		// The missed message is already a dead letter. Broadcasting another
+		// wraps that letter and the event stream delivers the wrapper here.
+		if _, ok := msg.(DeadLetterEvent); ok {
+			return
+		}
 		e.BroadcastEvent(DeadLetterEvent{
 			Target:  pid,
 			Message: msg,
