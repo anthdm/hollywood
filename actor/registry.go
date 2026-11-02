@@ -7,14 +7,14 @@ import (
 const LocalLookupAddr = "local"
 
 type Registry struct {
-	mu     sync.RWMutex
-	lookup map[string]Processer
+	// lookup maps a PID's ID to its Processer. It is read on every local send,
+	// and a sync.Map serves those reads without a shared lock.
+	lookup sync.Map
 	engine *Engine
 }
 
 func newRegistry(e *Engine) *Registry {
 	return &Registry{
-		lookup: make(map[string]Processer, 1024),
 		engine: e,
 	}
 }
@@ -31,9 +31,7 @@ func (r *Registry) GetPID(kind, id string) *PID {
 
 // Remove removes the given PID from the registry.
 func (r *Registry) Remove(pid *PID) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	delete(r.lookup, pid.ID)
+	r.lookup.Delete(pid.ID)
 }
 
 // get returns the processer for the given PID, if it exists.
@@ -43,29 +41,20 @@ func (r *Registry) get(pid *PID) Processer {
 	if pid == nil {
 		return nil
 	}
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	if proc, ok := r.lookup[pid.ID]; ok {
-		return proc
+	return r.getByID(pid.ID)
+}
+
+func (r *Registry) getByID(id string) Processer {
+	if proc, ok := r.lookup.Load(id); ok {
+		return proc.(Processer)
 	}
 	return nil // didn't find the processer
 }
 
-func (r *Registry) getByID(id string) Processer {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	return r.lookup[id]
-}
-
 func (r *Registry) add(proc Processer) {
-	r.mu.Lock()
-	id := proc.PID().ID
-	if _, ok := r.lookup[id]; ok {
-		r.mu.Unlock()
+	if _, loaded := r.lookup.LoadOrStore(proc.PID().ID, proc); loaded {
 		r.engine.BroadcastEvent(ActorDuplicateIdEvent{PID: proc.PID()})
 		return
 	}
-	r.lookup[id] = proc
-	r.mu.Unlock()
 	proc.Start()
 }
