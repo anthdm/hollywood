@@ -50,7 +50,9 @@ type Inbox struct {
 	proc       Processer
 	scheduler  Scheduler
 	procStatus int32
-	batch      []Envelope
+	// batch is reused between pops. It starts empty and PopNInto grows it to
+	// the largest batch popped, so an idle actor doesn't hold a full-size buffer.
+	batch []Envelope
 }
 
 func NewInbox(size int) *Inbox {
@@ -58,7 +60,6 @@ func NewInbox(size int) *Inbox {
 		rb:         ringbuffer.New[Envelope](int64(size)),
 		scheduler:  NewScheduler(defaultThroughput),
 		procStatus: stopped,
-		batch:      make([]Envelope, 0, messageBatchSize),
 	}
 }
 
